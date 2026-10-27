@@ -1,0 +1,139 @@
+.cnn-project{max-width:450px}
+.cnn-spaced{margin-top:22px}
+.cnn-three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:17px;align-items:center}
+.cnn-user-form{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:15px;align-items:center}
+.cnn-user-form>.primary{margin-top:17px}
+.cnn-previews{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px;margin:22px 0}
+.cnn-preview{margin:0;border:1px solid #e0e6f0;border-radius:9px;padding:12px;background:#f8fafd;text-align:center}
+.cnn-preview img{width:100%;height:100px;object-fit:contain;background:#e9edf4;border-radius:6px}
+.cnn-preview figcaption{font-size:11px;color:#53657f;margin-top:10px;overflow-wrap:anywhere}
+.cnn-preview small{display:block;color:#718098;font-size:9px;margin-top:5px}
+.cnn-flow{display:flex;gap:13px;overflow:auto;padding:25px 0}
+.cnn-flow>span{position:relative;flex-shrink:0;border:1px solid #b9c5e5;border-left:4px solid #637acd;border-radius:9px;padding:17px;background:#f6f8ff;font-size:11px;line-height:1.8;text-align:center;min-width:110px}
+.cnn-flow>span:not(:last-child)::after{content:"→";position:absolute;right:-15px;top:35%;color:#798bb4}
+.cnn-block{background:#fafbfe;border:1px solid #e0e6f0;border-radius:10px;padding:17px;margin:18px 0}
+.cnn-block h3{font-size:13px;margin:0}
+.cnn-check{display:flex;align-items:center;gap:9px;font-size:12px}
+.cnn-check input{width:16px;height:16px;accent-color:#536bce}
+.cnn-version{border-bottom:1px solid #e3e9f2;padding:15px 0;font-size:11px;line-height:1.8;overflow-wrap:anywhere}
+.cnn-two-charts{display:grid;grid-template-columns:1fr 1fr;gap:18px;min-width:0}
+.cnn-chart svg{display:block;width:100%;height:auto}
+.cnn-legend{display:flex;gap:18px;flex-wrap:wrap;font-size:10px;color:#536bce}
+.cnn-legend>span:last-child{color:#318b79}
+textarea{width:100%;font:inherit;font-size:12px;border:1px solid #cbd5e4;border-radius:7px;padding:12px;resize:vertical;color:#263751}
+textarea:focus-visible{outline:3px solid #8b83ed;outline-offset:3px}
+.sidebar nav{overflow-y:auto;min-height:0}
+.sidebar-foot,.sidebar>.brand,.sidebar>.workspace{flex-shrink:0}
+@media(max-width:1200px){.cnn-two-charts{grid-template-columns:1fr}.cnn-user-form{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.cnn-three,.cnn-user-form{grid-template-columns:1fr}.cnn-previews{grid-template-columns:1fr 1fr}.cnn-user-form>.primary{margin:0 0 15px}.sidebar nav{overflow-x:auto;overflow-y:visible}}
+@media print{
+  [hidden]{display:none!important}
+  .sidebar,.topbar,.heading,.notice,.no-print,footer,.error,.feedback{display:none!important}
+  .shell{display:block}
+  .content{padding:0}
+  .cnn-report{border:0;box-shadow:none}
+  .table-scroll{overflow:visible}
+  table,th,td{white-space:normal;font-size:9px}
+  tr{break-inside:avoid}
+}
+
+/* NEUROLAB: CONTENEDORES MOVILES CNN */
+@media screen and (max-width:800px){
+  .shell{
+    width:100%;
+    max-width:100%;
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .sidebar,
+  main,
+  .content,
+  .designer,
+  .panel,
+  .properties,
+  .cnn-block{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .sidebar{
+    width:100%;
+  }
+
+  .sidebar nav{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:auto;
+  }
+
+  .sidebar nav .nav-item{
+    flex-shrink:0;
+  }
+
+  .content{
+    width:100%;
+  }
+
+  .designer{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .cnn-project{
+    width:100%;
+    min-width:0;
+  }
+
+  .cnn-flow{
+    width:100%;
+    max-width:100%;
+    min-width:0;
+    overflow-x:auto;
+    overscroll-behavior-x:contain;
+  }
+
+  .cnn-three,
+  .cnn-user-form{
+    min-width:0;
+  }
+
+  .cnn-three>*,
+  .cnn-user-form>*,
+  .field,
+  .panel-head>*{
+    min-width:0;
+    max-width:100%;
+  }
+
+  input,
+  select,
+  textarea{
+    min-width:0;
+    max-width:100%;
+  }
+
+  .properties dd,
+  .cnn-version,
+  .cnn-block h3,
+  .soft,
+  .feedback,
+  .error{
+    overflow-wrap:anywhere;
+  }
+
+  .cnn-flow:focus-visible{
+    outline:3px solid #8b83ed;
+    outline-offset:3px;
+  }
+}
+
+@media screen and (max-width:700px){
+  .cnn-three,
+  .cnn-user-form{
+    grid-template-columns:minmax(0,1fr);
+  }
+
+  .cnn-previews{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+  }
+}

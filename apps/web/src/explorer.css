@@ -1,0 +1,21 @@
+.explorer{min-width:0}
+.explorer-filters{display:grid;grid-template-columns:2fr 1fr 1fr;gap:17px;min-width:0}
+.explorer-filters>*{min-width:0}
+.explorer-result{font-size:11px;color:#65758d;margin:0 0 18px}
+.explorer-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.explorer-tile{display:block;min-width:0;width:100%;text-align:left;border:1px solid #dce4ef;border-radius:10px;padding:13px;background:#f9fbfe;color:#273950}
+.explorer-tile:hover{border-color:#8496d5;background:#f1f5fe}
+.explorer-tile img{display:block;width:100%;height:125px;object-fit:contain;background:#e9edf4;border-radius:7px}
+.explorer-tile strong{display:block;font-size:11px;font-weight:600;margin-top:12px;overflow-wrap:anywhere}
+.explorer-tile span{display:block;font-size:10px;line-height:1.8;color:#65758e;margin-top:7px}
+.explorer-tile small{display:block;font-size:9px;color:#4b796c;margin-top:8px}
+.explorer-pagination{display:flex;justify-content:center;align-items:center;gap:17px;flex-wrap:wrap;margin:23px 0;font-size:11px;color:#65758d}
+.explorer-dialog{width:min(640px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:90vh;overflow:auto;border:1px solid #dce4ef;border-radius:14px;padding:24px;background:white;color:#26374e}
+.explorer-dialog::backdrop{background:#142238a8}
+.explorer-dialog .panel-head{align-items:start}
+.explorer-dialog h2{font-size:17px}
+.explorer-dialog dd{overflow-wrap:anywhere}
+.explorer-full-image{display:block;width:100%;height:280px;object-fit:contain;background:#eef1f7;border-radius:10px;margin-top:22px;image-rendering:pixelated}
+@media(max-width:1100px){.explorer-gallery{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:700px){.explorer-filters{grid-template-columns:minmax(0,1fr);gap:0}.explorer-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}.explorer .metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:380px){.explorer-gallery{grid-template-columns:minmax(0,1fr)}.explorer-pagination{gap:9px}.explorer-dialog{padding:17px}}
