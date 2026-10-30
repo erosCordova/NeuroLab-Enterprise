@@ -209,7 +209,7 @@ test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", asy
   expect(exported.record.job.dataset.classes.length).toBe(10);
 
   await navigate(page, "Evaluación");
-  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".evaluation-summary tbody tr")).toHaveCount(1);
 
   await navigate(page, "Reportes");
 
@@ -768,4 +768,54 @@ test("Proyectos CNN: archivar impide nuevas simulaciones y permite reactivar",as
   await page.setViewportSize({width:390,height:844});
   await navigate(page,"Proyectos");
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});
+
+
+test("Evaluación CNN: comparación hasta tres ejecuciones y exportaciones trazables",async({page})=>{
+  await applyDataset(page);
+  for(let i=0;i<4;i++)await createJob(page,"2");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible({timeout:25000});
+  await navigate(page,"Evaluación");
+  const results=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true});
+  await expect(results.locator("tbody tr")).toHaveCount(4);
+  const checks=results.getByRole("checkbox");
+  for(let i=0;i<3;i++)await checks.nth(i).check();
+  await expect(checks.nth(3)).toBeDisabled();
+  const comparison=page.getByRole("region",{name:"Comparación de ejecuciones",exact:true});
+  await expect(comparison.getByRole("article")).toHaveCount(3);
+  await expect(comparison.getByRole("status")).toContainText("misma huella");
+  const event=page.waitForEvent("download");
+  await comparison.getByRole("button",{name:"Exportar comparación JSON",exact:true}).click();
+  const report=JSON.parse(fs.readFileSync(await(await event).path(),"utf8"));
+  expect(report.simulated).toBe(true);expect(report.sameDataset).toBe(true);
+  expect(report.rows).toHaveLength(3);expect(report.rows.every(row=>row.epochsExecuted===2)).toBe(true);
+  const csvEvent=page.waitForEvent("download");
+  await comparison.getByRole("button",{name:"Exportar comparación CSV",exact:true}).click();
+  expect(fs.readFileSync(await(await csvEvent).path(),"utf8")).toContain("CNN_SIMULADA");
+  await results.getByRole("button",{name:/^Inspeccionar ejecución/}).first().click();
+  await expect(page.locator(".epoch-table tbody tr")).toHaveCount(2);
+  const metrics=page.getByRole("region",{name:"Métricas por época",exact:true});
+  const metricEvent=page.waitForEvent("download");
+  await metrics.getByRole("button",{name:"Exportar métricas por época CSV",exact:true}).click();
+  expect(fs.readFileSync(await(await metricEvent).path(),"utf8").split("\r\n")).toHaveLength(3);
+  await comparison.getByRole("button",{name:"Limpiar comparación",exact:true}).click();
+  await expect(comparison.getByRole("article")).toHaveCount(0);
+  await expect(checks.nth(3)).toBeEnabled();
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});
+
+test("Evaluación CNN: advierte si cambian las particiones del dataset",async({page})=>{
+  await applyDataset(page);await createJob(page,"1");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await navigate(page,"Datasets");
+  await page.getByLabel(/^Semilla/).fill("43");
+  await page.getByRole("button",{name:"Enviar dataset al proyecto",exact:true}).click();
+  await expect(page.getByRole("status").filter({hasText:"Dataset de imágenes validado y aplicado."})).toBeVisible();
+  await createJob(page,"1");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await navigate(page,"Evaluación");
+  const checks=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true}).getByRole("checkbox");
+  await checks.nth(0).check();await checks.nth(1).check();
+  await expect(page.getByRole("region",{name:"Comparación de ejecuciones",exact:true}).getByRole("status")).toContainText("no son directamente comparables");
 });

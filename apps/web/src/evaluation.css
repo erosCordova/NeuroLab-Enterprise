@@ -1,0 +1,13 @@
+.evaluation-workspace{display:grid;gap:24px;min-width:0}
+.evaluation-workspace .panel-head{flex-wrap:wrap;gap:16px}
+.evaluation-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px;margin-top:20px}
+.comparison-card{border:1px solid #dfe6f2;border-radius:12px;background:#f9fbff;padding:20px;min-width:0}
+.comparison-card h3{font-size:.9rem;overflow-wrap:anywhere;margin:16px 0}
+.comparison-card dl{margin:0;display:grid;gap:6px}
+.comparison-card dt{font-size:.75rem;color:#65748b;margin-top:9px}
+.comparison-card dd{margin:0;font-size:.88rem;font-weight:600;overflow-wrap:anywhere}
+.evaluation-hash{font-family:monospace;font-size:.65rem!important;font-weight:400!important}
+.evaluation-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:16px;margin-top:18px}
+.evaluation-facts p{padding:16px;background:#f0f4fb;border-radius:10px;margin:0}
+.evaluation-facts small,.evaluation-facts strong{display:block}.evaluation-facts small{color:#65748b;font-size:.76rem;margin-bottom:8px}
+.evaluation-summary input[type=checkbox]{width:18px;height:18px;accent-color:#536bce}

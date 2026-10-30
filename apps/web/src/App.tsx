@@ -1,3 +1,4 @@
+import EvaluationPanel from "./EvaluationPanel";
 import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
 import type {Project} from "./projects";
@@ -339,7 +340,7 @@ export default function App() {
           </>}</div></div>
         </>}
 
-        {page==="Evaluación"&&<section className="panel"><h2>Resultados CNN de demostración</h2><div className="soft">Valores de la última época simulada. No hay predicciones ni evaluación real del conjunto de prueba.</div><div className="table-scroll"><table><thead><tr><th>Ejecución</th><th>Dataset</th><th>Épocas</th><th>Precisión validación</th><th>Pérdida validación</th></tr></thead><tbody>{projectJobs.filter(job=>job.status==="Completado").map(job=>{const metric=job.metrics.at(-1)!;return <tr key={job.id}><td>{job.id}</td><td>{job.dataset.name}</td><td>{job.epoch} / {job.epochs}</td><td>{(metric.valAccuracy*100).toFixed(1)}%</td><td>{metric.valLoss.toFixed(4)}</td></tr>;})}</tbody></table></div></section>}
+        {page==="Evaluación"&&<EvaluationPanel key={projectId} jobs={projectJobs} />}
 
         {page==="Modelos"&&<>
           <section className="panel"><h2>Registrar ficha CNN</h2><p className="muted">Selecciona una ejecución completada. Cada ejecución admite una ficha.</p>{projectJobs.filter(job=>job.status==="Completado"&&!records.some(record=>record.job.id===job.id)).map(job=><div className="panel-head cnn-version" key={job.id}><span>{job.id} · {job.dataset.name}</span><button className="primary" onClick={()=>register(job)}>Registrar ficha</button></div>)}</section>
