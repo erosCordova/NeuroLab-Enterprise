@@ -411,3 +411,10 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Frontend:** 20 pruebas Chromium aprobadas. [GitHub Actions frontend](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080431805). **CNN:** 3 pruebas Keras aprobadas. [GitHub Actions CNN](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080432045).
 - El diagnóstico GET-only pasó **7 comprobaciones**, incluida la coincidencia exacta del commit entre Vercel y Render simulados.
 - **Avance global permanece en 98%**; el 2% restante requiere pruebas y operaciones de producción autorizadas. No se produjo despliegue ni migración remota.
+
+## Limpieza de entrenamiento TensorFlow.js al cancelar (pendiente de CI)
+
+- Las copias temporales de los mejores pesos se liberan también cuando ocurre un error o una cancelación.
+- Si la cancelación coincide con la escritura en IndexedDB, se elimina el modelo recién guardado y no se registra un informe de éxito.
+- Se añade una prueba real de entrenamiento CPU con señal AbortController y verificación de memoria.
+- Sigue el progreso global 98% hasta validar la suite completa; sin despliegues nuevos.

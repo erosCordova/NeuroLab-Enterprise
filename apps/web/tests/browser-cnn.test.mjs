@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import * as tf from "@tensorflow/tfjs";
-import {buildBrowserCNN,validateBrowserBudget} from "../src/browserCNN.ts";
+import {buildBrowserCNN,validateBrowserBudget,trainInBrowser,TrainingCancelled} from "../src/browserCNN.ts";
 import {summary} from "../src/cnn.ts";
 
 const config={
@@ -56,4 +56,46 @@ test("restringe el uso del navegador sin alterar límites de la CNN Python",()=>
   assert.throws(()=>validateBrowserBudget(config,{...dataset,test:[0,5]},4,2),/solapadas/);
   assert.throws(()=>validateBrowserBudget({...config,size:64},dataset,4,2),/32×32/);
   assert.throws(()=>validateBrowserBudget(config,dataset,41,2),/40 épocas/);
+});
+
+
+test("cancelar durante una época CNN libera los pesos provisionales y no guarda modelos",async()=>{
+  await tf.ready();
+  await tf.setBackend("cpu");
+  const originalBitmap=globalThis.createImageBitmap;
+  const originalDocument=globalThis.document;
+  const size=28,rgba=new Uint8ClampedArray(size*size*4);
+  for(let i=0;i<rgba.length;i+=4){rgba[i]=i%8===0?255:0;rgba[i+1]=128;rgba[i+2]=40;rgba[i+3]=255;}
+  const closed=[];
+  globalThis.createImageBitmap=async()=>({close(){closed.push(true);}});
+  globalThis.document={createElement:()=>({
+    width:size,height:size,
+    getContext:()=>({
+      fillStyle:"#fff",
+      fillRect(){},drawImage(){},
+      getImageData:()=>({data:rgba}),
+    }),
+  })};
+  const fake={name:"cancelación",fingerprint:"f".repeat(64),seed:42,
+    classes:["cero","uno"],
+    images:Array.from({length:6},(_,i)=>({label:i<3?"cero":"uno",file:{}})),
+    train:[0,3],validation:[1,4],test:[2,5]};
+  const controller=new AbortController();
+  const before=tf.memory().numTensors;
+  let progress=0;
+  try{
+    await assert.rejects(
+      trainInBrowser("proyecto-prueba",fake,config,3,2,()=>{
+        progress++;controller.abort();
+      },controller.signal),
+      error=>error instanceof TrainingCancelled
+    );
+    assert.equal(progress,1);
+    assert.equal(closed.length,6);
+    const remaining=tf.memory().numTensors-before;
+    assert.ok(remaining<=4,"Quedaron "+remaining+" tensores tras cancelar.");
+  }finally{
+    globalThis.createImageBitmap=originalBitmap;
+    globalThis.document=originalDocument;
+  }
 });

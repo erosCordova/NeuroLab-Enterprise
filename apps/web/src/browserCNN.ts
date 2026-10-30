@@ -144,6 +144,8 @@ export async function trainInBrowser(
     if(index%8===0)await new Promise<void>(resolve=>setTimeout(resolve,0));
   }
   let model:tf.Sequential|undefined;
+  // Se liberan incluso si fit(), onProgress o la evaluación generan un error.
+  let bestWeights:tf.Tensor[]|null=null;
   const tensors:tf.Tensor[]=[];
   const remember=<T extends tf.Tensor>(value:T):T=>{tensors.push(value);return value;};
   try {
@@ -163,7 +165,6 @@ export async function trainInBrowser(
     const yTrain=targets(dataset.train),yVal=targets(dataset.validation),yTest=targets(dataset.test);
     model=buildBrowserCNN(config,classes.length);
     let bestLoss=Infinity,stale=0;
-    const bestWeights:{value:tf.Tensor[]|null}={value:null};
     const metrics:Metric[]=[];
     const history=await model.fit(xTrain,yTrain,{
       batchSize:batch,epochs,shuffle:true,validationData:[xVal,yVal],verbose:0,
@@ -175,8 +176,8 @@ export async function trainInBrowser(
           if(config.earlyStopping){
             if(bestLoss-point.valLoss>(config.minDelta??.01)){
               bestLoss=point.valLoss;
-              bestWeights.value?.forEach(weight=>weight.dispose());
-              bestWeights.value=model!.getWeights().map(weight=>weight.clone());
+              bestWeights?.forEach(weight=>weight.dispose());
+              bestWeights=model!.getWeights().map(weight=>weight.clone());
               stale=0;
             }else stale++;
             if(stale>=(config.patience??5))model!.stopTraining=true;
@@ -188,13 +189,22 @@ export async function trainInBrowser(
     });
     if(signal?.aborted)throw new TrainingCancelled();
     if(!metrics.length||!history.history.loss?.length)throw new Error("El entrenamiento no devolvió épocas.");
-    if(bestWeights.value){model.setWeights(bestWeights.value);bestWeights.value.forEach((w:tf.Tensor)=>w.dispose());bestWeights.value=null;}
+    if(bestWeights){model.setWeights(bestWeights);bestWeights.forEach(weight=>weight.dispose());bestWeights=null;}
     const evaluated=model.evaluate(xTest,yTest,{batchSize:Math.min(batch,16),verbose:0});
     const outputs=Array.isArray(evaluated)?evaluated:[evaluated];
     const result=outputs.map(item=>item.dataSync()[0]);
     outputs.forEach(item=>item.dispose());
     if(result.length<2||result.some(value=>!Number.isFinite(value)))throw new Error("La evaluación del conjunto de prueba no es válida.");
     await model.save(name);
+    // Una cancelación durante IndexedDB no puede dejar un entrenamiento fantasma.
+    if(signal?.aborted){
+      try{
+        await tf.io.removeModel(name);
+      }catch{
+        throw new Error("El entrenamiento fue cancelado, pero no se pudieron borrar sus pesos locales. Revisa el almacenamiento del navegador.");
+      }
+      throw new TrainingCancelled();
+    }
     return {
       training:"real",engine:"TensorFlow.js",dataset_fingerprint:dataset.fingerprint!,
       classes:[...classes],samples:{
@@ -206,6 +216,7 @@ export async function trainInBrowser(
       weights_file:"model.json",model_ref:name,
     };
   }finally{
+    bestWeights?.forEach(weight=>weight.dispose());
     tensors.forEach(tensor=>tensor.dispose());
     model?.dispose();
   }

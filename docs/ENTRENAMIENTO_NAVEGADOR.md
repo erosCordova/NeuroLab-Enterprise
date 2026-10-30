@@ -36,3 +36,7 @@ Esta modalidad no necesita abrir un servidor local para el usuario final: al pub
 - `python -m pytest -q --tb=short --ignore=tests/test_real_cnn.py` valida API, migraciones y aislamiento de resultados.
 - `cnn-training.yml` valida por separado el motor TensorFlow/Keras Python.
 - **No desplegar automáticamente** este bloque. Mantenerlo en `fix/validacion-frontend-cnn` hasta autorización explícita.
+
+## Cancelación y limpieza de memoria
+
+Si se cancela un entrenamiento TensorFlow.js, el motor evita presentar el resultado como completado y libera sus tensores de entrenamiento y las copias temporales usadas para la parada temprana. Si la cancelación llega mientras IndexedDB guarda los pesos, intenta retirar ese modelo para que no quede como una ejecución finalizada. Si no puede eliminarlo, lo indica con un mensaje explícito.
