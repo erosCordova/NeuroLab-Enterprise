@@ -166,3 +166,52 @@ test('Plataforma: comparación CNN real guardada y exportable sin simulaciones',
  await page.getByRole('navigation').getByRole('button',{name:'Evaluación',exact:true}).click();
  await expect(page.getByRole('region',{name:'Evaluación de CNN reales'}).getByLabel('Comparar entrenamiento real '+ids[0])).toBeVisible();
 });
+
+
+test('Plataforma: Dashboard e informe CNN real exportan resultados sin pesos',async({page})=>{
+ await register(page);await create(page,'Proyecto informe CNN');
+ const code=await page.evaluate(async()=>{
+  const projects=await (await fetch('/api/v1/projects',{credentials:'include'})).json();
+  const project=projects.find(p=>p.name==='Proyecto informe CNN');
+  const report={
+   training:'real',engine:'TensorFlow.js',dataset_fingerprint:'a'.repeat(64),
+   classes:['cero','uno'],samples:{train:8,validation:2,test:2},
+   config:{size:28,channels:1,dense:8,layers:[{filters:4,kernel:3,pool:true,activation:'relu'}]},
+   parameters:6329,requested_epochs:1,completed_epochs:1,batch:4,seed:42,
+   metrics:[{epoch:1,accuracy:.75,valAccuracy:.5,loss:.6,valLoss:.7}],
+   test:{accuracy:.75,loss:.6},weights_file:'model.json',
+   model_ref:'indexeddb://neurolab-cnn-'+project.id+'-'+crypto.randomUUID(),
+  };
+  const response=await fetch('/api/v1/projects/'+project.id+'/real-runs',{
+   method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
+   body:JSON.stringify(report)});
+  return response.status;
+ });
+ expect(code).toBe(201);
+ await page.getByRole('navigation').getByRole('button',{name:'Dashboard',exact:true}).click();
+ const dash=page.getByRole('region',{name:'Indicadores CNN reales del proyecto'});
+ await dash.getByRole('button',{name:'Actualizar indicadores'}).click();
+ await expect(dash.getByText('75.0%')).toBeVisible();
+ await page.getByRole('navigation').getByRole('button',{name:'Reportes',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Informe profesional de CNN reales'});
+ await expect(panel).toBeVisible();
+ await expect(panel.getByRole('table',{name:'Tabla del informe CNN real'}).locator('tbody tr')).toHaveCount(1);
+ await expect(panel.getByText(/no verificadas independientemente/)).toBeVisible();
+ const event=page.waitForEvent('download');
+ await panel.getByRole('button',{name:'Exportar informe real JSON'}).click();
+ const file=await event;
+ expect(file.suggestedFilename()).toBe('neurolab-informe-cnn-real.json');
+ const stream=await file.createReadStream();
+ const chunks=[];for await(const chunk of stream)chunks.push(chunk);
+ const result=JSON.parse(Buffer.concat(chunks).toString('utf8'));
+ expect(result.simulated).toBe(false);
+ expect(result.server_verified).toBe(false);
+ expect(result.totals.runs).toBe(1);
+ expect(JSON.stringify(result)).not.toContain('indexeddb://');
+ const csvEvent=page.waitForEvent('download');
+ await panel.getByRole('button',{name:'Exportar informe real CSV'}).click();
+ expect((await csvEvent).suggestedFilename()).toBe('neurolab-informe-cnn-real.csv');
+ await page.reload();
+ await page.getByRole('navigation').getByRole('button',{name:'Reportes',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Informe profesional de CNN reales'}).getByRole('table',{name:'Tabla del informe CNN real'}).locator('tbody tr')).toHaveCount(1);
+});
