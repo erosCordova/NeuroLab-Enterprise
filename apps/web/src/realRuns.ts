@@ -17,7 +17,7 @@ export type RealReport={
   weights_file:"model.keras";
 };
 export type RealRun=Omit<RealReport,"training"|"engine"|"weights_file">&{
-  id:string;project_id:string;imported_at:string;source:"importado";
+  id:string;project_id:string;imported_at:string;source:"importado"|"navegador";engine:"TensorFlow/Keras"|"TensorFlow.js";weights_file:"model.keras"|"model.json";model_ref:string|null;
 };
 
 export function prepareRealReport(source:unknown):RealReport {
