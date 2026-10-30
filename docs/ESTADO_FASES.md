@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
-**Avance global estimado: 97%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `5a55fed1b49db216b51652ef0750c8e8b16a7338` mediante
+**Avance global estimado: 98%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación funcional: commit `ed2f2f2e4567af565b803546f55f4170e83257f7` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -390,10 +390,14 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 97%** (anterior 96%, +1 punto por protección de migraciones y ensayo integral aprobados).
 - Vercel conserva el despliegue de producción `df162826`; Render tiene autoDeploy desactivado; Neon permanece con solo `001_platform.sql`. Ninguna actualización de producción autorizada ni ejecutada.
 
-## Diagnóstico final de solo lectura (pendiente de pruebas)
+## Diagnóstico final de solo lectura (validado en CI)
 
 - Creado `apps/web/release-smoke.mjs`, limitado a GET sin cookies y exclusivamente al dominio NeuroLab o al proxy efímero de GitHub CI.
 - Comprueba disponibilidad del esquema, API real, 401 en recursos privados, CSP observacional, archivos sensibles no publicados y portada/bundle.
 - Integrado como paso adicional de GitHub Actions tras iniciar los contenedores conectados.
 - Se documentan referencias de despliegues actuales para un futuro plan de reversión controlada.
-- No se ha desplegado ni se ha cambiado Neon. Avance se mantiene en 97% hasta validar la nueva prueba.
+- **Prueba validada**: `NEUROLAB_SMOKE_READ_ONLY=APROBADO` tras seis comprobaciones, todas GET y sin credenciales; ejecución de API y PostgreSQL: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086735.
+- Mismo commit: **74 pruebas Python**, **5 de plataforma**, **6 de alojamiento**, migración y restauración de PostgreSQL temporales aprobadas.
+- Frontend/Chromium **20 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086843; CNN Keras **3 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086833.
+- **Avance global estimado: 98%** (anterior 97%, +1 punto por diagnóstico reproducible y validación de requisitos de publicación).
+- Pendiente para producción: respaldo real verificado de Neon, variables reales Render, autorización de migraciones 002–005, despliegue controlado y comprobaciones del modelo CNN en el dominio público.

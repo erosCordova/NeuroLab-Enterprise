@@ -242,3 +242,17 @@ del commit `df162826ec9e07b35e5d3347814dbdcf6cb78901`.
 Una reversión de frontend/backend no deshace automáticamente cambios
 de esquema. Nunca revertir Neon con SQL inverso sin respaldo verificado
 y comprobar compatibilidad de versiones antes de volver a servir tráfico.
+
+## Evidencia del diagnóstico GET-only (validado en CI)
+
+El script de diagnóstico y sus pruebas pasaron en el commit
+`ed2f2f2e4567af565b803546f55f4170e83257f7`, incluidos
+los controles de origen permitido y compatibilidad con Git Bash Windows.
+
+- API, PostgreSQL y smoke: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086735
+- Frontend, 20 pruebas Chromium: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086843
+- Motor CNN, tres pruebas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086833
+
+Se mantiene el 98% estimado y se prohíbe cerrar el proyecto al 100%
+sin comprobar respaldo real de Neon, configuración de Render,
+aplicación autorizada de las migraciones y funcionamiento de producción.
