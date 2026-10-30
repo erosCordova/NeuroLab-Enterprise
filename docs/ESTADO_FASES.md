@@ -365,3 +365,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Motor Python/Keras:** 3 pruebas aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926310.
 - **Avance global estimado: 95%** (anterior 93%, +2 puntos por la comprobación de esquema, la imagen Docker y la configuración sintética de producción).
 - **Limitación:** variables y secretos reales de Render y respaldo de Neon todavía sin verificar. Las migraciones 002–005 siguen pendientes en producción, así como su despliegue autorizado y las pruebas finales del sistema publicado.
+
+## Ensayo de respaldo y recuperación PostgreSQL 16 (CI)
+
+- Preparada prueba con `pg_dump` y `pg_restore` en una base PostgreSQL aislada.
+- Se comparan registros sintéticos y las huellas de las cinco migraciones después de restaurar.
+- Dos barreras obligatorias de GitHub CI impiden apuntar el ensayo a Neon o a otra base.
+- El archivo es efímero, no se almacena en el repositorio.
+- El respaldo REAL de Neon sigue pendiente de aprobación; porcentaje 95% hasta validar la suite.

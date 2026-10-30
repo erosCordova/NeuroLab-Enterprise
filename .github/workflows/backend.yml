@@ -43,6 +43,9 @@ jobs:
       - name: Rehearse production baseline migration 001 to 005 (isolated database)
         run: PYTHONPATH=. python tests/rehearse_upgrade.py
 
+      - name: Rehearse PostgreSQL 16 custom backup and verified restore (CI only)
+        run: NEUROLAB_CI_BACKUP_REHEARSAL=1 PYTHONPATH=.:tests python tests/rehearse_backup_restore.py
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24

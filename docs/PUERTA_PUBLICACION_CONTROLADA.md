@@ -127,3 +127,24 @@ También aprobaron 11 pruebas conectadas y 20 recorridos Chromium.
 Antes de continuar se deben confirmar las variables reales de Render, el
 respaldo verificable de Neon, y la autorización explícita para aplicar
 migraciones 002–005 y publicar backend y frontend conjuntamente.
+
+## Recuperación comprobable antes del despliegue
+
+GitHub Actions ensaya `pg_dump --format=custom` de la base **temporal**
+`neurolab_test` usando PostgreSQL 16 y `pg_restore --single-transaction`
+sobre otra base **nueva y temporal** (`neurolab_restore_ci`). La prueba
+compara los conteos de todas las tablas, identificadores de usuarios y
+proyectos sintéticos y las cinco migraciones con sus hashes.
+
+El ensayo se ejecuta únicamente cuando `GITHUB_ACTIONS=true`,
+`NEUROLAB_CI_BACKUP_REHEARSAL=1`, host=localhost/127.0.0.1, puerto 5432
+y base=`neurolab_test`. Rechaza cualquier DSN externo o base distinta.
+El archivo temporal `.dump` se elimina al finalizar. No se sube a GitHub.
+
+**Este ensayo no ha generado un respaldo de los datos reales de Neon.**
+Antes de publicar, con autorización expresa, se debe obtener y comprobar
+un respaldo de **la base real**, guardarlo en una ubicación privada
+fuera del repositorio y validar su restauración en un entorno seguro.
+El plan de recuperación de un fallo posterior a una migración es restaurar
+el respaldo verificado en una instancia aislada y coordinar el retorno
+del backend/frontend a versiones compatibles; no invertir SQL a ciegas.
