@@ -176,8 +176,9 @@ export async function createCNNBackup(projectId:string,report:BrowserReport):Pro
   }finally{model.dispose();}
 }
 
-export async function restoreCNNBackup(projectId:string,file:Blob):Promise<BrowserReport>{
+export async function restoreCNNBackup(projectId:string,file:Blob,expectedRef?:string):Promise<BrowserReport>{
   const {report,artifacts}=await decodeCNNBackup(file,projectId);
+  if(expectedRef&&report.model_ref!==expectedRef)error("El respaldo no pertenece al entrenamiento seleccionado.");
   const existing=await tf.io.listModels();
   if(existing[report.model_ref])error("El modelo ya existe en este navegador; no se reemplazarán sus pesos.");
   const model=await tf.loadLayersModel({load:async()=>artifacts});
