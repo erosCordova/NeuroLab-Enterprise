@@ -40,7 +40,7 @@ def project(client,name='Proyecto CNN'):
 def test_postgresql_and_idempotent_migration(client):
     assert client.get('/api/v1/health').json()['database']=='postgresql'
     with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
-        assert db.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==2
+        assert db.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==3
         assert 'PostgreSQL' in db.execute('SELECT version()').fetchone()[0]
         db.execute((Path(__file__).parent / 'neon_smoke.sql').read_text())
 
