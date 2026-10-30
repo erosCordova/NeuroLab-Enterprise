@@ -86,7 +86,7 @@ export default function RealCNNResults({projectId}:Props) {
       </div>
       <span className="badge">IMPORTACIÓN JSON</span>
     </div>
-    <p className="soft">Importa <strong>metrics.json</strong>, generado por el motor Python de NeuroLab. Los valores del archivo se validan y se conservan en PostgreSQL. También puedes entrenar con TensorFlow.js desde esta página: los pesos quedan en IndexedDB del navegador y no se suben a Neon. Los informes proporcionados por clientes no están certificados por el servidor.</p>
+    <p className="soft">Importa un informe JSON de entrenamiento CNN, generado por el motor Python o exportado desde TensorFlow.js. Los valores del informe se validan y se conservan en PostgreSQL. Importar un JSON del navegador no transfiere sus pesos a otros dispositivos. También puedes entrenar con TensorFlow.js desde esta página: los pesos quedan en IndexedDB del navegador y no se suben a Neon. Los informes proporcionados por clientes no están certificados por el servidor.</p>
     <label className="field">
       <span>Seleccionar informe de un entrenamiento real</span>
       <input type="file" accept=".json,application/json" disabled={busy} aria-label="Importar métricas CNN reales" onChange={event=>{
