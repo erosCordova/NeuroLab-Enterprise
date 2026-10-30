@@ -115,3 +115,29 @@ para considerar terminados los componentes aplazados.
 - Avance global estimado comunicado: 38% (antes 35%). El porcentaje es una
   estimación del producto integral CNN, no la proporción de pruebas aprobadas.
 - Sin base de datos ni entrenamiento real. La Fase 1 integral sigue parcial.
+
+
+## Autorización de PostgreSQL e inicio real de la base de plataforma
+
+El usuario autorizó base de datos si la exige el documento. La sección 14,
+Fase 1, exige PostgreSQL, API, autenticación y migraciones, por lo que se inició
+ese incremento. La restricción anterior de solo frontend queda superada para
+estos componentes; el motor de entrenamiento sigue simulado.
+
+- PostgreSQL 16 y API FastAPI con migración SQL versionada e idempotente.
+- Usuarios, sesiones revocables y proyectos con propietario.
+- Registro/login/logout y protección de proyectos entre usuarios.
+- Persistencia comprobada entre conexiones/clientes; revisión para evitar
+  sobrescribir ediciones y nombres únicos por propietario.
+- Seis pruebas de integración aprobadas contra PostgreSQL real en GitHub Actions:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40986139303
+  Código b56207103414915c8836106aa32723ebc67a1394.
+- No se ejecutó PostgreSQL localmente en el entorno de revisión: no dispone de
+  Docker ni del servidor instalado. La evidencia procede del runner de CI.
+- Docker Compose y guía local preparados. No hay una base o API pública
+  aprovisionada para el usuario. La vista previa sigue usando datos en memoria.
+- Pendiente inmediato: conectar React a autenticación y proyectos de esta API.
+- Fase 1 integral aún parcial; faltan integración UI, permisos colaborativos y
+  el resto de criterios. El entrenamiento real corresponde a la fase posterior.
+- Avance global estimado comunicado: 43% (antes 38%). Es una estimación del
+  producto integral, no un porcentaje de pruebas ni una fase declarada completa.
