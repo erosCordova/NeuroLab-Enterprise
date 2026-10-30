@@ -1,0 +1,33 @@
+name: Preparar dependencia TensorFlow.js sin despliegue
+on:
+  pull_request:
+    paths:
+      - 'apps/web/package.json'
+      - '.github/workflows/tfjs-lock.yml'
+permissions:
+  contents: write
+jobs:
+  actualizar-lock:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Actualizar solo lockfile reproducible
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+        working-directory: apps/web
+      - name: Publicar lockfile solamente en la rama de desarrollo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/web/package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Actualizar lockfile TensorFlow.js [skip ci]"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
