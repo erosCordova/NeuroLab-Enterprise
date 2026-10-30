@@ -63,6 +63,6 @@ test("bloquea esquema incompleto, cache privado y CSP ausente",async()=>{
     {"/api/v1/release":{status:200,body:{commit:"b".repeat(40),protocol:"neurolab-cnn-real-1"},headers:{"cache-control":"private, no-store","x-content-type-options":"nosniff"}}},
   ]){
     const mock=goodFetch(patch);
-    await assert.rejects(runReleaseSmoke(ci,{env,fetcher:mock.fetcher}),/Diagnóstico detenido|política de|protección|mismo commit/);
+    await assert.rejects(runReleaseSmoke(ci,{env,fetcher:mock.fetcher}),/Diagnóstico detenido|política de|protección|mismo commit|commit Git válido/);
   }
 });
