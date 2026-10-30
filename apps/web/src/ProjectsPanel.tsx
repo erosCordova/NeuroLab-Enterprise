@@ -6,18 +6,20 @@ import "./projects.css";
 type Props = {
   projects: Project[];
   activeId: string;
-  onSave: (draft:ProjectDraft,id:string)=>void;
+  onSave: (draft:ProjectDraft,id:string)=>void|Promise<unknown>;
+  persistent?:boolean;
   onOpen: (id:string)=>void;
 };
 const emptyDraft = ():ProjectDraft => ({name:"",description:"",status:"Activo",tags:""});
 
-export default function ProjectsPanel({projects,activeId,onSave,onOpen}:Props) {
+export default function ProjectsPanel({projects,activeId,onSave,onOpen,persistent=false}:Props) {
   const [search,setSearch]=useState("");
   const [status,setStatus]=useState("Todos");
   const [editing,setEditing]=useState<string|null>(null);
   const [draft,setDraft]=useState<ProjectDraft>(emptyDraft);
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
+  const [saving,setSaving]=useState(false);
   const visible=filterProjects(projects,search,status);
 
   function reset() {setEditing(null);setDraft(emptyDraft());setError("");}
@@ -33,16 +35,17 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen}:Props) {
       <div className="panel-head"><div><div className="eyebrow">CONTEXTO DEL EXPERIMENTO</div>
         <h2>{editing?"Editar proyecto":"Crear proyecto CNN"}</h2>
         <p className="muted">Define el problema y organiza tus experimentos de imágenes.</p></div>
-        <span className="badge">Sesión en memoria</span></div>
-      <form onSubmit={event=>{
-        event.preventDefault();setError("");setNotice("");
+        <span className="badge">{persistent?"Proyectos en PostgreSQL":"Sesión en memoria"}</span></div>
+      <form onSubmit={async event=>{
+        event.preventDefault();setError("");setNotice("");setSaving(true);
         try {
-          onSave(draft,editing??crypto.randomUUID());
+          await onSave(draft,editing??crypto.randomUUID());
           setNotice(editing?"Proyecto actualizado. Sus datasets y ejecuciones se conservan.":"Proyecto creado.");
           reset();
         } catch(cause) {setError(cause instanceof Error?cause.message:"No se pudo guardar el proyecto.");}
+        finally {setSaving(false);}
       }}>
-        <div className="two-fields">
+        <fieldset disabled={saving} className="cnn-mode-fields"><div className="two-fields">
           <label className="field" htmlFor="project-name"><span>{editing?"Nombre del proyecto":"Nuevo proyecto CNN"}</span>
             <input id="project-name" value={draft.name} maxLength={80} required onChange={event=>setDraft({...draft,name:event.target.value})}/></label>
           <label className="field"><span>Estado del proyecto</span><select aria-label="Estado del proyecto" value={draft.status} onChange={event=>setDraft({...draft,status:event.target.value})}>
@@ -59,7 +62,7 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen}:Props) {
         {error&&<p className="error" role="alert">{error}</p>}
         <div className="actions"><button className="primary">{editing?"Guardar cambios":"Crear proyecto"}</button>
           {editing&&<button type="button" className="secondary" onClick={reset}>Cancelar edición</button>}</div>
-        <p role="status" className="feedback">{notice}</p>
+        </fieldset><p role="status" className="feedback">{saving?"Guardando proyecto…":notice}</p>
       </form>
     </section>
     <section className="project-library" aria-label="Listado de proyectos">

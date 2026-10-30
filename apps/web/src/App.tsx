@@ -3,7 +3,7 @@ import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
 import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
-import type {Project} from "./projects";
+import type {Project,ProjectDraft} from "./projects";
 import AutoCNNPanel from "./AutoCNNPanel";
 import DatasetTransfer from "./DatasetTransfer";
 import {recommendCNN} from "./adaptiveTraining";
@@ -78,10 +78,10 @@ function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
   </div>;
 }
 
-export default function App() {
+export default function App({initialProjects,onPersistProject}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>}={}) {
   const [page,setPage]=useState<Page>("Dashboard");
-  const [projects,setProjects]=useState<Project[]>([{id:"CNN-001",name:"Clasificación de imágenes",description:"Explora la clasificación de imágenes con una arquitectura CNN.",status:"Activo",tags:["CNN"]}]);
-  const [projectId,setProjectId]=useState("CNN-001");
+  const [projects,setProjects]=useState<Project[]>(initialProjects??[{id:"CNN-001",name:"Clasificación de imágenes",description:"Explora la clasificación de imágenes con una arquitectura CNN.",status:"Activo",tags:["CNN"]}]);
+  const [projectId,setProjectId]=useState(initialProjects?.[0]?.id??"CNN-001");
   const [configs,setConfigs]=useState<Record<string,Config>>({});
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
@@ -290,7 +290,7 @@ export default function App() {
       <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · DEMO</span></header>
       <div className="content">
         <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
-        <div className="notice"><strong>Alcance actual:</strong> las imágenes se cargan y validan realmente en el navegador. El entrenamiento, sus métricas y las fichas de modelos son de demostración. Recargar elimina la sesión.</div>
+        <div className="notice"><strong>Alcance actual:</strong> las imágenes se cargan y validan realmente en el navegador. El entrenamiento, sus métricas y las fichas de modelos son de demostración. {onPersistProject?"Los proyectos se guardan en PostgreSQL; imágenes, arquitecturas y simulaciones siguen en memoria.":"Recargar elimina la sesión."}</div>
         <label className="field cnn-project no-print"><span>Proyecto activo</span><select aria-label="Proyecto activo" value={projectId} onChange={event=>changeProject(event.target.value)}>{projects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <p className="error" role="alert">{error}</p><p className="feedback" role="status">{message}</p>
 
@@ -300,7 +300,11 @@ export default function App() {
         </>}
 
         {page==="Proyectos"&&<ProjectsPanel projects={projects} activeId={projectId}
-          onSave={(draft,id)=>setProjects(saveProject(projects,draft,id))}
+          persistent={Boolean(onPersistProject)} onSave={async(draft,id)=>{
+            const validated=saveProject(projects,draft,id);
+            if(onPersistProject){const stored=await onPersistProject(draft,id);setProjects(current=>current.some(item=>item.id===stored.id)?current.map(item=>item.id===stored.id?stored:item):[...current,stored]);}
+            else setProjects(validated);
+          }}
           onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>

@@ -2,6 +2,7 @@ export const projectStatuses = ["Activo", "En preparación", "Archivado"] as con
 export type ProjectStatus = typeof projectStatuses[number];
 export type Project = {
   id: string;
+  revision?: number;
   name: string;
   description: string;
   status: ProjectStatus;

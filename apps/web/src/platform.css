@@ -1,0 +1,6 @@
+.platform-auth{min-height:100vh;background:#f1f5fb;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:7vw;box-sizing:border-box}
+.platform-story{max-width:540px}.platform-story h1{font-size:clamp(2rem,4vw,3.5rem);line-height:1.1;letter-spacing:-.04em;margin:22px 0;color:#233354}
+.platform-story>p{font-size:1.1rem;line-height:1.7;color:#52637f}.platform-note{padding:20px;border-left:3px solid #536bce;background:#e7edf9;border-radius:0 12px 12px 0;color:#445878;line-height:1.6;margin-top:30px}
+.platform-form{max-width:440px;width:100%;box-sizing:border-box;justify-self:center}.platform-form h2{font-size:1.6rem;margin-top:20px}.platform-form .field{margin-bottom:18px}
+.platform-loading{padding:60px;text-align:center}.platform-onboarding{max-width:1000px;margin:40px auto;padding:24px}.account-strip{display:flex;align-items:center;justify-content:flex-end;gap:18px;padding:10px 24px;background:#e9eefb;color:#405577;border-bottom:1px solid #d9e1f0}
+@media(max-width:700px){.platform-auth{grid-template-columns:minmax(0,1fr);gap:24px;padding:24px}.platform-story h1{font-size:2rem}.platform-note{display:none}.account-strip{flex-wrap:wrap;font-size:.8rem}.platform-onboarding{padding:16px}}
