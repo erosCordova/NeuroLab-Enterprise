@@ -62,11 +62,16 @@ Tras publicar: esperar READY en Vercel y live en Render, comprobar HTTPS,
 el despliegue operativo. Las imágenes, arquitecturas y simulaciones siguen en
 memoria y el entrenamiento continúa simulado, exclusivamente CNN.
 
-## Estado de la publicación
+## Estado de la publicación (30 de octubre de 2026)
 
-El proyecto Vercel está creado, sin despliegue. La API Render todavía no está
-creada: la conexión requiere confirmar My Workspace (tea-daiqrkmk1f9s7399cle0)
-como destino antes de operar. La vista privada de Sites sigue en modo demo.
+- Backend Render creado en `My Workspace`, desplegado y marcado `live` en https://neurolab-enterprise-api.onrender.com.
+- Frontend Vercel publicado con estado `READY` en https://neurolab-enterprise-xi.vercel.app. El commit publicado es `df162826` de la rama `fix/validacion-frontend-cnn`.
+- Neon tiene la migración 001 aplicada y las cuatro tablas de la plataforma. No hay usuarios ni proyectos todavía.
+- Las pruebas CI de frontend y API/PostgreSQL de ese commit terminaron en éxito.
+- Pendiente la prueba HTTP externa /api/v1/health y el flujo registro → guardar → recargar en el dominio de producción; `READY` y `live` no sustituyen esta comprobación.
+- Vercel tiene SSO de protección activo y puede solicitar acceso. El build alertó de cuatro vulnerabilidades npm de severidad alta, pendientes de investigar.
+- El entrenamiento CNN sigue simulado. No se han incorporado pesos entrenados ni registros persistentes de datasets/ejecuciones.
+
 
 Referencias oficiales consultadas el 30 de octubre de 2026:
 
