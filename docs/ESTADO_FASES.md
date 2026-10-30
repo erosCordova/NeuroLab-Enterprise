@@ -141,3 +141,24 @@ estos componentes; el motor de entrenamiento sigue simulado.
   el resto de criterios. El entrenamiento real corresponde a la fase posterior.
 - Avance global estimado comunicado: 43% (antes 38%). Es una estimación del
   producto integral, no un porcentaje de pruebas ni una fase declarada completa.
+
+
+## Integración React → API → PostgreSQL
+
+- Registro/login, recuperación de sesión y logout desde React.
+- Creación y edición de proyectos confirmadas por el servidor; revisión optimista.
+- Persistencia comprobada tras recargar y cerrar/abrir sesión; aislamiento de cuentas.
+- Sin falsos guardados ni fallback silencioso a memoria ante fallos de la API.
+- Modo conectado explícito con VITE_USE_API=true. Sesiones mediante cookies HttpOnly,
+  sin tokens en localStorage. Proxy Vite local y guía de despliegue del mismo origen.
+- Persisten cuentas, sesiones y proyectos; imágenes, arquitecturas y experimentos
+  permanecen en memoria. No hay entrenamiento real aún.
+- Código 753dace60f30ebdbbe378411b2e131088fe0bf07 validado:
+  6 pruebas API + 2 E2E reales PostgreSQL aprobadas en
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40987026295
+  43 unitarias, build y 18 E2E demo aprobadas en
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40987026313
+- Vista privada aún en demo: no hay API pública ni PostgreSQL aprovisionado para
+  el usuario. La integración está probada en CI y preparada para activación local.
+- Avance global estimado: 48% (antes 43%). La Fase 1 sigue parcial; faltan roles
+  colaborativos y completar los demás criterios. No se declara finalizado el MVP.

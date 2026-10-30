@@ -4,10 +4,14 @@ Frontend para diseñar arquitecturas CNN, cargar imágenes por clase, explorar
 particiones y observar simulaciones con gráficos de precisión y pérdida.
 Automático es el modo predeterminado; Manual permite editar la configuración.
 
-**Estado:** frontend sin base de datos. Las imágenes y su preprocesamiento son
+**Estado:** frontend demo y modo conectado opcional a FastAPI/PostgreSQL.
+La API persiste cuentas, sesiones y proyectos. Consulta
+[la conexión React/API](docs/CONEXION_REACT_API.md) para activarla.
+Las imágenes y su preprocesamiento son
 reales; el entrenamiento y las métricas son simulados. Dropout y L2 se conservan
 como configuración y no modifican esas curvas. No se generan pesos entrenados.
-Los datos de la sesión se pierden al recargar.
+En demo los datos se pierden al recargar. En modo conectado se conservan
+los proyectos; imágenes, arquitecturas y simulaciones todavía son de sesión.
 
 ## Ejecución local
 
