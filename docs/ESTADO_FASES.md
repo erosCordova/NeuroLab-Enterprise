@@ -252,3 +252,15 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Validación completa aprobada en el commit `64f9817951dc35052fd653f1f5761b18b7fb601c`: frontend 19/19 escenarios Chromium y build; API 30/30 pruebas Python y 9 escenarios conectados/hosting; motor TensorFlow/Keras independiente también aprobado. Referencias: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41000653594 y https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41000653591 y https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41000653578.
 - **Avance global estimado: 77%** (anterior 74%, incremento +3 puntos por comparación y exportación CNN real verificadas). La prueba usa datos sintéticos y no valida capacidad de generalización predictiva.
 - Ningún despliegue nuevo autorizado.
+
+## Incremento verificado: Dashboard y reportes profesionales CNN reales
+
+- Se conectaron Dashboard y Reportes a los informes y fichas de modelos reales de PostgreSQL.
+- Indicadores de entrenamientos, modelos, datasets, inventario y mayor precisión de prueba declarada; no se atribuye superioridad científica.
+- Visualización de los resultados más recientes, tabla por experimento, filtros de motor, descargas CSV/JSON y diálogo de impresión del navegador.
+- Los reportes de simulaciones permanecen separados y rotulados como datos didácticos.
+- Las exportaciones no incluyen imágenes ni datos binarios de pesos; las hojas CSV neutralizan fórmulas.
+- Los datos presentados están limitados a los últimos 50 entrenamientos y 50 modelos; la interfaz advierte cuando pueden no ser exhaustivos.
+- Verificación del bloque en GitHub Actions: frontend y Chromium https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571786 y API/PostgreSQL https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571595 (ambos exitosos); motor CNN https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571577 (exitoso).
+- Avance global estimado: **80%** (anterior 77%), por integración y validación de informes profesionales CNN reales.
+- Continúa sin desplegarse la rama de desarrollo; Vercel conserva el despliegue anterior hasta la autorización explícita.
