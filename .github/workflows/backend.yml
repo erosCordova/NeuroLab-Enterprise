@@ -41,7 +41,7 @@ jobs:
       - run: python -m pytest -q --tb=short --ignore=tests/test_real_cnn.py
 
       - name: Rehearse production baseline migration 001 to 005 (isolated database)
-        run: python tests/rehearse_upgrade.py
+        run: PYTHONPATH=. python tests/rehearse_upgrade.py
 
       - uses: actions/setup-node@v4
         with:
