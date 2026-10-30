@@ -198,3 +198,14 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Proyecto neurolab-enterprise creado en el equipo EROSSS de Vercel, sin publicar.
 - Render pendiente de confirmar My Workspace; no hay servicio creado ni se
   declara operativo el despliegue. Avance global estimado conservado: 50%.
+
+## Incremento comprobado: despliegue Render + Vercel (30 de octubre de 2026)
+
+- Render: servicio `neurolab-enterprise-api` creado en My Workspace, plan Free; deploy `dep-dbi08a5g1s2s73dj7ok0` marcado `live`, commit `df162826`. URL: https://neurolab-enterprise-api.onrender.com.
+- Vercel: proyecto `neurolab-enterprise` compilado y despliegue `dpl_6kV5FhqWpFkDPCQ7WUhBf5dyrJjK` con estado `READY` y destino `production`, desde `fix/validacion-frontend-cnn` y commit `df162826`. URL: https://neurolab-enterprise-xi.vercel.app.
+- Neon: base `neurolab`, tablas `users`, `sessions`, `projects` y `schema_migrations`; 1 migración aplicada, 0 usuarios y 0 proyectos al comprobar. Sin datos de producción introducidos por esta revisión.
+- CI del commit publicado: frontend y API/PostgreSQL correctos, https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40992764258 y https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40992764285.
+- Advertencia de seguridad: el build npm reportó 4 vulnerabilidades de severidad alta en dependencias; pendiente de investigación y corrección.
+- La publicación no se verificó aún navegando desde un cliente externo: la lectura HTTP del health y de la página no estuvo accesible en el entorno de revisión. No se afirma éxito E2E real en producción. La protección SSO del proyecto Vercel puede requerir inicio de sesión.
+- Continúan pendientes: entrenamientos CNN reales en Python, persistencia de datasets, arquitecturas y resultados, monitorización y verificación de uso en producción. La Fase 1 sigue parcial.
+- **Avance global estimado: 55%** (antes 50%) por la publicación comprobada de ambos componentes. Es una estimación de alcance, no porcentaje de pruebas ni cierre de fase.
