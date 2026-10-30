@@ -5,7 +5,7 @@
  */
 import * as tf from "@tensorflow/tfjs";
 import type {BrowserReport} from "./browserCNN";
-import {buildBrowserCNN} from "./browserCNN";
+import {buildBrowserCNN} from "./browserCNN.ts";
 import {summary} from "./cnn.ts";
 import {prepareRealReport} from "./realRuns.ts";
 
