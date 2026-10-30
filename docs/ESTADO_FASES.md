@@ -377,3 +377,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **20 pruebas Chromium** aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009630858. **3 pruebas Python/Keras** aprobadas en el commit anterior: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009521555.
 - **Avance global estimado: 96%** (anterior 95%; +1 punto por comprobación efectiva de respaldo y restauración en CI).
 - El respaldo REAL de Neon sigue pendiente de autorización. No hay desplegados nuevos ni migraciones remotas aplicadas.
+
+## Barrera final de migraciones no autorizadas (en validación)
+
+- La API Render requiere una confirmación explícita y la lista exacta de migraciones pendientes antes de aplicar modificaciones al esquema de Neon.
+- El control se ejecuta dentro de `migrate()`, por lo que también protege invocaciones directas cuando `RENDER=true`.
+- Cuando el esquema ya está actualizado, los reinicios de Render no necesitan mantener el permiso de migración.
+- Ensayo automatizado 001→005 con intento denegado, sin modificaciones, seguido de autorización exacta y aplicación sobre PostgreSQL efímero.
+- Avance base: 96% hasta que las pruebas CI finalicen correctamente. Vercel, Render y Neon siguen sin modificación.

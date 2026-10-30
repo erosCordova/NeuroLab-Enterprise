@@ -57,7 +57,32 @@ def main():
         (2,"real_cnn_runs"),(3,"browser_cnn"),(4,"real_cnn_models"),(5,"auth_attempt_windows")
     ]]
     assert before["applied"] == ["001_platform.sql"] and before["pending"] == expected, before
-    migrate(test_url)
+    # Simula el arranque de Render SOBRE LA BASE EFÍMERA del ensayo:
+    # sin dos confirmaciones exactas debe rechazar antes de tocar tablas.
+    from app.migration_release_gate import MigrationApprovalError, APPROVAL_VALUE
+    import os
+    saved = {key: os.environ.get(key) for key in (
+        "RENDER", "NEUROLAB_MIGRATION_RELEASE", "NEUROLAB_EXPECTED_MIGRATIONS"
+    )}
+    try:
+        os.environ["RENDER"] = "true"
+        os.environ.pop("NEUROLAB_MIGRATION_RELEASE", None)
+        os.environ.pop("NEUROLAB_EXPECTED_MIGRATIONS", None)
+        try:
+            migrate(test_url)
+            raise AssertionError("Producción migró sin autorización.")
+        except MigrationApprovalError:
+            pass
+        assert migration_plan(test_url) == before
+        os.environ["NEUROLAB_MIGRATION_RELEASE"] = APPROVAL_VALUE
+        os.environ["NEUROLAB_EXPECTED_MIGRATIONS"] = ",".join(expected)
+        migrate(test_url)
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
     after = migration_plan(test_url)
     assert after["current"] and len(after["applied"]) == 5 and not after["pending"], after
     with psycopg.connect(test_url) as conn:

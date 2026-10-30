@@ -163,3 +163,32 @@ de las cinco migraciones. La prueba confirmó que el respaldo temporal se elimin
 el procedimiento sobre datos sintéticos de CI. Antes de autorizar producción
 quedan el respaldo real verificable, las variables seguras de Render,
 las cuatro migraciones pendientes y las pruebas sobre los servicios publicados.
+
+
+## Protección contra migraciones automáticas no autorizadas (candidata)
+
+Se añadió una **barrera adicional dentro de \`app.migrate\`**, no solo en el
+script de arranque: cuando \`RENDER=true\`, se consulta primero el historial
+de Neon en modo **solo lectura**. Si está actualizado, el servicio puede
+iniciarse sin aprobación especial. Si existen migraciones pendientes,
+la actualización **se rechaza antes de cualquier escritura**, salvo que se
+cumplan ambas condiciones de forma exacta:
+
+- \`NEUROLAB_MIGRATION_RELEASE=aplicar-solo-migraciones-revisadas\`.
+- \`NEUROLAB_EXPECTED_MIGRATIONS\` igual a la lista **completa y ordenada**
+  de migraciones pendientes (separadas por comas, sin espacios).
+
+La lista pendiente actualmente identificada es:
+\`002_real_cnn_runs.sql,003_browser_cnn.sql,004_real_cnn_models.sql,005_auth_attempt_windows.sql\`.
+
+**Estos parámetros NO constituyen por sí solos un respaldo ni una
+autorización del propietario.** Solo se configuran durante el procedimiento
+de publicación expresamente aprobado, **después** de obtener un respaldo real
+verificado de Neon y revisar las migraciones. Después del despliegue se
+retiran ambos parámetros de Render, se confirma \`/api/v1/ready\` y se
+verifica que el servicio reinicia sin permisos para nuevas migraciones.
+
+Si la base cambia, si el historial tiene un hash distinto o si hay
+migraciones nuevas no incluidas en la lista revisada, se rechaza la
+operación. Un fallo seguro del arranque puede causar indisponibilidad;
+no sustituye una estrategia de rollback con respaldos validados.

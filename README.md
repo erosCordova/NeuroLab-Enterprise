@@ -97,3 +97,10 @@ La lista de requisitos antes de publicar se encuentra en
 ## Preparación de migraciones sin tocar Neon
 
 El estado real de Neon confirmó solo `001_platform.sql` aplicada. Hay cuatro migraciones pendientes (`002`–`005`). El módulo `app.migration_plan` ofrece una inspección **de solo lectura**, y GitHub Actions ensaya el salto desde 001 con datos sintéticos en PostgreSQL aislado. Consulta [la puerta de publicación](docs/PUERTA_PUBLICACION_CONTROLADA.md) antes de aprobar cualquier despliegue.
+
+### Prevención de migraciones inesperadas
+
+La rama candidata bloquea las migraciones automáticas en Render cuando existen
+versiones pendientes, salvo autorización de despliegue explícita y coincidencia
+exacta con el listado de migraciones revisadas. Ver
+[la puerta de publicación](docs/PUERTA_PUBLICACION_CONTROLADA.md).
