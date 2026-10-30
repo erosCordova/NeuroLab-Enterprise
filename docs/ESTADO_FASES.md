@@ -265,7 +265,7 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Avance global estimado: **80%** (anterior 77%), por integración y validación de informes profesionales CNN reales.
 - Continúa sin desplegarse la rama de desarrollo; Vercel conserva el despliegue anterior hasta la autorización explícita.
 
-## Bloque UX y accesibilidad (pendiente de validación)
+## Bloque UX y accesibilidad (verificado)
 
 - Navegación accesible con enlace para saltar al contenido y foco gestionado al cambiar de sección.
 - Menú móvil plegable con estado anunciado y navegación accesible desde teclado.
@@ -274,3 +274,7 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Mejoras responsivas, contraste, tamaños de botones y estado visual de foco; acceso y registro más legibles.
 - Tests de navegación móvil, enlace de salto, foco, estado activo, título de página y control de desbordamiento.
 - No modifica la API ni las migraciones. Sin despliegue a Vercel ni Render.
+- Validación de commit `3ebe6525894d6353a2233c510fed09d87ac3f44e`: frontend **20/20 escenarios Chromium** y compilación aprobados: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002266848.
+- API **30 pruebas Python** aprobadas, integración de plataforma **5 pruebas** y alojamiento conectado **6 pruebas** aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002266809.
+- Motor independiente TensorFlow/Keras aprobado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002266817.
+- **Avance global estimado: 83%** (anterior 80%, +3 puntos por UX accesible/responsiva verificada). No significa que la versión pública haya sido actualizada.
