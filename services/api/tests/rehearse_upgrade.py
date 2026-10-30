@@ -60,7 +60,6 @@ def main():
     # Simula el arranque de Render SOBRE LA BASE EFÍMERA del ensayo:
     # sin dos confirmaciones exactas debe rechazar antes de tocar tablas.
     from app.migration_release_gate import MigrationApprovalError, APPROVAL_VALUE
-    import os
     saved = {key: os.environ.get(key) for key in (
         "RENDER", "NEUROLAB_MIGRATION_RELEASE", "NEUROLAB_EXPECTED_MIGRATIONS"
     )}
