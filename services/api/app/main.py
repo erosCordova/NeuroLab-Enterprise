@@ -5,6 +5,7 @@ import re
 import secrets
 import unicodedata
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -13,6 +14,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -100,7 +102,12 @@ class ProjectUpdate(ProjectInput):
 
 def create_app():
     app = FastAPI(title='NeuroLab CNN API', version='0.1.0')
-    origins = [value.strip() for value in os.getenv('APP_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',') if value.strip()]
+    # Render supplies this exact public origin. Never derive trust from Host headers.
+    render_origin = os.getenv('RENDER_EXTERNAL_URL', '').rstrip('/')
+    defaults = render_origin or 'http://localhost:5173,http://127.0.0.1:5173'
+    origins = [value.strip().rstrip('/') for value in os.getenv('APP_ORIGINS', defaults).split(',') if value.strip()]
+    if render_origin and render_origin not in origins:
+        origins.append(render_origin)
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=True, allow_methods=['GET','POST','PUT'], allow_headers=['Content-Type'])
 
     @app.middleware('http')
@@ -187,6 +194,15 @@ def create_app():
         except psycopg.errors.UniqueViolation:
             db.rollback()
             raise HTTPException(409,'Ya existe un proyecto con ese nombre.')
+
+    # Optional production bundle: React and /api share one HTTPS origin and cookie.
+    # Register last so API routes retain their authentication and JSON responses.
+    frontend = os.getenv('FRONTEND_DIST')
+    if frontend:
+        directory = Path(frontend).resolve()
+        if not (directory / 'index.html').is_file():
+            raise RuntimeError('FRONTEND_DIST must contain the compiled frontend')
+        app.mount('/', StaticFiles(directory=str(directory), html=True), name='frontend')
 
     return app
 

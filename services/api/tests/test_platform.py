@@ -67,6 +67,13 @@ def test_duplicate_email_and_validation(client):
     assert client.post('/api/v1/projects',json={'name':'   '}).status_code==422
 
 
+def test_production_cookie_is_secure_and_httponly(client, monkeypatch):
+    monkeypatch.setenv('COOKIE_SECURE', 'true')
+    _, response = register(client)
+    cookie = response.headers['set-cookie'].lower()
+    assert 'secure' in cookie and 'httponly' in cookie and 'samesite=lax' in cookie
+
+
 def test_projects_persist_after_new_client(client):
     register(client)
     saved=project(client)

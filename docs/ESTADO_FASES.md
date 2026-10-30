@@ -177,3 +177,13 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Pendiente: desplegar API, conectar vista previa y verificar el flujo sobre Neon.
   El entrenamiento continúa simulado. La Fase 1 sigue parcial.
 - Avance global estimado: 50% (antes 48%), por la infraestructura real verificada.
+
+## Preparación del despliegue de un solo origen
+
+- Dockerfile.render compila React conectado y lo sirve con la API FastAPI.
+- Arranque con migraciones previas, PORT configurable y usuario sin privilegios.
+- Origen Render explícito para la sesión; las rutas API conservan su protección.
+- Pruebas de hosting y verificación del contenedor de producción añadidas a CI.
+- Referencias y configuración en DESPLIEGUE_RENDER.md. No se ha creado un servicio:
+  Render requiere confirmar el workspace, que todavía no está seleccionado.
+- La vista privada permanece en demo; no se declara conexión pública con Neon.

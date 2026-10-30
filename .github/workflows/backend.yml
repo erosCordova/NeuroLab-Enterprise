@@ -8,7 +8,7 @@ permissions:
 jobs:
   postgres-api:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     services:
       postgres:
         image: postgres:16-alpine
@@ -35,7 +35,7 @@ jobs:
           cache: pip
           cache-dependency-path: services/api/requirements.txt
       - run: pip install -r requirements.txt
-      - run: python -m pytest -q
+      - run: python -m pytest -q --tb=short
 
       - uses: actions/setup-node@v4
         with:
@@ -48,3 +48,26 @@ jobs:
         working-directory: apps/web
       - run: npm run test:platform
         working-directory: apps/web
+
+      - name: Build production image with connected React
+        run: docker build -f Dockerfile.render -t neurolab-hosted-ci .
+        working-directory: .
+      - name: Start production image on isolated CI PostgreSQL
+        run: >-
+          docker run -d --name neurolab-hosted-ci --network host
+          -e DATABASE_URL="$TEST_DATABASE_URL"
+          -e DATABASE_URL_UNPOOLED="$TEST_DATABASE_URL"
+          -e PORT=4189 -e COOKIE_SECURE=false
+          -e APP_ORIGINS=http://127.0.0.1:4189
+          neurolab-hosted-ci
+      - name: Wait for database readiness
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/health
+      - name: Verify production bundle, login and project persistence
+        run: npx playwright test --config playwright.hosted.config.mjs
+        working-directory: apps/web
+      - name: Inspect failed image
+        if: failure()
+        run: docker logs neurolab-hosted-ci
+      - name: Stop isolated CI image
+        if: always()
+        run: docker rm -f neurolab-hosted-ci || true
