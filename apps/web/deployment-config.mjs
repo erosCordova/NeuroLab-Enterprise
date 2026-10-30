@@ -7,7 +7,7 @@ export function createDeploymentConfig(value) {
   }
   return {
     framework: 'vite',
-    buildCommand: 'VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build',
+    buildCommand: 'VITE_RELEASE_SHA=$VERCEL_GIT_COMMIT_SHA VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build',
     outputDirectory: 'dist',
     rewrites: [{source: '/api/:path*', destination: `${url.origin}/api/:path*`}],
     headers: [

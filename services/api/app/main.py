@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field, field_validator
 from app.real_runs import RealCNNImport
 from app.auth_throttle import check_attempt, clear_attempts
 from app.readiness import schema_is_ready
+from app.release_info import get_release_info
 
 
 def normalize(value):
@@ -200,6 +201,11 @@ def create_app():
             raise HTTPException(503, 'El laboratorio aún no está preparado.')
         return {'status':'ready'}
 
+
+    @app.get('/api/v1/release')
+    def release():
+        # Exponer solo un identificador de versión pública.
+        return get_release_info()
 
     @app.post('/api/v1/auth/register', status_code=201)
     def register(body:Registration, response:Response, db=Depends(database)):

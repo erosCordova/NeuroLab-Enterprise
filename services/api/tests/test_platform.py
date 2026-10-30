@@ -226,3 +226,14 @@ def test_readiness_denies_missing_schema_without_leaking_details():
     assert result.status_code==503
     assert result.json()=={'detail':'El laboratorio aún no está preparado.'}
     assert 'schema' not in result.text and 'password' not in result.text
+
+
+def test_release_fingerprint_is_safe_and_never_cached(client, monkeypatch):
+    sha = "a" * 40
+    monkeypatch.setenv("RENDER_GIT_COMMIT", sha)
+    response = client.get("/api/v1/release")
+    assert response.status_code == 200
+    assert response.json() == {"commit": sha, "protocol": "neurolab-cnn-real-1"}
+    assert response.headers["Cache-Control"] == "private, no-store"
+    monkeypatch.setenv("RENDER_GIT_COMMIT", "invalid-secret")
+    assert client.get("/api/v1/release").json()["commit"] is None

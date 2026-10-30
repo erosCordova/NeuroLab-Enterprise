@@ -401,3 +401,10 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Frontend/Chromium **20 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086843; CNN Keras **3 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41011086833.
 - **Avance global estimado: 98%** (anterior 97%, +1 punto por diagnóstico reproducible y validación de requisitos de publicación).
 - Pendiente para producción: respaldo real verificado de Neon, variables reales Render, autorización de migraciones 002–005, despliegue controlado y comprobaciones del modelo CNN en el dominio público.
+
+## Control de coincidencia entre las versiones de frontend y backend
+
+- Integrados identificadores públicos de commit en HTML y API, sin credenciales.
+- El diagnóstico sin autenticar comprueba coincidencia exacta y protocolo.
+- CI ensaya el despliegue conjunto con el mismo SHA, incluyendo incompatibilidades.
+- Se mantiene avance 98% hasta publicar y validar producción. Ningún despliegue nuevo.

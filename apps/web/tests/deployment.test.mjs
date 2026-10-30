@@ -14,6 +14,7 @@ test('Despliegue: conserva /api, activa modo conectado y evita caché de cuentas
   const config = createDeploymentConfig('https://example.onrender.com/');
   assert.equal(config.rewrites[0].destination, 'https://example.onrender.com/api/:path*');
   assert.match(config.buildCommand, /VITE_USE_API=true/);
+  assert.match(config.buildCommand, /VITE_RELEASE_SHA=\$VERCEL_GIT_COMMIT_SHA/);
   assert.equal(config.headers[0].headers[0].value, 'private, no-store');
 });
 

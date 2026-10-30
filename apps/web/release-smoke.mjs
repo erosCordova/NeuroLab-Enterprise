@@ -66,6 +66,10 @@ export async function runReleaseSmoke(input, {
       !/src=["']\/assets\/[^"']+\.js["']/i.test(html)) {
     throw new Error("La portada no contiene el bundle de producción de NeuroLab.");
   }
+  const frontendCommit=html.match(/<meta\s+name=["']neurolab-release["']\s+content=["']([a-f0-9]{40})["']\s*\/?>/i)?.[1];
+  if (!frontendCommit) {
+    throw new Error("El frontend no identifica un commit Git válido.");
+  }
   const policy=home.headers.get("content-security-policy-report-only") || "";
   if (!policy.includes("script-src 'self'") ||
       !policy.includes("frame-ancestors 'none'")) {
@@ -80,6 +84,11 @@ export async function runReleaseSmoke(input, {
       health?.training!=="browser-tensorflowjs (not server)") {
     throw new Error("Los datos de salud de la API no corresponden al backend CNN esperado.");
   }
+  const release=await getJson(get,origin,"/api/v1/release",200);
+  if (release?.protocol!=="neurolab-cnn-real-1" ||
+      release?.commit!==frontendCommit) {
+    throw new Error("Frontend y Render no corresponden al mismo commit revisado.");
+  }
   for (const path of ["/api/v1/auth/me","/api/v1/projects"]) {
     const denied=await getJson(get,origin,path,401);
     if (typeof denied?.detail!=="string") {
@@ -90,8 +99,8 @@ export async function runReleaseSmoke(input, {
     signal:AbortSignal.timeout(15000)});
   requireStatus(envFile,404,"/.env");
   return {
-    ready:true,read_only:true,authenticated:false,checks:6,
-    findings:["frontend","csp-report-only","schema","api","sesiones-sin-autenticar","archivos-protegidos"]
+    ready:true,read_only:true,authenticated:false,checks:7,
+    findings:["frontend","csp-report-only","schema","api","commit-conjunto","sesiones-sin-autenticar","archivos-protegidos"]
   };
 }
 

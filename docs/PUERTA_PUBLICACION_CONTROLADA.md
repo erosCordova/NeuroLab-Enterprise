@@ -256,3 +256,16 @@ los controles de origen permitido y compatibilidad con Git Bash Windows.
 Se mantiene el 98% estimado y se prohíbe cerrar el proyecto al 100%
 sin comprobar respaldo real de Neon, configuración de Render,
 aplicación autorizada de las migraciones y funcionamiento de producción.
+
+## Coincidencia obligatoria de versiones Vercel y Render
+
+La versión candidata incorpora el identificador Git en el HTML de Vercel
+y lo expone desde FastAPI mediante `GET /api/v1/release`, sin secretos.
+El diagnóstico sin escrituras rechaza que ambas aplicaciones ejecuten
+**commits diferentes**, que alguno falte o que el protocolo sea incompatible.
+
+Vercel inyecta `VERCEL_GIT_COMMIT_SHA` como `VITE_RELEASE_SHA` en el build.
+Render proporciona `RENDER_GIT_COMMIT`. En CI ambos usan el mismo `GITHUB_SHA`.
+Para publicar debe utilizarse el **mismo commit revisado** en ambos servicios.
+Si una plataforma no proporciona el identificador, el diagnóstico falla
+de forma segura. Esto no sustituye los ensayos de CNN con datos reales.
