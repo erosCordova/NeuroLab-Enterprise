@@ -5,6 +5,7 @@ import BrowserCNNTrainer from "./BrowserCNNTrainer";
 import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
 import RealEvaluationPanel from "./RealEvaluationPanel";
+import ProjectCNNReport from "./ProjectCNNReport";
 import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
 import type {Project,ProjectDraft} from "./projects";
@@ -30,7 +31,7 @@ const pages: Page[] = ["Dashboard","Proyectos","Diseñador CNN","Datasets","Entr
 
 
 const pageDescriptions:Record<Page,string>={
-  Dashboard:"El estado de tus proyectos, imágenes y experimentos en un solo lugar.",
+  Dashboard:"Consulta indicadores CNN reales y el estado de tus proyectos.",
   Proyectos:"Organiza tus iniciativas de clasificación de imágenes.",
   "Diseñador CNN":"Construye una arquitectura CNN válida para entrenar o simular.",
   Datasets:"Carga, valida y explora las imágenes que utilizará tu proyecto.",
@@ -38,7 +39,7 @@ const pageDescriptions:Record<Page,string>={
   Evaluación:"Compara métricas de CNN reales y revisa simulaciones por separado.",
   Modelos:"Conserva versiones y revisa las fichas de cada experimento.",
   Fundamentos:"Comprende cada operación de una red convolucional.",
-  Reportes:"Reúne la información del proyecto y prepara tus exportaciones.",
+  Reportes:"Consulta métricas CNN reales y exporta informes profesionales.",
   Administración:"Gestiona usuarios de ejemplo y los límites de la cola."
 };
 
@@ -300,6 +301,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
         <p className="error" role="alert">{error}</p><p className="feedback" role="status">{message}</p>
 
         {page==="Dashboard"&&<>
+          {onPersistProject&&<ProjectCNNReport projectId={projectId} projectName={project.name} mode="dashboard"/>}
           <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",Object.keys(datasets).length],["Simulaciones pendientes",pending],["Fichas registradas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
           <section className="panel recent"><h2>Flujo de trabajo CNN</h2><div className="workflow">{["Carga imágenes por clase","Configura convolución y pooling","Entrena una CNN real y analiza las curvas","Registra y exporta resultados"].map((text,index)=><div key={text}><span>0{index+1}</span><strong>{text}</strong></div>)}</div><button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes →</button></section>
         </>}
@@ -389,7 +391,10 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
           ["Salida","Dos clases: una unidad sigmoid. Más clases: una unidad por clase y softmax."],
         ].map(([title,text])=><article className="card concept-card" key={title}><h2>{title}</h2><p className="muted">{text}</p></article>)}</div>}
 
-        {page==="Reportes"&&<section className="panel cnn-report"><div className="panel-head no-print"><h2>Reporte CNN del proyecto</h2><div className="actions"><button className="secondary" onClick={exportJobs}>Exportar CSV</button><button className="primary" onClick={()=>window.print()}>Imprimir / guardar PDF</button></div></div><h2 className="cnn-spaced">{project.name}</h2><p>Dataset actual: {dataset?.name??"Sin dataset"} · Imágenes: {dataset?.images.length??0}</p><div className="soft">Reporte de frontend. Métricas simuladas; no contiene modelos entrenados ni las imágenes originales.</div><div className="table-scroll"><table><thead><tr><th>Ejecución</th><th>Estado</th><th>Dataset conservado</th><th>Bloques CNN</th><th>Clases</th></tr></thead><tbody>{projectJobs.map(job=><tr key={job.id}><td>{job.id}</td><td>{job.status}</td><td>{job.dataset.name}</td><td>{job.config.layers.length}</td><td>{job.dataset.classes.length}</td></tr>)}</tbody></table></div><h3 className="cnn-spaced">Versiones registradas</h3>{records.filter(record=>record.job.projectId===projectId).map(record=><p key={record.id}>CNN v{record.version} · {record.status} · origen {record.job.id}</p>)}</section>}
+        {page==="Reportes"&&<>
+          {onPersistProject?<ProjectCNNReport projectId={projectId} projectName={project.name} mode="report"/>:<p className="soft">Inicia sesión para consultar informes reales. Esta sección sin cuenta solo muestra simulaciones de sesión.</p>}
+          <section className="panel cnn-report"><div className="panel-head no-print"><h2>Reporte de simulaciones CNN · sesión</h2><div className="actions"><button className="secondary" onClick={exportJobs}>Exportar CSV simulado</button><button className="primary" onClick={()=>window.print()}>Imprimir / guardar PDF</button></div></div><h2 className="cnn-spaced">{project.name}</h2><p>Dataset actual: {dataset?.name??"Sin dataset"} · Imágenes: {dataset?.images.length??0}</p><div className="soft">Reporte didáctico. Contiene métricas simuladas, separadas de los entrenamientos CNN reales mostrados arriba.</div><div className="table-scroll"><table><thead><tr><th>Ejecución</th><th>Estado</th><th>Dataset conservado</th><th>Bloques CNN</th><th>Clases</th></tr></thead><tbody>{projectJobs.map(job=><tr key={job.id}><td>{job.id}</td><td>{job.status}</td><td>{job.dataset.name}</td><td>{job.config.layers.length}</td><td>{job.dataset.classes.length}</td></tr>)}</tbody></table></div><h3 className="cnn-spaced">Versiones registradas</h3>{records.filter(record=>record.job.projectId===projectId).map(record=><p key={record.id}>CNN v{record.version} · {record.status} · origen {record.job.id}</p>)}</section>
+        </>}
 
         {page==="Administración"&&<>
           <section className="panel"><h2>Límites de la cola</h2><div className="cnn-three"><label className="field"><span>Máximo de pendientes · 1 a 10</span><input type="number" value={maxPending} onChange={event=>setMaxPending(event.target.value)} /></label><label className="field"><span>Máximo por sesión · hasta 100</span><input type="number" value={maxJobs} onChange={event=>setMaxJobs(event.target.value)} /></label><button className="primary" onClick={()=>{const first=Number(maxPending),second=Number(maxJobs);if(!Number.isInteger(first)||first<1||first>10||!Number.isInteger(second)||second<first||second>100){setError("Revisa los límites: pendientes 1 a 10; máximo por sesión entre ese límite y 100.");return;}setLimits({pending:first,jobs:second});setError("");setMessage("Límites aplicados a nuevas ejecuciones.");}}>Aplicar límites</button></div><div className="soft">Activos: {limits.pending} pendientes y {limits.jobs} por sesión. Un trabajo se procesa a la vez. Los límites no eliminan ejecuciones existentes.</div></section>
