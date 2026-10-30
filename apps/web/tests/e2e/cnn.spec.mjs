@@ -850,3 +850,32 @@ test("Historial CNN: repetir una cancelación conserva la configuración de orig
   expect(result.record.job.repeatedFrom).toBe(sourceId);
   expect(result.record.job.startedAt).toBeTruthy();expect(result.record.job.endedAt).toBeTruthy();
 });
+
+
+test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar",async({page})=>{
+  test.setTimeout(120000);
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByRole("button",{name:"Eliminar bloque"}).last().click();
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("2");
+  await page.getByRole("spinbutton",{name:"Unidades Dense"}).fill("8");
+  await navigate(page,"Entrenamientos");
+  const trainer=page.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+  await expect(trainer.getByRole("button",{name:"Entrenar CNN real"})).toBeVisible();
+  await trainer.getByLabel("Épocas de entrenamiento real").fill("1");
+  await trainer.getByLabel("Batch del entrenamiento real").fill("8");
+  await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
+  await expect(trainer.getByText(/Pesos guardados en IndexedDB/)).toBeVisible({timeout:100000});
+  await expect(trainer.getByRole("img",{name:"Precisión real medida en cada época"})).toBeVisible();
+  await expect(trainer.getByRole("img",{name:"Pérdida real medida en cada época"})).toBeVisible();
+  await expect(trainer.getByRole("button",{name:"Exportar informe JSON de entrenamiento real"})).toBeVisible();
+  const saved=await page.evaluate(async()=>{
+    const request=indexedDB.open("tensorflowjs");
+    return new Promise((resolve,reject)=>{
+      request.onsuccess=()=>resolve(true);
+      request.onerror=()=>reject(request.error);
+    });
+  });
+  expect(saved).toBe(true);
+});
