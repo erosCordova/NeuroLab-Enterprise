@@ -67,3 +67,19 @@ para considerar terminados los componentes aplazados.
 2. Revisar los criterios del alcance CNN antes de ampliar módulos.
 3. Mantener API, autenticación y persistencia aplazadas hasta que el usuario
    autorice avanzar más allá del frontend sin base de datos.
+
+
+## Incremento: gestión de proyectos CNN
+
+- Edición de nombre y descripción, estado y hasta seis etiquetas.
+- Búsqueda combinada con filtros por estado; nombres únicos normalizados.
+- Identificadores estables: editar no cambia datasets, arquitectura ni ejecuciones.
+- Archivar impide nuevas simulaciones y conserva los trabajos ya iniciados.
+- Los datos siguen en memoria; no hay base de datos ni entrenamiento real.
+- Evidencia: 32/32 unitarias, 15/15 escenarios Chromium y build aprobados en
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40984192661
+  para el código 87bcbe2a5f8b60ad1d58c2587b0f9c7801ce703e.
+- Avance global estimado comunicado: 32% (anterior 30%). Es una estimación del
+  alcance integral CNN; no equivale al porcentaje de pruebas ni al cierre de fase.
+- La Fase 1 permanece parcial: autenticación, API, permisos y persistencia siguen
+  aplazados por la restricción vigente de trabajar solo el frontend.

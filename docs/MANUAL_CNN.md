@@ -36,6 +36,24 @@ La autorización de acceso de esa vista no añade autenticación a la aplicació
 Cambiar entre pantallas conserva la sesión.
 Recargar la página elimina los datos y cambios en memoria.
 
+## 1.1. Organizar proyectos CNN
+
+Proyectos permite crear y editar nombre, descripción, estado y hasta seis
+etiquetas. Los nombres son únicos sin distinguir mayúsculas, espacios repetidos
+ni formas Unicode equivalentes. Las etiquetas se separan por comas.
+
+La búsqueda incluye nombre, descripción y etiquetas y se puede combinar con el
+filtro de estado. Limpiar filtros permite recuperar la lista completa.
+
+Editar conserva el identificador del proyecto: sus imágenes, configuración,
+versiones y ejecuciones permanecen asociadas. Los nombres guardados dentro de
+las ejecuciones anteriores conservan el contexto que tenían al crearse.
+
+Estados: Activo, En preparación y Archivado. Archivar bloquea nuevas simulaciones,
+pero no elimina datos ni cancela las ejecuciones existentes. Para crear nuevas
+simulaciones, cambia el estado a Activo o En preparación. Los estados y cambios
+son locales a la sesión; recargar sigue eliminando los datos en memoria.
+
 ## 2. Cargar imágenes
 
 En Datasets, seleccionar una carpeta principal con esta organización:
