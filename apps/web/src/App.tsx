@@ -30,9 +30,9 @@ const pages: Page[] = ["Dashboard","Proyectos","Diseñador CNN","Datasets","Entr
 const pageDescriptions:Record<Page,string>={
   Dashboard:"El estado de tus proyectos, imágenes y experimentos en un solo lugar.",
   Proyectos:"Organiza tus iniciativas de clasificación de imágenes.",
-  "Diseñador CNN":"Construye la arquitectura y revisa sus dimensiones antes de simular.",
+  "Diseñador CNN":"Construye una arquitectura CNN válida para entrenar o simular.",
   Datasets:"Carga, valida y explora las imágenes que utilizará tu proyecto.",
-  Entrenamientos:"Sigue la cola y observa precisión y pérdida por época.",
+  Entrenamientos:"Entrena CNN reales en tu navegador o revisa las simulaciones didácticas.",
   Evaluación:"Consulta los resultados de demostración y sus configuraciones.",
   Modelos:"Conserva versiones y revisa las fichas de cada experimento.",
   Fundamentos:"Comprende cada operación de una red convolucional.",
@@ -287,19 +287,19 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
       <div className="workspace"><span>CNN</span><div><strong>Visión computacional</strong><small>Clasificación de imágenes</small></div></div>
       <p className="nav-label">ESPACIO DE TRABAJO</p>
       <nav aria-label="Navegación principal">{pages.map(item=><button className={page===item?"nav-item active":"nav-item"} key={item} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>)}</nav>
-      <div className="sidebar-foot">Exclusivamente CNN<small>Frontend · sin base de datos</small></div>
+      <div className="sidebar-foot">Exclusivamente CNN<small>{onPersistProject?"Proyectos y métricas en PostgreSQL":"Datos de esta sesión en memoria"}</small></div>
     </aside>
     <main>
-      <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · DEMO</span></header>
+      <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · REAL + DEMO</span></header>
       <div className="content">
         <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
-        <div className="notice"><strong>Alcance actual:</strong> las imágenes se cargan y validan realmente en el navegador. El entrenamiento, sus métricas y las fichas de modelos son de demostración. {onPersistProject?"Los proyectos se guardan en PostgreSQL; imágenes, arquitecturas y simulaciones siguen en memoria.":"Recargar elimina la sesión."}</div>
+        <div className="notice"><strong>Alcance actual:</strong> puedes entrenar CNN reales con TensorFlow.js y guardar los pesos en este navegador (IndexedDB). La cola de simulaciones, sus métricas y las fichas de demostración están claramente separadas de los resultados reales. {onPersistProject?"Proyectos y reportes CNN se conservan en PostgreSQL; las imágenes y arquitecturas aún no se sincronizan.":"Sin iniciar sesión, las métricas y proyectos no se sincronizan con PostgreSQL."}</div>
         <label className="field cnn-project no-print"><span>Proyecto activo</span><select aria-label="Proyecto activo" value={projectId} onChange={event=>changeProject(event.target.value)}>{projects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         <p className="error" role="alert">{error}</p><p className="feedback" role="status">{message}</p>
 
         {page==="Dashboard"&&<>
           <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",Object.keys(datasets).length],["Simulaciones pendientes",pending],["Fichas registradas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
-          <section className="panel recent"><h2>Flujo de trabajo CNN</h2><div className="workflow">{["Carga imágenes por clase","Configura convolución y pooling","Simula y observa los dos gráficos","Registra y exporta resultados"].map((text,index)=><div key={text}><span>0{index+1}</span><strong>{text}</strong></div>)}</div><button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes →</button></section>
+          <section className="panel recent"><h2>Flujo de trabajo CNN</h2><div className="workflow">{["Carga imágenes por clase","Configura convolución y pooling","Entrena una CNN real y analiza las curvas","Registra y exporta resultados"].map((text,index)=><div key={text}><span>0{index+1}</span><strong>{text}</strong></div>)}</div><button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes →</button></section>
         </>}
 
         {page==="Proyectos"&&<ProjectsPanel projects={projects} activeId={projectId}
@@ -389,7 +389,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
           <section className="panel"><h2>Límites de la cola</h2><div className="cnn-three"><label className="field"><span>Máximo de pendientes · 1 a 10</span><input type="number" value={maxPending} onChange={event=>setMaxPending(event.target.value)} /></label><label className="field"><span>Máximo por sesión · hasta 100</span><input type="number" value={maxJobs} onChange={event=>setMaxJobs(event.target.value)} /></label><button className="primary" onClick={()=>{const first=Number(maxPending),second=Number(maxJobs);if(!Number.isInteger(first)||first<1||first>10||!Number.isInteger(second)||second<first||second>100){setError("Revisa los límites: pendientes 1 a 10; máximo por sesión entre ese límite y 100.");return;}setLimits({pending:first,jobs:second});setError("");setMessage("Límites aplicados a nuevas ejecuciones.");}}>Aplicar límites</button></div><div className="soft">Activos: {limits.pending} pendientes y {limits.jobs} por sesión. Un trabajo se procesa a la vez. Los límites no eliminan ejecuciones existentes.</div></section>
           <section className="panel recent"><h2>Usuarios de demostración</h2><form className="cnn-user-form" onSubmit={event=>{event.preventDefault();const email=userEmail.trim().toLowerCase();if(userName.trim().length<3||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||users.some(user=>user.email===email)){setError("Revisa el nombre y utiliza un correo válido y único.");return;}setUsers(current=>[...current,{name:userName.trim(),email,role}]);setUserName("");setUserEmail("");setError("");}}><label className="field"><span>Nombre</span><input value={userName} maxLength={80} onChange={event=>setUserName(event.target.value)} required /></label><label className="field"><span>Correo</span><input type="email" value={userEmail} onChange={event=>setUserEmail(event.target.value)} required /></label><label className="field"><span>Rol</span><select value={role} onChange={event=>setRole(event.target.value)}>{["Administrador","Responsable de proyecto","Ingeniero/analista","Revisor","Lector"].map(value=><option key={value}>{value}</option>)}</select></label><button className="primary">Añadir usuario demo</button></form><div className="table-scroll"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr></thead><tbody>{users.map(user=><tr key={user.email}><td>{user.name}</td><td>{user.email}</td><td>{user.role}</td></tr>)}</tbody></table></div><p className="caption">No crea cuentas reales, envía mensajes ni aplica autorización.</p></section>
         </>}
-        <footer>NeuroLab Enterprise · Exclusivamente CNN · Frontend sin base de datos</footer>
+        <footer>NeuroLab Enterprise · Exclusivamente CNN · Pesos reales en IndexedDB · {onPersistProject?"Métricas en PostgreSQL":"Sesión sin persistencia en servidor"}</footer>
       </div>
     </main>
   </div>;
