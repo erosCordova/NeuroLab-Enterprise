@@ -35,6 +35,9 @@ export default function RealCNNResults({projectId}:Props) {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
+  const [predicting,setPredicting]=useState(false);
+  const [predictionError,setPredictionError]=useState("");
+  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
 
   useEffect(()=>{
     let active=true;
@@ -63,16 +66,27 @@ export default function RealCNNResults({projectId}:Props) {
   }
 
   const current=runs.find(run=>run.id===selected)??runs[0];
+  async function classify(file:File) {
+    if(!current?.model_ref||current.engine!=="TensorFlow.js")return;
+    setPredictionError("");setPredictions([]);setPredicting(true);
+    try {
+      const {predictInBrowser}=await import("./browserCNN");
+      const result=await predictInBrowser(current.model_ref,file,current.config,current.classes);
+      setPredictions(result);
+    }catch(cause) {
+      setPredictionError("No se encontró el modelo en este navegador o la imagen no es válida: "+(cause instanceof Error?cause.message:"error desconocido"));
+    }finally {setPredicting(false);}
+  }
   return <section className="panel recent" aria-label="Resultados CNN reales importados">
     <div className="panel-head">
       <div>
         <div className="eyebrow">ENTRENAMIENTOS CON MÉTRICAS OBSERVADAS</div>
         <h2>Resultados CNN reales</h2>
-        <p className="muted">Historial persistente · {runs.length} reportes recuperados</p>
+        <p className="muted">Historial persistente · {runs.length} entrenamientos registrados</p>
       </div>
       <span className="badge">IMPORTACIÓN JSON</span>
     </div>
-    <p className="soft">Importa <strong>metrics.json</strong>, generado por el motor Python de NeuroLab. Los valores del archivo se validan y se conservan en PostgreSQL. Su procedencia no está certificada por el servidor, y el archivo de pesos <code>model.keras</code> aún no se aloja aquí. El entrenamiento remoto desde esta página sigue pendiente.</p>
+    <p className="soft">Importa <strong>metrics.json</strong>, generado por el motor Python de NeuroLab. Los valores del archivo se validan y se conservan en PostgreSQL. También puedes entrenar con TensorFlow.js desde esta página: los pesos quedan en IndexedDB del navegador y no se suben a Neon. Los informes proporcionados por clientes no están certificados por el servidor.</p>
     <label className="field">
       <span>Seleccionar informe de un entrenamiento real</span>
       <input type="file" accept=".json,application/json" disabled={busy} aria-label="Importar métricas CNN reales" onChange={event=>{
@@ -88,7 +102,7 @@ export default function RealCNNResults({projectId}:Props) {
     {!loading&&!runs.length&&<p className="caption">Aún no hay reportes importados en este proyecto.</p>}
     {current&&<>
       <label className="field"><span>Entrenamiento importado</span>
-        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>setSelected(event.target.value)}>
+        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);setPredictions([]);setPredictionError("");}}>
           {runs.map(run=><option key={run.id} value={run.id}>{new Date(run.imported_at).toLocaleString("es-PE")+" · "+run.classes.join(", ")}</option>)}
         </select>
       </label>
@@ -98,11 +112,19 @@ export default function RealCNNResults({projectId}:Props) {
         <div><small>Épocas ejecutadas</small><strong>{current.completed_epochs}/{current.requested_epochs}</strong></div>
         <div><small>Parámetros CNN</small><strong>{current.parameters.toLocaleString("es-PE")}</strong></div>
       </div>
-      <p className="caption">Fuente: informe externo importado · particiones: {current.samples.train} entrenamiento / {current.samples.validation} validación / {current.samples.test} prueba. Estas cifras proceden del JSON y no de una evaluación realizada por Render.</p>
+      <p className="caption">Fuente: {current.source==="navegador"?"entrenamiento TensorFlow.js registrado":"informe externo Keras importado"} · particiones: {current.samples.train} entrenamiento / {current.samples.validation} validación / {current.samples.test} prueba. Estas cifras proceden del reporte del cliente; Render no realiza una verificación independiente del entrenamiento.</p>
       <div className="cnn-two-charts">
         <section className="panel"><h3>Precisión por época</h3><Curves run={current} kind="accuracy"/></section>
         <section className="panel"><h3>Pérdida por época</h3><Curves run={current} kind="loss"/></section>
       </div>
+      {current.engine==="TensorFlow.js"&&current.model_ref&&<div className="browser-cnn-summary cnn-spaced">
+        <h3>Reconocer otra imagen con este modelo</h3>
+        <p className="caption">El modelo se recupera de IndexedDB en este navegador; no se vuelve a entrenar. Si cambias de equipo o eliminas los datos del navegador, puede no estar disponible.</p>
+        <label className="field"><span>Imagen PNG, JPG o WebP</span><input aria-label="Imagen para predecir con CNN real" type="file" accept="image/png,image/jpeg,image/webp" disabled={predicting} onChange={event=>{const file=event.target.files?.[0];event.target.value="";if(file)void classify(file);}}/></label>
+        {predicting&&<p role="status">Evaluando imagen con los pesos guardados…</p>}
+        {predictionError&&<p className="error" role="alert">{predictionError}</p>}
+        {predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
+      </div>}
       <details className="cnn-fingerprint"><summary>Huella SHA-256 del dataset declarado</summary><code>{current.dataset_fingerprint}</code></details>
     </>}
   </section>;
