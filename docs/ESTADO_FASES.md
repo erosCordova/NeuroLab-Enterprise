@@ -303,3 +303,16 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 89%** (anterior 86%; +3 puntos por controles de acceso, políticas del frontend y validación de release en CI).
 - Importante: la variable `NEUROLAB_RATE_LIMIT_SECRET` **aún debe configurarse en Render antes de autorizar un despliegue**; de lo contrario, login/registro devolverían 503. La migración 005 tampoco se ha aplicado a la base Neon de producción.
 - CSP sigue en modo **Report-Only**; sus restricciones no se aplican en modo bloqueo hasta probar el entrenamiento e inferencia real sobre el bundle desplegado.
+
+
+## Versión candidata a publicación: control de arranque
+
+- Guardia para Render que valida presencia de variables críticas, cookie segura,
+  clave antiintentos y orígenes HTTPS exactos **antes de ejecutar migraciones**.
+- Pruebas aisladas para error seguro y arranque válido sin tocar Neon.
+- Descripción pública actualizada: la aplicación mezcla CNN reales y simulaciones
+  didácticas claramente diferenciadas.
+- Inventario Vercel (solo metadatos) confirmó \`NEUROLAB_API_ORIGIN\` en producción
+  y preview. Los valores secretos y las variables de Render siguen sin verificar.
+- Prohibido desplegar o ejecutar migración remota sin autorización.
+- Avance de referencia 89% hasta superar la suite completa.

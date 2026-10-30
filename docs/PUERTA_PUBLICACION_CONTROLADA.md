@@ -32,3 +32,25 @@
 ## Puerta de salida
 
 Requiere validación de CI, comprobación manual de variables, autorización expresa del propietario y un despliegue controlado de Render y Vercel; después, comprobar login, registro, modelos persistentes e inferencia en el navegador remoto. **Ninguno de esos despliegues se ha realizado.**
+
+
+## Validación de inicio previa a migraciones (candidato)
+
+El arranque del contenedor ejecuta una comprobación **antes** de migrar Neon si
+Render define \`RENDER=true\`. Exige presencia de \`DATABASE_URL\`,
+\`DATABASE_URL_UNPOOLED\` y \`NEUROLAB_RATE_LIMIT_SECRET\` (mínimo 32 bytes),
+\`COOKIE_SECURE=true\` y \`APP_ORIGINS\` con al menos un dominio HTTPS exacto
+del frontend, sin comodines ni rutas. Si falla, detiene el arranque en lugar de
+modificar la base de datos o exponer un login sin límites. No imprime secretos.
+
+Las pruebas de GitHub Actions usan configuración sintética y no consultan
+credenciales reales. La comprobación de nombres de variables en Vercel mostró
+\`NEUROLAB_API_ORIGIN\` definido para producción y vista previa, pero **no**
+verifica el valor ni su destino. Las variables de Render aún requieren
+comprobación antes de autorizar la publicación.
+
+**Orden de publicación autorizado posteriormente:** confirmar variables;
+revisar copia de respaldo de Neon; aplicar migraciones mediante un arranque
+controlado de Render; confirmar API y sesiones; publicar el frontend Vercel;
+verificar entrenamiento, respaldo, reportes, cookies y recuperación.
+No ejecutar este proceso sin la autorización explícita del propietario.
