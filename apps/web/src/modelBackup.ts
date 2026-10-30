@@ -168,7 +168,7 @@ export async function createCNNBackup(projectId:string,report:BrowserReport):Pro
         dateSaved:new Date(),modelTopologyType:"JSON",
         modelTopologyBytes:JSON.stringify(artifacts.modelTopology).length,
         weightSpecsBytes:JSON.stringify(artifacts.weightSpecs).length,
-        weightDataBytes:artifacts.weightData?.byteLength??0,
+        weightDataBytes:artifacts.weightData instanceof ArrayBuffer?artifacts.weightData.byteLength:0,
       }};
     }),{includeOptimizer:false});
     if(!backup)error("No se pudieron recopilar los pesos del respaldo.");
