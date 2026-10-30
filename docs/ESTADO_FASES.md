@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
 **Avance global estimado: 98%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `ed2f2f2e4567af565b803546f55f4170e83257f7` mediante
+Última verificación funcional: commit `265216bdd5369add231fb8d12e1a25c0193136ec` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -402,9 +402,12 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 98%** (anterior 97%, +1 punto por diagnóstico reproducible y validación de requisitos de publicación).
 - Pendiente para producción: respaldo real verificado de Neon, variables reales Render, autorización de migraciones 002–005, despliegue controlado y comprobaciones del modelo CNN en el dominio público.
 
-## Control de coincidencia entre las versiones de frontend y backend
+## Control de coincidencia entre las versiones de frontend y backend (verificado)
 
 - Integrados identificadores públicos de commit en HTML y API, sin credenciales.
 - El diagnóstico sin autenticar comprueba coincidencia exacta y protocolo.
-- CI ensaya el despliegue conjunto con el mismo SHA, incluyendo incompatibilidades.
-- Se mantiene avance 98% hasta publicar y validar producción. Ningún despliegue nuevo.
+- CI ensaya el despliegue conjunto con el mismo SHA y rechaza incompatibilidades, valores ausentes o protocolo equivocado.
+- **Validación aprobada:** 83 pruebas Python/API, 5 de plataforma y 6 de alojamiento, ensayo de migración y restauración. [GitHub Actions API](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080432043).
+- **Frontend:** 20 pruebas Chromium aprobadas. [GitHub Actions frontend](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080431805). **CNN:** 3 pruebas Keras aprobadas. [GitHub Actions CNN](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080432045).
+- El diagnóstico GET-only pasó **7 comprobaciones**, incluida la coincidencia exacta del commit entre Vercel y Render simulados.
+- **Avance global permanece en 98%**; el 2% restante requiere pruebas y operaciones de producción autorizadas. No se produjo despliegue ni migración remota.

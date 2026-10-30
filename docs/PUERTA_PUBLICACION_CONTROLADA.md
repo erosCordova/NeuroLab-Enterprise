@@ -269,3 +269,20 @@ Render proporciona `RENDER_GIT_COMMIT`. En CI ambos usan el mismo `GITHUB_SHA`.
 Para publicar debe utilizarse el **mismo commit revisado** en ambos servicios.
 Si una plataforma no proporciona el identificador, el diagnóstico falla
 de forma segura. Esto no sustituye los ensayos de CNN con datos reales.
+
+## Validación del commit conjunto: evidencia CI aprobada
+
+El commit funcional `265216bdd5369add231fb8d12e1a25c0193136ec` superó
+el diagnóstico GET-only del frontend conectado y la API con el mismo hash.
+También se validaron escenarios de commit faltante o distinto:
+
+- API y PostgreSQL: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080432043
+- Frontend/Chromium: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080431805
+- TensorFlow/Keras: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41080432045
+
+**No se publicó esta versión.** El sitio Vercel conserva el commit
+`df162826ec9e07b35e5d3347814dbdcf6cb78901`, Render sigue con
+`autoDeploy=no` y la base de Neon solo tiene `001_platform.sql`.
+Antes de dar por listo el producto quedan la verificación de secretos
+Render, un respaldo real y verificable de Neon, la autorización de
+migraciones 002–005 y las pruebas del sistema desplegado.
