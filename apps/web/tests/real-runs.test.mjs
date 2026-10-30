@@ -30,3 +30,13 @@ test("rechaza épocas o huella inconsistente",()=>{
   assert.throws(()=>prepareRealReport({...report(),completed_epochs:3}),/épocas/);
   assert.throws(()=>prepareRealReport({...report(),dataset_fingerprint:"falso"}),/huella/);
 });
+
+test("recupera el JSON de TensorFlow.js y distingue metadatos de pesos",()=>{
+  const value={
+    ...report(),engine:"TensorFlow.js",weights_file:"model.json",
+    model_ref:"indexeddb://neurolab-cnn-proyecto-123",
+  };
+  assert.equal(prepareRealReport(value),value);
+  assert.throws(()=>prepareRealReport({...value,model_ref:"https://externo.example/pesos.bin"}),/CNN real/);
+  assert.throws(()=>prepareRealReport({...value,weights_file:"model.keras"}),/CNN real/);
+});
