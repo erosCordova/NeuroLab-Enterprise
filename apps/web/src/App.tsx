@@ -1,4 +1,5 @@
 import TrainingHistory from "./TrainingHistory";
+import RealCNNResults from "./RealCNNResults";
 import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
 import ProjectsPanel from "./ProjectsPanel";
@@ -350,6 +351,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
         </div>}
 
         {page==="Entrenamientos"&&<>
+          {onPersistProject&&<RealCNNResults key={projectId} projectId={projectId} />}
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
           <div className="training-layout"><section className="panel"><h2>Cola del proyecto</h2>{!projectJobs.length&&<div className="cnn-empty"><p>Todavía no hay ejecuciones en este proyecto.</p><button className="secondary" onClick={()=>navigate(dataset?"Diseñador CNN":"Datasets")}>{dataset?"Revisar arquitectura":"Cargar imágenes"}</button></div>}{[...projectJobs].reverse().map(job=><button className={selected?.id===job.id?"queue-item chosen":"queue-item"} key={job.id} onClick={()=>setSelectedId(job.id)}><strong>{job.name}</strong><span data-status={job.status}>{job.status}</span><small>{job.id}</small><progress max={job.epochs} value={job.status==="Completado"?job.epochs:job.epoch} /><small>{job.epoch}/{job.epochs} épocas</small></button>)}</section>
           <div className="training-detail">{selected&&<>
