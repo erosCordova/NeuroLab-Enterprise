@@ -290,3 +290,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - TensorFlow/Keras independiente: **3 pruebas reales aprobadas**, sin incorporar entrenamiento Python al contenedor Render; evidencia: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002993990.
 - **Avance global estimado: 86%** (anterior 83%; +3 puntos por endurecimiento, eliminación de dependencias de prueba y verificación integral).
 - Sin nuevos despliegues a Vercel/Render. Continúa pendiente la auditoría de límites de acceso distribuido, CSP y el paquete de publicación autorizado.
+
+## Auditoría de publicación: acceso distribuido y CSP (pendiente de CI)
+
+- Añadida cuota de autenticación por correo mediante HMAC y tabla PostgreSQL `005_auth_attempt_windows.sql`; límites entre instancias y expiración, sin revelar correo ni IP.
+- Nueva variable obligatoria de Render `NEUROLAB_RATE_LIMIT_SECRET` (mínimo 32 bytes): necesaria antes de autorizar publicación.
+- CSP en modo observación y comprobación de cabeceras en bundle conectado. No bloquear TensorFlow.js hasta probarlo con CSP obligatorio.
+- Lista de verificación de Vercel, Render y Neon documentada. No se ha modificado ningún servicio publicado.
+- Avance base: 86% hasta validar los flujos.

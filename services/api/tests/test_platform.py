@@ -13,6 +13,7 @@ def database_setup():
     # Never infer a test target from the application's DATABASE_URL.
     os.environ['DATABASE_URL']=os.environ['TEST_DATABASE_URL']
     os.environ['COOKIE_SECURE']='false'
+    os.environ['NEUROLAB_RATE_LIMIT_SECRET']='clave-efimera-pruebas-neurolab-12345678901234567890'
     # An inherited production migration URL must never redirect test migrations.
     migrate(os.environ['TEST_DATABASE_URL'])
     migrate(os.environ['TEST_DATABASE_URL'])
@@ -40,7 +41,7 @@ def project(client,name='Proyecto CNN'):
 def test_postgresql_and_idempotent_migration(client):
     assert client.get('/api/v1/health').json()['database']=='postgresql'
     with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
-        assert db.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==4
+        assert db.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==5
         assert 'PostgreSQL' in db.execute('SELECT version()').fetchone()[0]
         db.execute((Path(__file__).parent / 'neon_smoke.sql').read_text())
 
@@ -151,3 +152,52 @@ def test_json_content_type_and_streamed_size_limit(client):
     assert response.status_code==201,response.text
     assert client.get('/api/v1/auth/me').status_code==200
     assert client.get('/api/v1/auth/me').headers['Cache-Control']=='private, no-store'
+
+
+def test_auth_throttling_shared_between_clients_and_secret_required(client, monkeypatch):
+    body,_=register(client)
+    email=body['email']
+    url='/api/v1/auth/login'
+    attempt={'email':email,'password':'incorrecta-12345'}
+    for _ in range(8):
+        assert client.post(url,json=attempt).status_code==401
+    blocked=client.post(url,json={**attempt,'password':body['password']})
+    assert blocked.status_code==429
+    assert blocked.headers['Retry-After']=='900'
+    # Persiste entre clientes, no depende de memoria del proceso.
+    with TestClient(create_app()) as another:
+        assert another.post(url,json=attempt).status_code==429
+    # Otro correo no comparte la cuota (sin acceso a datos de otras cuentas).
+    assert client.post(url,json={
+        'email':str(uuid4())+'@example.invalid','password':'incorrecta-12345'
+    }).status_code==401
+    # Caducidad del límite permite el acceso de nuevo.
+    import psycopg
+    from app.auth_throttle import identifier
+    with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
+        key=identifier(email,'login')
+        db.execute("UPDATE auth_attempt_windows SET started_at=now()-interval '16 minutes' WHERE key_hash=%s",(key,))
+        db.commit()
+    assert client.post(url,json={'email':email,'password':body['password']}).status_code==200
+    with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
+        assert db.execute('SELECT count(*) FROM auth_attempt_windows WHERE key_hash=%s',(key,)).fetchone()[0]==0
+    # No aceptar el inicio de sesión sin secreto (fallar cerrado).
+    monkeypatch.delenv('NEUROLAB_RATE_LIMIT_SECRET')
+    assert client.post(url,json={'email':email,'password':body['password']}).status_code==503
+
+
+def test_register_limit_and_hmac_privacy(client):
+    from app.auth_throttle import identifier
+    email=str(uuid4())+'@example.invalid'
+    data={'email':email,'password':'contraseña-segura-12345','display_name':'Prueba CNN'}
+    # No necesita gastar scrypt en más de ocho registros fallidos del mismo email.
+    initial=client.post('/api/v1/auth/register',json=data)
+    assert initial.status_code==201
+    for _ in range(8):
+        assert client.post('/api/v1/auth/register',json=data).status_code==409
+    throttled=client.post('/api/v1/auth/register',json=data)
+    assert throttled.status_code==429
+    assert identifier(email,'register')!=identifier(email,'login')
+    with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
+        keys=[row[0] for row in db.execute('SELECT key_hash FROM auth_attempt_windows').fetchall()]
+    assert email not in keys

@@ -4,6 +4,10 @@ test('Despliegue: el bundle conectado y la API se sirven desde el mismo origen',
   const health = await request.get('/api/v1/health');
   expect(health.ok()).toBe(true);
   expect(await health.json()).toEqual({status: 'ok', database: 'postgresql', training: 'browser-tensorflowjs (not server)'});
+  const home = await request.get('/');
+  const csp = home.headers()['content-security-policy-report-only'];
+  expect(csp).toContain("script-src 'self'");
+  expect(csp).toContain("frame-ancestors 'none'");
   await page.goto('/');
   await expect(page.getByRole('heading', {name: 'Iniciar sesión', exact: true})).toBeVisible();
   const script = page.locator('script[type="module"][src]').first();

@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from app.real_runs import RealCNNImport
+from app.auth_throttle import check_attempt, clear_attempts
 
 
 def normalize(value):
@@ -193,8 +194,10 @@ def create_app():
 
     @app.post('/api/v1/auth/register', status_code=201)
     def register(body:Registration, response:Response, db=Depends(database)):
+        attempt_key = check_attempt(db, body.email, 'register')
         try:
             user = db.execute('INSERT INTO users(id,email,display_name,password_hash) VALUES (%s,%s,%s,%s) RETURNING id,email,display_name', (uuid4(),body.email,body.display_name,password_hash(body.password))).fetchone()
+            clear_attempts(db, attempt_key)
             return start_session(db,response,user)
         except psycopg.errors.UniqueViolation:
             db.rollback()
@@ -202,11 +205,13 @@ def create_app():
 
     @app.post('/api/v1/auth/login')
     def login(body:Credentials, response:Response, db=Depends(database)):
+        attempt_key = check_attempt(db, body.email, 'login')
         user = db.execute('SELECT id,email,display_name,password_hash FROM users WHERE email=%s',(body.email,)).fetchone()
-        # Always do one expensive hash, including for unknown users.
+        # Always do one expensive hash, including for unknown users, until the limit.
         encoded = user['password_hash'] if user else '0'*32+':'+'0'*128
         if not verify_password(body.password,encoded) or not user:
             raise HTTPException(401,'Correo o contraseña incorrectos.')
+        clear_attempts(db, attempt_key)
         return start_session(db,response,user)
 
     @app.get('/api/v1/auth/me')

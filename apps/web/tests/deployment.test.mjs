@@ -29,3 +29,15 @@ test('La configuración pública impide caché de cuentas y declara cabeceras de
   const api=config.headers.find(item=>item.source==='/api/:path*');
   assert.equal(api.headers[0].value,'private, no-store');
 });
+
+
+test('CSP de observación protege orígenes sin interrumpir TensorFlow.js', () => {
+  const config=createDeploymentConfig('https://example.onrender.com');
+  const headers=Object.fromEntries(config.headers.find(h=>h.source==='/(.*)').headers.map(h=>[h.key,h.value]));
+  const policy=headers['Content-Security-Policy-Report-Only'];
+  assert.match(policy,/default-src 'self'/);
+  assert.match(policy,/object-src 'none'/);
+  assert.match(policy,/frame-ancestors 'none'/);
+  assert.match(policy,/connect-src 'self'/);
+  assert.ok(!headers['Content-Security-Policy']); // Aún no bloquear inferencia CNN sin ensayo CSP completo.
+});
