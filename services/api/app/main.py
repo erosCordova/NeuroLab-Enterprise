@@ -244,6 +244,8 @@ def create_app():
             raise HTTPException(413,'El informe excede 64 KiB.')
         owned=db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',(project_id,user['id'])).fetchone()
         if not owned:raise HTTPException(404,'Proyecto no encontrado.')
+        if body.engine == 'TensorFlow.js' and not body.model_ref.startswith('indexeddb://neurolab-cnn-'+str(project_id)+'-'):
+            raise HTTPException(422,'El modelo no pertenece a este proyecto.')
         row=db.execute(f'''INSERT INTO real_cnn_runs
             (id,project_id,owner_id,dataset_fingerprint,classes,samples,config,parameters,
              requested_epochs,completed_epochs,batch,seed,metrics,test,source,engine,weights_file,model_ref)

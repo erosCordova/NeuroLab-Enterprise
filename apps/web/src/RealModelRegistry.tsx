@@ -31,7 +31,6 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
   try{
    const tf=await import("@tensorflow/tfjs");
    const local=await tf.io.listModels();
-   if(active){ /* Check invocation below. */ }
    if(active()){setAvailable(new Set(Object.keys(local)));setInventory("available");}
   }catch{if(active()){setAvailable(new Set());setInventory("error");}}
  }

@@ -3,7 +3,7 @@ import {test, expect} from '@playwright/test';
 test('Despliegue: el bundle conectado y la API se sirven desde el mismo origen', async ({page, request}) => {
   const health = await request.get('/api/v1/health');
   expect(health.ok()).toBe(true);
-  expect(await health.json()).toEqual({status: 'ok', database: 'postgresql', training: 'simulated'});
+  expect(await health.json()).toEqual({status: 'ok', database: 'postgresql', training: 'browser-tensorflowjs (not server)'});
   await page.goto('/');
   await expect(page.getByRole('heading', {name: 'Iniciar sesión', exact: true})).toBeVisible();
   const script = page.locator('script[type="module"][src]').first();
