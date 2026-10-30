@@ -40,3 +40,5 @@ Esta modalidad no necesita abrir un servidor local para el usuario final: al pub
 ## Cancelación y limpieza de memoria
 
 Si se cancela un entrenamiento TensorFlow.js, el motor evita presentar el resultado como completado y libera sus tensores de entrenamiento y las copias temporales usadas para la parada temprana. Si la cancelación llega mientras IndexedDB guarda los pesos, intenta retirar ese modelo para que no quede como una ejecución finalizada. Si no puede eliminarlo, lo indica con un mensaje explícito.
+
+La suite automatizada confirmó que la cancelación durante la primera época, con parada temprana activada, no deja tensores temporales retenidos. El código libera además la memoria del optimizador al finalizar tanto normalmente como por fallo. Ver [validación de frontend](https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41081684532).

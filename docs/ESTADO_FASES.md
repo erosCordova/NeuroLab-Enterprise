@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
 **Avance global estimado: 98%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `265216bdd5369add231fb8d12e1a25c0193136ec` mediante
+Última verificación funcional: commit `052f646adbe10fe737910c1e03daaca591e27d35` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -412,9 +412,13 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - El diagnóstico GET-only pasó **7 comprobaciones**, incluida la coincidencia exacta del commit entre Vercel y Render simulados.
 - **Avance global permanece en 98%**; el 2% restante requiere pruebas y operaciones de producción autorizadas. No se produjo despliegue ni migración remota.
 
-## Limpieza de entrenamiento TensorFlow.js al cancelar (pendiente de CI)
+## Limpieza de entrenamiento TensorFlow.js al cancelar (validada en CI)
 
 - Las copias temporales de los mejores pesos se liberan también cuando ocurre un error o una cancelación.
 - Si la cancelación coincide con la escritura en IndexedDB, se elimina el modelo recién guardado y no se registra un informe de éxito.
 - Se añade una prueba real de entrenamiento CPU con señal AbortController y verificación de memoria.
-- Sigue el progreso global 98% hasta validar la suite completa; sin despliegues nuevos.
+- Prueba de cancelación CPU y recuento de tensores: **aprobada**; la limpieza incluye los estados del optimizador TensorFlow.js. Resultado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41081684532.
+- Pruebas del frontend, incluida CNN real, descarga y restauración `.ncnn`: **20 recorridos Chromium aprobados**.
+- API/PostgreSQL: **83 pruebas**, integración **11 pruebas**, respaldo restaurado y diagnóstico de versión conjunta aprobado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41081684577.
+- TensorFlow/Keras Python independiente: **3 pruebas aprobadas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41081684512.
+- **Avance global estimado: 98%, sin aumento**. La publicación requiere respaldo de Neon, configuración de Render, migraciones y pruebas de producción.
