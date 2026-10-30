@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:unit": "node --test tests/cnn.test.mjs tests/inspection.test.mjs tests/pixels.test.mjs tests/integrity.test.mjs tests/adaptive.test.mjs tests/dataset-export.test.mjs",
+    "test:unit": "node --test tests/cnn.test.mjs tests/inspection.test.mjs tests/pixels.test.mjs tests/integrity.test.mjs tests/adaptive.test.mjs tests/dataset-export.test.mjs tests/projects.test.mjs",
     "test:e2e": "playwright test --config playwright.cnn.config.mjs",
     "test:e2e:report": "playwright show-report ../../runtime/cnn-e2e-report"
   },

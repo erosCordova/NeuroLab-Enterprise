@@ -1,0 +1,11 @@
+.project-workspace{display:grid;gap:24px;min-width:0}
+.project-editor{border-top:3px solid #536bce;scroll-margin-top:20px}
+.project-editor textarea{resize:vertical;min-height:90px}
+.project-filters{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,260px);gap:16px;align-items:end}
+.project-card{display:flex;flex-direction:column;gap:14px;min-width:0}
+.project-card h2{overflow-wrap:anywhere;margin:0}
+.project-description{line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere;flex:1}
+.project-tags{display:flex;gap:6px;flex-wrap:wrap;min-height:24px}
+.project-tags span{background:#edf1fc;color:#42568f;font-size:.75rem;border-radius:6px;padding:4px 8px;overflow-wrap:anywhere;max-width:100%}
+.project-card .actions{justify-content:space-between;margin-top:8px}
+@media(max-width:600px){.project-filters{grid-template-columns:minmax(0,1fr)}.project-editor .panel-head{flex-wrap:wrap}.project-editor input,.project-editor textarea{min-width:0;max-width:100%}}

@@ -1,3 +1,6 @@
+import ProjectsPanel from "./ProjectsPanel";
+import {saveProject} from "./projects";
+import type {Project} from "./projects";
 import AutoCNNPanel from "./AutoCNNPanel";
 import DatasetTransfer from "./DatasetTransfer";
 import {recommendCNN} from "./adaptiveTraining";
@@ -74,10 +77,8 @@ function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
 
 export default function App() {
   const [page,setPage]=useState<Page>("Dashboard");
-  const [projects,setProjects]=useState([{id:"CNN-001",name:"Clasificación de imágenes"}]);
+  const [projects,setProjects]=useState<Project[]>([{id:"CNN-001",name:"Clasificación de imágenes",description:"Explora la clasificación de imágenes con una arquitectura CNN.",status:"Activo",tags:["CNN"]}]);
   const [projectId,setProjectId]=useState("CNN-001");
-  const [projectName,setProjectName]=useState("");
-  const [search,setSearch]=useState("");
   const [configs,setConfigs]=useState<Record<string,Config>>({});
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
@@ -221,6 +222,7 @@ export default function App() {
   function createJob() {
     setError("");setMessage("");
     try {
+      if(project.status==="Archivado")throw new Error("El proyecto está archivado. Actívalo desde Proyectos para crear nuevas simulaciones.");
       if(!dataset?.fingerprint)throw new Error("Primero carga y aplica el dataset con su huella digital.");
       summary(config,dataset.classes.length);
       const count=Number(epochs),batchSize=Number(batch);
@@ -282,14 +284,9 @@ export default function App() {
           <section className="panel recent"><h2>Flujo de trabajo CNN</h2><div className="workflow">{["Carga imágenes por clase","Configura convolución y pooling","Simula y observa los dos gráficos","Registra y exporta resultados"].map((text,index)=><div key={text}><span>0{index+1}</span><strong>{text}</strong></div>)}</div><button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes →</button></section>
         </>}
 
-        {page==="Proyectos"&&<>
-          <div className="project-tools"><label className="field"><span>Buscar proyectos</span><input value={search} onChange={event=>setSearch(event.target.value)} /></label><form className="new-project" onSubmit={event=>{
-            event.preventDefault();const name=projectName.trim();
-            if(name.length<3||name.length>80||projects.some(item=>item.name.toLowerCase()===name.toLowerCase())){setError("Utiliza un nombre único de entre 3 y 80 caracteres.");return;}
-            setProjects(current=>[...current,{id:crypto.randomUUID(),name}]);setProjectName("");setError("");
-          }}><label className="field"><span>Nuevo proyecto CNN</span><input value={projectName} maxLength={80} onChange={event=>setProjectName(event.target.value)} required /></label><button className="primary">Crear proyecto</button></form></div>
-          <div className="projects-grid">{projects.filter(item=>item.name.toLowerCase().includes(search.toLowerCase())).map(item=><article className="card" key={item.id}><span className="badge">CNN</span><h2 className="cnn-spaced">{item.name}</h2><p className="muted">Clasificación de imágenes mediante redes convolucionales.</p><button className="text-button" onClick={()=>{changeProject(item.id);navigate("Diseñador CNN");}}>Abrir proyecto →</button></article>)}</div>
-        </>}
+        {page==="Proyectos"&&<ProjectsPanel projects={projects} activeId={projectId}
+          onSave={(draft,id)=>setProjects(saveProject(projects,draft,id))}
+          onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>
           <section className="panel"><h2>Cargar imágenes por clase</h2><p className="muted">Selecciona la carpeta principal que contiene una subcarpeta por clase.</p>

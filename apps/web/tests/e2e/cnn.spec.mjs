@@ -720,3 +720,52 @@ test("Modos CNN: cada proyecto conserva su selección y sus ajustes", async ({pa
   await expect(page.getByLabel("Modo de configuración CNN",{exact:true})).toHaveValue("manual");
   await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("24");
 });
+
+
+test("Proyectos CNN: editar, filtrar, evitar duplicados y conservar arquitectura",async({page})=>{
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  const editor=page.getByRole("region",{name:"Editor del proyecto",exact:true});
+  await editor.getByLabel("Nombre del proyecto",{exact:true}).fill("Dígitos manuscritos");
+  await editor.getByLabel("Descripción del problema",{exact:true}).fill("Clasificar los números del cero al nueve.");
+  await editor.getByLabel("Etiquetas del proyecto",{exact:true}).fill("MNIST, dígitos");
+  await editor.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await expect(page.getByLabel("Proyecto activo",{exact:true})).toHaveValue("CNN-001");
+  await page.getByLabel("Buscar proyectos",{exact:true}).fill("MNIST");
+  await expect(page.getByRole("article",{name:"Proyecto Dígitos manuscritos",exact:true})).toBeVisible();
+  await page.getByLabel("Filtrar proyectos por estado",{exact:true}).selectOption("Archivado");
+  await expect(page.getByRole("heading",{name:"No hay proyectos que coincidan",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Limpiar filtros de proyectos",exact:true}).click();
+  await editor.getByLabel("Nuevo proyecto CNN",{exact:true}).fill("dígitos manuscritos");
+  await editor.getByRole("button",{name:"Crear proyecto",exact:true}).click();
+  await expect(editor.getByRole("alert")).toContainText("Ya existe un proyecto");
+  await page.getByRole("article",{name:"Proyecto Dígitos manuscritos",exact:true}).getByRole("button",{name:"Abrir proyecto →",exact:true}).click();
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("24");
+  await navigate(page,"Datasets");
+  await expect(page.getByRole("heading",{name:"Dataset aplicado",exact:true}).locator("..")).toContainText("200 imágenes");
+});
+
+test("Proyectos CNN: archivar impide nuevas simulaciones y permite reactivar",async({page})=>{
+  await applyDataset(page);
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Archivado");
+  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await navigate(page,"Entrenamientos");
+  await page.getByRole("button",{name:"Añadir a la cola",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("El proyecto está archivado");
+  await expect(page.locator(".queue-item")).toHaveCount(0);
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Activo");
+  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await createJob(page,"3");
+  await expect(page.locator(".queue-item")).toHaveCount(1);
+  await page.setViewportSize({width:390,height:844});
+  await navigate(page,"Proyectos");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});
