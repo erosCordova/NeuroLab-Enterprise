@@ -33,4 +33,4 @@ También es posible restaurar un respaldo asociado a una ejecución seleccionada
 
 - Pruebas de serialización, checksum, detección de alteraciones y carga de pesos en la suite `model-backup.test.mjs`.
 - Prueba de extremo a extremo en Chromium: entrenamiento real, descarga de respaldo, restauración en contexto nuevo y predicción sin reentrenamiento.
-- Comprobar los resultados en GitHub Actions antes de dar la funcionalidad por validada.
+- Verificado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937195 (19/19 casos Chromium, incluidas restauración y predicción), https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937185 (API + PostgreSQL) y https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937139 (motor Python/Keras).
