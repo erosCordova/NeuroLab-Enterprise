@@ -57,7 +57,9 @@ def test_import_persists_and_isolated_from_other_accounts(client):
     assert row['source'] == 'importado'
     assert row['test']['accuracy'] == .5
     assert len(row['metrics']) == 2
-    assert 'weights_file' not in row  # We did NOT upload the weights.
+    assert row['weights_file'] == 'model.keras'  # Nombre del archivo, no los pesos.
+    assert row['model_ref'] is None
+    assert row['engine'] == 'TensorFlow/Keras'
     assert 'owner_id' not in row
     assert len(client.get(path).json()) == 1
 
@@ -92,3 +94,26 @@ def test_reject_invalid_metrics(client, invalid):
     response = client.post(f'/api/v1/projects/{saved["id"]}/real-runs', json=payload)
     assert response.status_code == 422, response.text
     assert client.get(f'/api/v1/projects/{saved["id"]}/real-runs').json() == []
+
+
+def test_browser_training_is_separated_from_imported_keras(client):
+    register(client)
+    saved = project(client)
+    path = f'/api/v1/projects/{saved["id"]}/real-runs'
+    report_browser = {
+        **report(),
+        'engine': 'TensorFlow.js',
+        'weights_file': 'model.json',
+        'model_ref': 'indexeddb://neurolab-cnn-' + saved['id'] + '-' + str(uuid4()),
+    }
+    response = client.post(path, json=report_browser)
+    assert response.status_code == 201, response.text
+    row = response.json()
+    assert row['source'] == 'navegador'
+    assert row['engine'] == 'TensorFlow.js'
+    assert row['weights_file'] == 'model.json'
+    assert row['model_ref'].startswith('indexeddb://neurolab-cnn-')
+    assert client.get(path).json()[0]['model_ref'] == row['model_ref']
+    assert client.post(path, json={**report_browser, 'model_ref': 'https://example.com/model.json'}).status_code == 422
+    assert client.post(path, json={**report_browser, 'weights_file': 'model.keras'}).status_code == 422
+    assert client.post(path, json={**report_browser, 'engine': 'TensorFlow/Keras'}).status_code == 422
