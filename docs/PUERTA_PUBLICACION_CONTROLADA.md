@@ -148,3 +148,18 @@ fuera del repositorio y validar su restauración en un entorno seguro.
 El plan de recuperación de un fallo posterior a una migración es restaurar
 el respaldo verificado en una instancia aislada y coordinar el retorno
 del backend/frontend a versiones compatibles; no invertir SQL a ciegas.
+
+## Evidencia de respaldo y restauración CI — aprobado
+
+El ensayo PostgreSQL 16 restauró satisfactoriamente un respaldo de formato
+personalizado en una segunda base de datos efímera. Comparó los recuentos
+de las siete tablas, identificadores de usuarios/proyectos sintéticos y hashes
+de las cinco migraciones. La prueba confirmó que el respaldo temporal se elimina.
+
+- PostgreSQL/API y recuperación: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009630984
+- Frontend/Chromium: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009630858
+
+**Esta evidencia NO es un respaldo de la base real de Neon.** Solo prueba
+el procedimiento sobre datos sintéticos de CI. Antes de autorizar producción
+quedan el respaldo real verificable, las variables seguras de Render,
+las cuatro migraciones pendientes y las pruebas sobre los servicios publicados.

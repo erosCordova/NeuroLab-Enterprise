@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
-**Avance global estimado: 95%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `08f7c4bd537185890351ba9909d6ce312166afd1` mediante
+**Avance global estimado: 96%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación funcional: commit `fcce8f9078db5406e090c6c25ac12e09f77a42cc` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -366,10 +366,14 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 95%** (anterior 93%, +2 puntos por la comprobación de esquema, la imagen Docker y la configuración sintética de producción).
 - **Limitación:** variables y secretos reales de Render y respaldo de Neon todavía sin verificar. Las migraciones 002–005 siguen pendientes en producción, así como su despliegue autorizado y las pruebas finales del sistema publicado.
 
-## Ensayo de respaldo y recuperación PostgreSQL 16 (CI)
+## Ensayo de respaldo y recuperación PostgreSQL 16 (validado en CI)
 
 - Preparada prueba con `pg_dump` y `pg_restore` en una base PostgreSQL aislada.
 - Se comparan registros sintéticos y las huellas de las cinco migraciones después de restaurar.
 - Dos barreras obligatorias de GitHub CI impiden apuntar el ensayo a Neon o a otra base.
 - El archivo es efímero, no se almacena en el repositorio.
-- El respaldo REAL de Neon sigue pendiente de aprobación; porcentaje 95% hasta validar la suite.
+- El ensayo PostgreSQL 16 se completó: `RESPALDO_POSTGRESQL_CI=VERIFICADO`, `RESTAURACION_POSTGRESQL_CI=VERIFICADA` y `MIGRACIONES_Y_REGISTROS_CI=CONSERVADOS`. Archivo temporal eliminado.
+- **64 pruebas Python**, **5 pruebas de plataforma** y **6 de alojamiento** aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009630984.
+- **20 pruebas Chromium** aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009630858. **3 pruebas Python/Keras** aprobadas en el commit anterior: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41009521555.
+- **Avance global estimado: 96%** (anterior 95%; +1 punto por comprobación efectiva de respaldo y restauración en CI).
+- El respaldo REAL de Neon sigue pendiente de autorización. No hay desplegados nuevos ni migraciones remotas aplicadas.
