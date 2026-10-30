@@ -34,7 +34,7 @@ class SampleCounts(BaseModel):
 class RealCNNImport(BaseModel):
     model_config = ConfigDict(extra='forbid')
     training: Literal['real']
-    engine: Literal['TensorFlow/Keras']
+    engine: Literal['TensorFlow/Keras', 'TensorFlow.js']
     dataset_fingerprint: str = Field(pattern=r'^[0-9a-f]{64}$')
     classes: list[str] = Field(min_length=2, max_length=20)
     samples: SampleCounts
@@ -46,10 +46,17 @@ class RealCNNImport(BaseModel):
     seed: int = Field(ge=0, le=2**32 - 1)
     metrics: list[EpochMetric] = Field(min_length=1, max_length=100)
     test: TestMetric
-    weights_file: Literal['model.keras']
+    weights_file: Literal['model.keras', 'model.json']
+    model_ref: str | None = Field(default=None, max_length=240)
 
     @model_validator(mode='after')
     def valid_import(self):
+        if self.engine == 'TensorFlow/Keras':
+            if self.weights_file != 'model.keras' or self.model_ref is not None:
+                raise ValueError('Los informes Keras deben referir solamente a model.keras.')
+        else:
+            if self.weights_file != 'model.json' or not self.model_ref or not self.model_ref.startswith('indexeddb://neurolab-cnn-'):
+                raise ValueError('El modelo TensorFlow.js necesita una referencia IndexedDB.')
         if self.classes != sorted(self.classes) or len({name.casefold() for name in self.classes}) != len(self.classes):
             raise ValueError('Las clases deben ser únicas y estar ordenadas.')
         if any(not name or len(name) > 100 or '/' in name or '\\' in name for name in self.classes):
