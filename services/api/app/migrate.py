@@ -6,7 +6,9 @@ import psycopg
 
 
 def migrate(url=None):
-    with psycopg.connect(url or os.environ['DATABASE_URL']) as connection:
+    # Neon migrations use the direct URL; normal API traffic may use its pooler.
+    target = url or os.environ.get('DATABASE_URL_UNPOOLED') or os.environ['DATABASE_URL']
+    with psycopg.connect(target) as connection:
         connection.execute('SELECT pg_advisory_xact_lock(726114091)')
         connection.execute('CREATE TABLE IF NOT EXISTS schema_migrations (version text PRIMARY KEY, checksum char(64) NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())')
         for file in sorted((Path(__file__).parent.parent / 'migrations').glob('*.sql')):

@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from uuid import uuid4
 import psycopg
 import pytest
@@ -12,8 +13,9 @@ def database_setup():
     # Never infer a test target from the application's DATABASE_URL.
     os.environ['DATABASE_URL']=os.environ['TEST_DATABASE_URL']
     os.environ['COOKIE_SECURE']='false'
-    migrate()
-    migrate()
+    # An inherited production migration URL must never redirect test migrations.
+    migrate(os.environ['TEST_DATABASE_URL'])
+    migrate(os.environ['TEST_DATABASE_URL'])
 
 
 @pytest.fixture
@@ -40,6 +42,7 @@ def test_postgresql_and_idempotent_migration(client):
     with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
         assert db.execute('SELECT count(*) FROM schema_migrations').fetchone()[0]==1
         assert 'PostgreSQL' in db.execute('SELECT version()').fetchone()[0]
+        db.execute((Path(__file__).parent / 'neon_smoke.sql').read_text())
 
 
 def test_registration_login_and_revocable_session(client):

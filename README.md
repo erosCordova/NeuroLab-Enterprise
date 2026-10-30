@@ -7,6 +7,8 @@ Automático es el modo predeterminado; Manual permite editar la configuración.
 **Estado:** frontend demo y modo conectado opcional a FastAPI/PostgreSQL.
 La API persiste cuentas, sesiones y proyectos. Consulta
 [la conexión React/API](docs/CONEXION_REACT_API.md) para activarla.
+La base de plataforma ya está creada en Neon; consulta [su estado y conexión](docs/NEON.md).
+La vista previa sigue en demo hasta desplegar el backend.
 Las imágenes y su preprocesamiento son
 reales; el entrenamiento y las métricas son simulados. Dropout y L2 se conservan
 como configuración y no modifican esas curvas. No se generan pesos entrenados.

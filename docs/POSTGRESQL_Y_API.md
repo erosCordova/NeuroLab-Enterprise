@@ -18,9 +18,10 @@ arquitectura propuesta. El entrenamiento permanece simulado.
 
 ## Límites del incremento
 
-El frontend y la vista previa siguen en modo de sesión en memoria y aún no llaman
-a esta API. No hay backend público desplegado ni base creada en la cuenta del
-usuario por estas pruebas. Las cuentas de integración son efímeras y aisladas.
+React dispone de modo conectado opcional, explicado en CONEXION_REACT_API.md.
+La vista previa privada continúa en modo demo y no llama a esta API. Ya existe
+una base Neon en la cuenta del usuario, con esquema comprobado (NEON.md), pero
+no hay backend público desplegado. Las cuentas de integración de CI son efímeras.
 No se implementan todavía datasets persistentes, workers, roles colaborativos,
 recuperación de contraseña, verificación de email, límites de login distribuidos,
 auditoría, backups ni endurecimiento para exposición pública.
@@ -52,7 +53,8 @@ usar HTTPS, COOKIE_SECURE=true y APP_ORIGINS con el origen exacto de su frontend
 
 ## Desarrollo Python
 
-Desde services/api, con un entorno Python 3.12 y DATABASE_URL definida:
+Desde services/api, con un entorno Python 3.12 y DATABASE_URL definida
+(en Neon define también DATABASE_URL_UNPOOLED para migraciones directas):
 
 ```bash
 python -m pip install -r requirements.txt

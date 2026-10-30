@@ -162,3 +162,18 @@ estos componentes; el motor de entrenamiento sigue simulado.
   el usuario. La integración está probada en CI y preparada para activación local.
 - Avance global estimado: 48% (antes 43%). La Fase 1 sigue parcial; faltan roles
   colaborativos y completar los demás criterios. No se declara finalizado el MVP.
+
+## Base Neon aprovisionada y comprobada
+
+- Proyecto neurolab-enterprise creado en la organización Eros (Free), PostgreSQL 16.
+- Ramas production y development con migración 001_platform.sql aplicada.
+- Desarrollo: segunda aplicación idempotente, restricciones SQL comprobadas y
+  rollback de registros de prueba. Principal: lectura de esquema e historial.
+- Ambas ramas sin cuentas, sesiones ni proyectos de prueba al finalizar.
+- Migrador preparado para DATABASE_URL_UNPOOLED; las pruebas conservan siempre
+  TEST_DATABASE_URL explícita, aunque exista una URL de migración de producción.
+- Detalle reproducible en NEON.md. La revisión local por psycopg no pudo resolver
+  el DNS de Neon; esta comprobación de esquema usa la conexión administrada.
+- Pendiente: desplegar API, conectar vista previa y verificar el flujo sobre Neon.
+  El entrenamiento continúa simulado. La Fase 1 sigue parcial.
+- Avance global estimado: 50% (antes 48%), por la infraestructura real verificada.
