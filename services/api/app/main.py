@@ -219,7 +219,7 @@ def create_app():
         row=db.execute(f'''INSERT INTO real_cnn_runs
             (id,project_id,owner_id,dataset_fingerprint,classes,samples,config,parameters,
              requested_epochs,completed_epochs,batch,seed,metrics,test,source,engine,weights_file,model_ref)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING {real_fields}''',
             (uuid4(),project_id,user['id'],body.dataset_fingerprint,
              Jsonb(body.classes),Jsonb(body.samples.model_dump()),Jsonb(body.config),
