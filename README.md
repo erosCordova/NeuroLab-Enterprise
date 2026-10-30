@@ -93,3 +93,7 @@ con el origen HTTPS correcto. No se han leído ni modificado secretos.
 
 La lista de requisitos antes de publicar se encuentra en
 [PUERTA_PUBLICACION_CONTROLADA.md](docs/PUERTA_PUBLICACION_CONTROLADA.md).
+
+## Preparación de migraciones sin tocar Neon
+
+El estado real de Neon confirmó solo `001_platform.sql` aplicada. Hay cuatro migraciones pendientes (`002`–`005`). El módulo `app.migration_plan` ofrece una inspección **de solo lectura**, y GitHub Actions ensaya el salto desde 001 con datos sintéticos en PostgreSQL aislado. Consulta [la puerta de publicación](docs/PUERTA_PUBLICACION_CONTROLADA.md) antes de aprobar cualquier despliegue.

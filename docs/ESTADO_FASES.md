@@ -341,3 +341,10 @@ estos componentes; el motor de entrenamiento sigue simulado.
   y preview. Los valores secretos y las variables de Render siguen sin verificar.
 - Prohibido desplegar o ejecutar migración remota sin autorización.
 - Avance de referencia 89% hasta superar la suite completa.
+
+## Revisión real de Neon y ensayo de migraciones (en verificación)
+
+- El 30/10/2026 una consulta SQL **SELECT** sobre la rama predeterminada de Neon, base `neurolab`, devolvió solo `001_platform.sql` en `schema_migrations`.
+- Pendientes reales: `002_real_cnn_runs.sql`, `003_browser_cnn.sql`, `004_real_cnn_models.sql`, `005_auth_attempt_windows.sql`.
+- Creado un lector de planes de migración en transacción read-only, con verificación de SHA-256 y orden, y un ensayo 001→005 exclusivo de PostgreSQL temporal en GitHub CI.
+- Todavía no se ha ejecutado ninguna actualización en la base remota. Se conserva el avance de referencia **91%** hasta la validación completa.

@@ -4,7 +4,7 @@
 
 - **Render:** servicio Docker `neurolab-enterprise-api`, plan gratuito, región Ohio, despliegue automático desactivado. Dockerfile no incorpora paquetes de entrenamiento Python.
 - **Vercel:** proyecto `neurolab-enterprise`, Vite/Node 24, último despliegue de producción en el commit `df162826`. Protección SSO habilitada en despliegues Vercel según la configuración inspeccionada.
-- **Neon:** la versión aún no publicada requerirá aplicar mediante Render la migración `005_auth_attempt_windows.sql` a la base de datos de NeuroLab. **No se ha ejecutado esa migración en la instancia remota**.
+- **Neon (consulta de solo lectura del 30/10/2026):** la rama predeterminada `production` de la base `neurolab` tiene **solamente `001_platform.sql` aplicada**. Están pendientes las migraciones `002_real_cnn_runs.sql`, `003_browser_cnn.sql`, `004_real_cnn_models.sql` y `005_auth_attempt_windows.sql`. **Ninguna de ellas se ha ejecutado en la instancia remota**.
 
 ## Variables y controles obligatorios antes de publicar
 
@@ -54,3 +54,21 @@ revisar copia de respaldo de Neon; aplicar migraciones mediante un arranque
 controlado de Render; confirmar API y sesiones; publicar el frontend Vercel;
 verificar entrenamiento, respaldo, reportes, cookies y recuperación.
 No ejecutar este proceso sin la autorización explícita del propietario.
+
+## Ensayo verificable de migraciones antes de publicar
+
+El repositorio incluye `python -m app.migration_plan` desde `services/api`. El comando
+consulta `schema_migrations` con una **transacción PostgreSQL de solo lectura**,
+compara las huellas SHA-256 del repositorio y muestra únicamente los nombres
+de las migraciones aplicadas y pendientes. `--require-current` comprueba
+que ya no queden versiones por aplicar. No revela contraseñas ni modifica tablas.
+
+GitHub Actions también crea una **base de datos CI independiente**, instala
+`001_platform.sql`, inserta un proyecto y usuario sintéticos, ensaya la
+aplicación de `002` a `005`, verifica que los registros sobreviven y comprueba
+que repetir el proceso no produce cambios. Este ensayo no prueba compatibilidad
+con todos los datos reales de producción: antes del despliegue, validar respaldo
+y estado de la base remota.
+
+**La aplicación de las cuatro migraciones a Neon se reserva para un despliegue
+autorizado.** No se han ejecutado en producción desde ChatGPT.
