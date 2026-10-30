@@ -32,7 +32,7 @@ def schema_is_ready(db) -> bool:
             return False
         result = db.execute(
             "SELECT bool_and(to_regclass(item) IS NOT NULL) AS ready "
-            "FROM unnest(%s::text[]) AS item", (list(REQUIRED_TABLES),)
+            "FROM unnest(%s::text[]) AS items(item)", (list(REQUIRED_TABLES),)
         ).fetchone()
         return bool(result["ready"] if isinstance(result, dict) else result[0])
     except (psycopg.Error, ValueError, OSError):
