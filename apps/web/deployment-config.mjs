@@ -10,9 +10,17 @@ export function createDeploymentConfig(value) {
     buildCommand: 'VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build',
     outputDirectory: 'dist',
     rewrites: [{source: '/api/:path*', destination: `${url.origin}/api/:path*`}],
-    headers: [{source: '/api/:path*', headers: [
-      {key: 'Cache-Control', value: 'private, no-store'},
-      {key: 'x-vercel-enable-rewrite-caching', value: '0'},
-    ]}],
+    headers: [
+      {source: '/api/:path*', headers: [
+        {key: 'Cache-Control', value: 'private, no-store'},
+        {key: 'x-vercel-enable-rewrite-caching', value: '0'},
+      ]},
+      {source: '/(.*)', headers: [
+        {key: 'X-Content-Type-Options', value: 'nosniff'},
+        {key: 'X-Frame-Options', value: 'DENY'},
+        {key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin'},
+        {key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()'},
+      ]},
+    ],
   };
 }

@@ -13,6 +13,7 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from app.real_runs import RealCNNImport
 
@@ -139,15 +140,41 @@ def create_app():
 
     @app.middleware('http')
     async def verify_origin(request, call_next):
-        if request.method in ('POST', 'PUT', 'DELETE') and request.headers.get('origin') and request.headers['origin'] not in origins:
-            from fastapi.responses import JSONResponse
-            response = JSONResponse(status_code=403, content={'detail':'Origen no permitido.'})
-        else:
-            response = await call_next(request)
-        if request.url.path.startswith('/api/'):
+        path = request.url.path
+        write = request.method in ('POST','PUT','PATCH','DELETE')
+        origin = request.headers.get('origin')
+        fetch_site = request.headers.get('sec-fetch-site', '').lower()
+        rejection = None
+        if write and (origin is not None and origin not in origins or fetch_site == 'cross-site'):
+            rejection = JSONResponse(status_code=403, content={'detail':'Origen no permitido.'})
+        elif write and path.startswith('/api/v1/'):
+            # El único POST sin JSON válido es cerrar sesión (sin cuerpo).
+            if path != '/api/v1/auth/logout' and (
+                request.headers.get('content-type','').split(';')[0].strip().lower() != 'application/json'
+            ):
+                rejection = JSONResponse(status_code=415, content={'detail':'Usa JSON para enviar datos.'})
+            elif path != '/api/v1/auth/logout':
+                # Comprueba también transferencias fragmentadas sin Content-Length.
+                # Starlette conserva _body para que FastAPI pueda leerlo después.
+                chunks = []
+                total = 0
+                async for fragment in request.stream():
+                    total += len(fragment)
+                    if total > 65536:
+                        rejection = JSONResponse(status_code=413, content={'detail':'La solicitud supera 64 KiB.'})
+                        break
+                    chunks.append(fragment)
+                if rejection is None:
+                    request._body = b''.join(chunks)
+        response = rejection if rejection is not None else await call_next(request)
+        if path.startswith('/api/'):
             response.headers['Cache-Control'] = 'private, no-store'
             response.headers['CDN-Cache-Control'] = 'no-store'
             response.headers['Vercel-CDN-Cache-Control'] = 'no-store'
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['X-Frame-Options'] = 'DENY'
+            response.headers['Referrer-Policy'] = 'no-referrer'
+            response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=()'
         return response
 
     def start_session(db, response, user):

@@ -111,3 +111,43 @@ def test_duplicate_names_revision_conflict_and_origin(client):
     assert client.put('/api/v1/projects/'+saved['id'],json={**body,'name':'Sobrescritura'}).status_code==409
     assert client.post('/api/v1/auth/logout',headers={'Origin':'https://sitio-ajeno.example'}).status_code==403
     assert client.get('/api/v1/auth/me').status_code==200
+
+
+def test_cross_site_csrf_and_untrusted_origins_are_rejected(client, monkeypatch):
+    # Browser requests from a foreign site are blocked before authentication.
+    foreign = {'Origin':'https://other.example','Sec-Fetch-Site':'cross-site'}
+    response=client.post('/api/v1/auth/logout', headers=foreign)
+    assert response.status_code==403
+    assert response.headers['Cache-Control']=='private, no-store'
+    assert response.headers['X-Content-Type-Options']=='nosniff'
+    assert response.headers['X-Frame-Options']=='DENY'
+    assert response.headers['Referrer-Policy']=='no-referrer'
+    assert client.post('/api/v1/auth/logout',headers={'Sec-Fetch-Site':'cross-site'}).status_code==403
+    assert client.post('/api/v1/auth/logout',headers={'Origin':'null'}).status_code==403
+    assert client.post('/api/v1/auth/logout',headers={'Origin':'https://other.example'}).status_code==403
+    # A same-origin request may carry an explicit trusted Origin.
+    monkeypatch.setenv('COOKIE_SECURE','false')
+    with TestClient(create_app()) as allowed:
+        response=allowed.post('/api/v1/auth/logout',headers={'Origin':'http://127.0.0.1:5173','Sec-Fetch-Site':'same-origin'})
+        assert response.status_code==204
+
+
+def test_json_content_type_and_streamed_size_limit(client):
+    path='/api/v1/auth/register'
+    sample={'email':str(uuid4())+'@example.com','password':'secure-password-2026','display_name':'Prueba CNN'}
+    assert client.post(path,data='not json',headers={'Content-Type':'text/plain'}).status_code==415
+    huge={**sample,'display_name':'CNN'*25000}
+    import json
+    from collections.abc import Iterator
+    raw=json.dumps(huge).encode()
+    assert client.post(path,content=raw,headers={'Content-Type':'application/json'}).status_code==413
+
+    def data_chunks() -> Iterator[bytes]:
+        yield raw[:30000]
+        yield raw[30000:]
+    assert client.post(path,content=data_chunks(),headers={'Content-Type':'application/json'}).status_code==413
+    # A small valid request must still be readable by downstream FastAPI.
+    response=client.post(path,json=sample)
+    assert response.status_code==201,response.text
+    assert client.get('/api/v1/auth/me').status_code==200
+    assert client.get('/api/v1/auth/me').headers['Cache-Control']=='private, no-store'

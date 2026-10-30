@@ -278,3 +278,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - API **30 pruebas Python** aprobadas, integración de plataforma **5 pruebas** y alojamiento conectado **6 pruebas** aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002266809.
 - Motor independiente TensorFlow/Keras aprobado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41002266817.
 - **Avance global estimado: 83%** (anterior 80%, +3 puntos por UX accesible/responsiva verificada). No significa que la versión pública haya sido actualizada.
+
+## Bloque seguridad/rendimiento previo a despliegue — sujeto a pruebas
+
+- Restricción de peticiones de otros orígenes, controles Fetch Metadata y límite de cuerpos JSON de 64 KiB.
+- Cabeceras de seguridad y protección contra cachear contenido privado.
+- Separación de dependencias de pruebas y runtime Render, con comprobación del contenedor.
+- Sin modificaciones de pesos, modelos, datos ni migraciones en Neon.
+- Avance base: 83%, hasta completar CI del bloque. Sin nuevos despliegues a Vercel/Render.
