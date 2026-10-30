@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
-**Avance global estimado: 91%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación: commit `83898fb7f90c22df822aec4196c4f298caf63118` mediante
+**Avance global estimado: 93%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación funcional: commit `0f9120f87a74cc4012080b40248308c785080932` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -347,4 +347,7 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - El 30/10/2026 una consulta SQL **SELECT** sobre la rama predeterminada de Neon, base `neurolab`, devolvió solo `001_platform.sql` en `schema_migrations`.
 - Pendientes reales: `002_real_cnn_runs.sql`, `003_browser_cnn.sql`, `004_real_cnn_models.sql`, `005_auth_attempt_windows.sql`.
 - Creado un lector de planes de migración en transacción read-only, con verificación de SHA-256 y orden, y un ensayo 001→005 exclusivo de PostgreSQL temporal en GitHub CI.
-- Todavía no se ha ejecutado ninguna actualización en la base remota. Se conserva el avance de referencia **91%** hasta la validación completa.
+- **Ensayo aprobado** sobre PostgreSQL efímero: se parte de 001, se ejecutan 002–005, se conservan usuario/proyecto sintéticos y las migraciones son idempotentes. Prueba: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274920.
+- Pruebas de esta versión: **55 Python/API**, **11 integradas/hosting**, **20 navegador** y **3 motor CNN**; frontend: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274919; motor: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274908.
+- **Avance global: 93%** (antes 91%; +2 puntos por ensayo fiel a la línea base de Neon y verificación de migraciones de solo lectura).
+- No se ha ejecutado ninguna actualización en la base remota.

@@ -72,3 +72,17 @@ y estado de la base remota.
 
 **La aplicación de las cuatro migraciones a Neon se reserva para un despliegue
 autorizado.** No se han ejecutado en producción desde ChatGPT.
+
+## Evidencia del ensayo aprobado (30/10/2026)
+
+- PostgreSQL CI: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274920
+  - `ENSAYO_MIGRACION_001_A_005=APROBADO`
+  - `REGISTROS_HISTORICOS=CONSERVADOS`
+  - `MIGRACIONES_REPETIDAS=IDEMPOTENTES`
+  - 55 pruebas de API, 5 de plataforma y 6 de alojamiento aprobadas.
+- Frontend: 20 recorridos Chromium aprobados en
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274919.
+- Entrenamiento Python/Keras: 3 pruebas aprobadas en
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274908.
+- Neon, Render y Vercel **sin cambios de publicación**. La prueba sintética no
+  sustituye una copia de respaldo y verificación de las variables de producción.
