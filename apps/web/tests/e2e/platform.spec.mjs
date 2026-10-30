@@ -58,3 +58,51 @@ test('Plataforma: un guardado fallido no crea proyectos falsos y una cuenta dist
  await register(page);
  await expect(page.getByRole('heading',{name:'Tu primer proyecto CNN',exact:true})).toBeVisible();
 });
+
+
+test('Plataforma: registro de modelos reales editable y persistente',async({page})=>{
+ await register(page);
+ await create(page,'Proyecto registro CNN');
+ const saved=await page.evaluate(async()=>{
+  const projects=await (await fetch("/api/v1/projects",{credentials:"include"})).json();
+  const owned=projects.find(item=>item.name==="Proyecto registro CNN");
+  const report={
+   training:"real",engine:"TensorFlow.js",dataset_fingerprint:"b".repeat(64),
+   classes:["cero","uno"],samples:{train:8,validation:2,test:2},
+   config:{size:28,channels:1,dense:8,layers:[{filters:4,kernel:3,pool:true,activation:"relu"}]},
+   parameters:6329,requested_epochs:1,completed_epochs:1,batch:4,seed:42,
+   metrics:[{epoch:1,accuracy:.5,valAccuracy:.5,loss:.8,valLoss:.8}],
+   test:{accuracy:.5,loss:.8},weights_file:"model.json",
+   model_ref:"indexeddb://neurolab-cnn-"+owned.id+"-"+crypto.randomUUID(),
+  };
+  const res=await fetch("/api/v1/projects/"+owned.id+"/real-runs",{
+   method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},
+   body:JSON.stringify(report),
+  });
+  return res.status;
+ });
+ expect(saved).toBe(201);
+ await page.getByRole("navigation").getByRole("button",{name:"Modelos",exact:true}).click();
+ const registry=page.getByRole("region",{name:"Registro de modelos CNN reales"});
+ await expect(registry).toBeVisible();
+ await registry.getByLabel("Nombre del modelo real").fill("Clasificador CNN A");
+ await registry.getByRole("button",{name:"Registrar modelo real"}).click();
+ await expect(registry.getByRole("article",{name:"Modelo real Clasificador CNN A"})).toBeVisible();
+ await registry.getByLabel("Editar nombre del modelo real").fill("Clasificador CNN revisado");
+ await registry.getByLabel("Observación del modelo real").fill("Notas de revisión");
+ await registry.getByRole("button",{name:"Guardar ficha real"}).click();
+ await expect(registry.getByRole("heading",{name:"Ficha: Clasificador CNN revisado"})).toBeVisible();
+ await registry.getByRole("button",{name:"Marcar favorito"}).click();
+ await registry.getByLabel("Filtrar modelos reales").selectOption("Favoritos");
+ await expect(registry.getByRole("article",{name:"Modelo real Clasificador CNN revisado"})).toBeVisible();
+ await registry.getByRole("button",{name:"Archivar ficha"}).click();
+ await registry.getByLabel("Filtrar modelos reales").selectOption("Archivados");
+ await expect(registry.getByRole("article",{name:"Modelo real Clasificador CNN revisado"})).toBeVisible();
+ await page.reload();
+ await page.getByRole("navigation").getByRole("button",{name:"Modelos",exact:true}).click();
+ const again=page.getByRole("region",{name:"Registro de modelos CNN reales"});
+ await expect(again.getByRole("article",{name:"Modelo real Clasificador CNN revisado"})).toBeVisible();
+ await page.getByRole("button",{name:"Cerrar sesión"}).click();
+ await register(page);
+ await expect(page.getByRole("heading",{name:"Tu primer proyecto CNN"})).toBeVisible();
+});
