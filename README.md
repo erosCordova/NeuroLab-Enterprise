@@ -79,3 +79,17 @@ El bloque TensorFlow.js está implementado y probado en la rama `fix/validacion-
 ## Respaldo portable de modelos CNN
 
 El navegador permite descargar un solo archivo `.ncnn` con arquitectura, pesos y métricas, restaurarlo en el mismo proyecto y reconocer imágenes sin reentrenar. Consulta [RESPALDOS_CNN.md](docs/RESPALDOS_CNN.md). Esta función está preparada en la rama de desarrollo; no modifica el despliegue público hasta autorización explícita.
+
+## Estado de la versión candidata
+
+La rama `fix/validacion-frontend-cnn` está validada en GitHub Actions, pero
+la aplicación pública sigue en el commit `df162826`. No confundir los avances
+de la rama de desarrollo con los servicios actualmente publicados.
+
+La protección de arranque de Render exige configurar
+`NEUROLAB_RATE_LIMIT_SECRET`, `DATABASE_URL`,
+`DATABASE_URL_UNPOOLED`, `COOKIE_SECURE=true` y `APP_ORIGINS`
+con el origen HTTPS correcto. No se han leído ni modificado secretos.
+
+La lista de requisitos antes de publicar se encuentra en
+[PUERTA_PUBLICACION_CONTROLADA.md](docs/PUERTA_PUBLICACION_CONTROLADA.md).

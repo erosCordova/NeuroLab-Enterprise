@@ -1,38 +1,63 @@
 # Estado de NeuroLab Enterprise por fases
 
-Referencia: sección 14 del Documento Maestro, versión 1.0, octubre de 2026.
-Base revisada: commit c170804 de main. Este documento distingue funcionalidades
-visibles de los requisitos completos de salida de cada fase.
+**Avance global estimado: 91%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación: commit `83898fb7f90c22df822aec4196c4f298caf63118` mediante
+GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
+no una medición de calidad predictiva ni una certificación de producción.
 
-## Alcance vigente solicitado
+## Alcance vigente e implementado
 
-- Exclusivamente CNN; las otras familias quedan fuera de este incremento.
-- Frontend React y TypeScript, sin base de datos por ahora.
-- Carga y exportación de imágenes originales; preprocesamiento real por imagen.
-- Entrenamiento y métricas simulados. No hay modelos ni pesos entrenados.
-- Automático por defecto; Manual conserva ajustes por proyecto durante la sesión.
+- NeuroLab utiliza exclusivamente arquitecturas **CNN**, por decisión de alcance.
+- Frontend React, TypeScript y TensorFlow.js: carga de imágenes, particiones,
+  entrenamiento CNN real en el navegador, evaluación e inferencia sin reentrenar.
+- Backend FastAPI en contenedor liviano y PostgreSQL Neon: usuarios, sesiones,
+  proyectos, informes de ejecuciones y fichas de modelos reales.
+- Pesos TensorFlow.js conservados en **IndexedDB del navegador**; respaldo
+  portable `.ncnn`, con verificación de integridad y recuperación.
+- Comparación, Dashboard e informes de resultados reales, separados claramente
+  de las herramientas de simulación didáctica.
+- Motor Python TensorFlow/Keras genuino, disponible **independientemente** de
+  Render y de la interfaz web; no existe una cola remota Python desde la página.
+- Autenticación, validación por proyecto, límite de intentos HMAC compartido y
+  verificación de variables de producción previa a migraciones.
+- Las métricas importadas o enviadas por el navegador son **declaradas por el
+  cliente y no certificadas por el backend**. Las pruebas sintéticas no demuestran
+  generalización del modelo con un dataset científico real.
+- La producción pública de Vercel continúa en el commit `df162826`; esta rama
+  está **pendiente de despliegue autorizado**. La migración 005 aún no se ha
+  aplicado a Neon en producción.
 
-El documento maestro exige entrenamiento real en Python, persistencia y seguridad
-para completar el MVP. El alcance actual aplaza esos componentes. Además, el MVP
-original menciona Feedforward: el alcance CNN es una adaptación solicitada por el
-usuario y no debe presentarse como cumplimiento literal de ese requisito original.
+## Correspondencia con el documento maestro
 
-## Fases originales
-
-| Fase | Evidencia actual | Pendiente para cerrar según el documento |
+| Fase | Estado comprobado en la rama candidata | Limitaciones para el cierre integral |
 | --- | --- | --- |
-| 0. Descubrimiento y diseño | Documento maestro, alcance CNN y pantallas implementadas | Consolidar historias y criterios del alcance adaptado; aprobación de sus flujos |
-| 1. Base de plataforma | Shell React, proyectos en memoria y pruebas; CI añadido en esta rama | Autenticación, permisos reales, API, PostgreSQL, migraciones e integración; integración del PR validado |
-| 2. Arquitecturas | Constructor CNN validado, formas, parámetros, exportación y versiones en memoria | Guardado y versionado persistente mediante API; validación del servidor |
-| 3. Entrenamiento | Cola y parada temprana de demostración | Worker Python, TensorFlow/Keras y estados persistidos; entrenamiento real de extremo a extremo |
-| 4. Tiempo real y evaluación | Dos gráficos y cancelación de simulación | Eventos autenticados, métricas reales, recuperación y reconexión |
-| 5. Model registry y reportes | Fichas, revisión y exportaciones de demostración | Artefactos reales, comparaciones, permisos y auditoría persistente |
-| 6. Endurecimiento y despliegue | Pruebas locales y documentación parcial | Seguridad, monitoreo, backups y restauración, despliegue y checklist de producción |
+| 0. Diseño | Alcance CNN y documentación disponibles | Revisión final de aceptación del alcance adaptado |
+| 1. Plataforma | FastAPI, sesiones, permisos, Neon y migraciones; CI aprobado | Validación del nuevo backend desplegado con variables seguras |
+| 2. Arquitecturas | Constructor CNN y validaciones en frontend | Persistencia de arquitecturas y versiones en servidor pendiente |
+| 3. Entrenamiento | TensorFlow.js real en navegador y motor Python/Keras separado | Cola de entrenamiento Python remoto y pesos cloud pendientes |
+| 4. Evaluación | Métricas por época, test, comparaciones e informes reales | Eventos remotos en tiempo real y auditoría independiente pendientes |
+| 5. Modelos | Registro de fichas en Neon, respaldos e inferencia local | Sincronización de pesos y gestión de artefactos en cloud pendiente |
+| 6. Seguridad y entrega | Pruebas CI, HMAC, CSP Report-Only, validación de configuración | Revisar secretos de Render, desplegar de forma autorizada, monitorear y probar producción |
 
-**Primera fase técnica sin cerrar: Fase 1.** Las pantallas de fases posteriores
-son avances de frontend y no prueban que esas fases estén completadas.
-No se asigna un porcentaje global: no hay una ponderación aprobada ni evidencia
-para considerar terminados los componentes aplazados.
+El Documento Maestro original incluía una familia Feedforward que **no forma
+parte del alcance CNN adaptado**; no se declara como completada.
+Las tablas y porcentajes de las primeras iteraciones que aparecen a continuación
+son un registro **histórico**, no el estado actual del producto.
+
+## Evidencia de la última versión candidata
+
+- API/PostgreSQL **49 pruebas**, integración y alojamiento **11 pruebas**:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41005726222
+- Frontend/Chromium **20 pruebas** y compilación:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41005726350
+- TensorFlow/Keras real **3 pruebas**:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41005726382
+- `NEUROLAB_API_ORIGIN` existe en Vercel para producción y preview (verificación
+  solo de metadatos). Variables Render aún requieren verificación sin exponer valores.
+- Render tiene `autoDeploy` desactivado; Vercel no registró nuevos despliegues.
+- **Avance anterior: 89%; incremento verificado: +2 puntos; actual: 91%.**
+
+## Historial de fases y avances anteriores
 
 ## Incremento de continuación: validación del frontend
 
