@@ -389,3 +389,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - En el ensayo, Render simulado rechazó la migración sin aprobación, mantuvo el estado inicial, y después aplicó exclusivamente los cuatro cambios con autorización y lista exacta.
 - **Avance global estimado: 97%** (anterior 96%, +1 punto por protección de migraciones y ensayo integral aprobados).
 - Vercel conserva el despliegue de producción `df162826`; Render tiene autoDeploy desactivado; Neon permanece con solo `001_platform.sql`. Ninguna actualización de producción autorizada ni ejecutada.
+
+## Diagnóstico final de solo lectura (pendiente de pruebas)
+
+- Creado `apps/web/release-smoke.mjs`, limitado a GET sin cookies y exclusivamente al dominio NeuroLab o al proxy efímero de GitHub CI.
+- Comprueba disponibilidad del esquema, API real, 401 en recursos privados, CSP observacional, archivos sensibles no publicados y portada/bundle.
+- Integrado como paso adicional de GitHub Actions tras iniciar los contenedores conectados.
+- Se documentan referencias de despliegues actuales para un futuro plan de reversión controlada.
+- No se ha desplegado ni se ha cambiado Neon. Avance se mantiene en 97% hasta validar la nueva prueba.

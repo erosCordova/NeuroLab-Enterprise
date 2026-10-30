@@ -209,3 +209,36 @@ también volvieron a aprobar.
 Render, no existe respaldo real de Neon comprobado, faltan las migraciones
 002–005 en esa base y falta el despliegue y la prueba en producción.
 Estos pasos no se harán sin autorización expresa del propietario.
+
+## Diagnóstico final de publicación (no destructivo)
+
+El script `apps/web/release-smoke.mjs` realiza únicamente seis lecturas GET
+sobre un origen permitido, sin cookies, tokens ni datos personales:
+portada/bundle, CSP en modo observación, disponibilidad del esquema
+(`/api/v1/ready`), salud de la API (`/api/v1/health`), denegación HTTP 401
+de los endpoints privados sin iniciar sesión y ausencia del archivo `.env`.
+
+En CI se ejecuta sobre `http://127.0.0.1:4189` con dos condiciones de
+seguridad obligatorias; fuera de CI acepta exclusivamente el dominio
+`https://neurolab-enterprise-xi.vercel.app`. Rechaza redirecciones,
+orígenes ajenos, rutas y credenciales en el destino. No modifica datos.
+
+Comando para ejecutar **después de un despliegue autorizado** desde
+`apps/web`:
+
+```bash
+node release-smoke.mjs https://neurolab-enterprise-xi.vercel.app
+```
+
+Este comando FALLARÁ actualmente contra producción anterior, porque
+no existe `/api/v1/ready` en esa versión. Eso es lo correcto: la prueba
+detecta que la versión nueva no está publicada. No ejecutar el comando
+como sustituto de las pruebas de sesión, inferencia CNN y recuperación.
+
+**Referencia de reversión, consultada sin modificar servicios:** Vercel
+producción estable `dpl_6kV5FhqWpFkDPCQ7WUhBf5dyrJjK`; Render
+último despliegue operativo `dep-dbi08a5g1s2s73dj7ok0`; ambos proceden
+del commit `df162826ec9e07b35e5d3347814dbdcf6cb78901`.
+Una reversión de frontend/backend no deshace automáticamente cambios
+de esquema. Nunca revertir Neon con SQL inverso sin respaldo verificado
+y comprobar compatibilidad de versiones antes de volver a servir tráfico.

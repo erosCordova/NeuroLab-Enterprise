@@ -99,6 +99,9 @@ jobs:
           nginx:alpine
       - name: Wait for frontend API proxy
         run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/ready
+      - name: Run authenticated-free, read-only release smoke against isolated frontend
+        run: NEUROLAB_CI_SMOKE=1 node release-smoke.mjs http://127.0.0.1:4189
+        working-directory: apps/web
       - name: Verify production bundle, login and project persistence
         run: npx playwright test --config playwright.hosted.config.mjs
         working-directory: apps/web
