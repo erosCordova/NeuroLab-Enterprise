@@ -33,3 +33,9 @@ __pycache__/
 .pytest_cache/
 .venv/
 *.pyc
+
+# CNN real: evitar versionar pesos y artefactos de entrenamiento
+*.keras
+*.h5
+resultados/
+modelos-entrenados/
