@@ -11,11 +11,11 @@ async function register(page){
  await expect(page.getByRole('heading',{name:'Tu primer proyecto CNN',exact:true})).toBeVisible();
  return {email,password};
 }
-async function create(page,name){
+async function create(page,name,expectSuccess=true){
  await page.getByLabel('Nuevo proyecto CNN',{exact:true}).fill(name);
  await page.getByLabel('Descripción del problema',{exact:true}).fill('Proyecto persistente para dígitos.');
  await page.getByRole('button',{name:'Crear proyecto',exact:true}).click();
- await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeVisible();
+ if(expectSuccess)await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeVisible();
 }
 async function projects(page){await page.getByRole('navigation').getByRole('button',{name:'Proyectos',exact:true}).click();}
 
@@ -50,7 +50,7 @@ test('Plataforma: un guardado fallido no crea proyectos falsos y una cuenta dist
   if(route.request().method()==='POST')await route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({detail:'Servidor temporalmente no disponible.'})});
   else await route.continue();
  });
- await create(page,'No debe guardarse');
+ await create(page,'No debe guardarse',false);
  await expect(page.getByRole('region',{name:'Editor del proyecto',exact:true}).getByRole('alert')).toContainText('Servidor temporalmente');
  await expect(page.getByRole('article',{name:'Proyecto No debe guardarse',exact:true})).toHaveCount(0);
  await page.unroute('**/api/v1/projects');await page.reload();await projects(page);
