@@ -148,8 +148,7 @@ export async function trainInBrowser(
   const remember=<T extends tf.Tensor>(value:T):T=>{tensors.push(value);return value;};
   try {
     const all=remember(tf.tensor4d(buffer,[dataset.images.length,config.size,config.size,channels]));
-    const inputs=(indices:number[])=>remember(tf.gather(all,tf.tensor1d(indices,"int32")).as4D(indices.length,config.size,config.size,channels));
-    // tf.gather crea tensor temporal; se conserva para liberarlo en finally.
+    const inputs=(indices:number[])=>remember(tf.gather(all,remember(tf.tensor1d(indices,"int32"))) as tf.Tensor4D);
     const xTrain=inputs(dataset.train),xVal=inputs(dataset.validation),xTest=inputs(dataset.test);
     const targets=(indices:number[])=>{
       const labels=indices.map(index=>{
@@ -164,7 +163,7 @@ export async function trainInBrowser(
     const yTrain=targets(dataset.train),yVal=targets(dataset.validation),yTest=targets(dataset.test);
     model=buildBrowserCNN(config,classes.length);
     let bestLoss=Infinity,stale=0;
-    let bestWeights:tf.Tensor[]|null=null;
+    const bestWeights:{value:tf.Tensor[]|null}={value:null};
     const metrics:Metric[]=[];
     const history=await model.fit(xTrain,yTrain,{
       batchSize:batch,epochs,shuffle:true,validationData:[xVal,yVal],verbose:0,
@@ -176,8 +175,8 @@ export async function trainInBrowser(
           if(config.earlyStopping){
             if(bestLoss-point.valLoss>(config.minDelta??.01)){
               bestLoss=point.valLoss;
-              bestWeights?.forEach(weight=>weight.dispose());
-              bestWeights=model!.getWeights().map(weight=>weight.clone());
+              bestWeights.value?.forEach(weight=>weight.dispose());
+              bestWeights.value=model!.getWeights().map(weight=>weight.clone());
               stale=0;
             }else stale++;
             if(stale>=(config.patience??5))model!.stopTraining=true;
@@ -189,7 +188,7 @@ export async function trainInBrowser(
     });
     if(signal?.aborted)throw new TrainingCancelled();
     if(!metrics.length||!history.history.loss?.length)throw new Error("El entrenamiento no devolvió épocas.");
-    if(bestWeights){model.setWeights(bestWeights);bestWeights.forEach(w=>w.dispose());bestWeights=null;}
+    if(bestWeights.value){model.setWeights(bestWeights.value);bestWeights.value.forEach((w:tf.Tensor)=>w.dispose());bestWeights.value=null;}
     const evaluated=model.evaluate(xTest,yTest,{batchSize:Math.min(batch,16),verbose:0});
     const outputs=Array.isArray(evaluated)?evaluated:[evaluated];
     const result=outputs.map(item=>item.dataSync()[0]);
