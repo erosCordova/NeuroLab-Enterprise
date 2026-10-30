@@ -2,6 +2,9 @@
  * NeuroLab Enterprise: inspección de producción GET-only, sin cookies ni tokens.
  * Este diagnóstico NUNCA despliega, migra, crea cuentas ni escribe datos.
  */
+import {pathToFileURL} from "node:url";
+import {resolve} from "node:path";
+
 const PRODUCTION_ORIGIN = "https://neurolab-enterprise-xi.vercel.app";
 const CI_ORIGIN = "http://127.0.0.1:4189";
 
@@ -92,7 +95,7 @@ export async function runReleaseSmoke(input, {
   };
 }
 
-if (process.argv[1] && import.meta.url === new URL("file://" + process.argv[1]).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const target=process.argv[2];
   runReleaseSmoke(target).then(result=>{
     if(!result.ready)throw new Error("La comprobación no terminó.");
