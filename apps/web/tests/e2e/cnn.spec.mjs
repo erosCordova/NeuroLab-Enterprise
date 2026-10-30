@@ -852,7 +852,7 @@ test("Historial CNN: repetir una cancelación conserva la configuración de orig
 });
 
 
-test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar",async({page})=>{
+test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar",async({page,browser})=>{
   test.setTimeout(120000);
   await applyDataset(page);
   await navigate(page,"Diseñador CNN");
@@ -870,4 +870,31 @@ test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar"
   await expect(trainer.getByRole("img",{name:"Precisión real medida en cada época"})).toBeVisible();
   await expect(trainer.getByRole("img",{name:"Pérdida real medida en cada época"})).toBeVisible();
   await expect(trainer.getByRole("button",{name:"Exportar informe JSON de entrenamiento real"})).toBeVisible();
+
+  // Respaldo portable de un solo archivo; restauración en un navegador limpio.
+  const downloadEvent=page.waitForEvent("download");
+  await trainer.getByRole("button",{name:"Descargar respaldo CNN"}).click();
+  const download=await downloadEvent;
+  expect(download.suggestedFilename()).toMatch(/\.ncnn$/);
+  const backupPath=await download.path();
+  const backup=fs.readFileSync(backupPath);
+  expect(backup.subarray(0,8).toString("utf8")).toBe("NLCNN001");
+  expect(backup.byteLength).toBeGreaterThan(1000);
+
+  const isolated=await browser.newContext();
+  try{
+    const other=await isolated.newPage();
+    await other.goto("/");
+    await navigate(other,"Entrenamientos");
+    const restored=other.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+    await restored.getByLabel("Restaurar modelo CNN desde respaldo").setInputFiles(backupPath);
+    await expect(restored.getByText(/Modelo CNN restaurado con integridad verificada/)).toBeVisible({timeout:30000});
+    await restored.getByLabel("Imagen para predecir con modelo respaldado")
+      .setInputFiles(path.join(datasetDirectory,"0",fs.readdirSync(path.join(datasetDirectory,"0"))[0]));
+    await expect(restored.getByRole("table")).toBeVisible({timeout:30000});
+    await expect(restored.getByRole("table").locator("tbody tr")).toHaveCount(10);
+    // Reimportar no debe sobrescribir sin autorización los pesos guardados.
+    await restored.getByLabel("Restaurar modelo CNN desde respaldo").setInputFiles(backupPath);
+    await expect(restored.getByRole("alert")).toContainText("ya existe en este navegador");
+  }finally{await isolated.close();}
 });

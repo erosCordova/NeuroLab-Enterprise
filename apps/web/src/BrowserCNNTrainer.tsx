@@ -3,6 +3,7 @@ import {api} from "./api";
 import type {Config,ImageDataset,Metric} from "./cnn";
 import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
+import CNNBackupActions from "./CNNBackupActions";
 import "./browser-cnn.css";
 
 type Props={
@@ -40,6 +41,9 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
   const [report,setReport]=useState<BrowserReport|null>(null);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
+  const [predicting,setPredicting]=useState(false);
+  const [predictionError,setPredictionError]=useState("");
+  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
   const controller=useRef<AbortController|null>(null);
 
   useEffect(()=>()=>controller.current?.abort(),[]);
@@ -87,6 +91,17 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
       if(controller.current===abort)controller.current=null;
       setWorking(false);
     }
+  }
+
+  async function classify(file:File){
+    if(!report)return;
+    setPredicting(true);setPredictionError("");setPredictions([]);
+    try{
+      const {predictInBrowser}=await import("./browserCNN");
+      const values=await predictInBrowser(report.model_ref,file,report.config,report.classes);
+      setPredictions(values);
+    }catch(cause){setPredictionError(cause instanceof Error?cause.message:"No se pudo reconocer la imagen.");}
+    finally{setPredicting(false);}
   }
 
   function exportReport(){
@@ -137,5 +152,19 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
         <button className="secondary cnn-spaced" onClick={exportReport}>Exportar informe JSON de entrenamiento real</button>
       </div>}
     </>}
+    <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
+      setReport(restored);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
+    }}/>
+    {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
+      <h3>Reconocer una imagen con los pesos guardados</h3>
+      <p className="caption">El modelo no se reentrena: se recupera de IndexedDB y se aplica a una imagen nueva.</p>
+      <label className="field"><span>Imagen para clasificar</span><input aria-label="Imagen para predecir con modelo respaldado" type="file" accept="image/png,image/jpeg,image/webp" disabled={working||predicting} onChange={event=>{
+        const file=event.target.files?.[0];event.target.value="";if(file)void classify(file);
+      }}/></label>
+      {predicting&&<p role="status">Reconociendo imagen…</p>}
+      {predictionError&&<p className="error" role="alert">{predictionError}</p>}
+      {predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
+    </section>}
   </section>;
 }

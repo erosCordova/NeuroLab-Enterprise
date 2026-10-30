@@ -1,0 +1,8 @@
+.cnn-backup-panel{margin:22px 0 0;padding:17px;border:1px solid #bed7d5;border-radius:14px;background:linear-gradient(125deg,#f6fcfa,#f8faff)}
+.cnn-backup-panel h3{margin:0 0 5px;font-size:15px;color:#1b554d}
+.cnn-backup-panel .panel-head{gap:14px;align-items:center;flex-wrap:wrap}
+.cnn-backup-panel .panel-head .secondary{white-space:normal}
+.cnn-backup-panel .field{margin-top:15px}
+.cnn-backup-predictions{padding:16px;border:1px solid #dce6f2;border-radius:12px;background:#fff}
+.cnn-backup-predictions h3{font-size:15px}
+@media(max-width:700px){.cnn-backup-panel .panel-head{display:block}.cnn-backup-panel .panel-head .secondary{margin-top:12px;width:100%}}

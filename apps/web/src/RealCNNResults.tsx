@@ -2,6 +2,8 @@ import {useEffect,useState} from "react";
 import {api} from "./api";
 import type {RealRun} from "./realRuns";
 import {prepareRealReport} from "./realRuns";
+import CNNBackupActions from "./CNNBackupActions";
+import type {BrowserReport} from "./browserCNN";
 
 type Props={projectId:string};
 
@@ -66,6 +68,13 @@ export default function RealCNNResults({projectId}:Props) {
   }
 
   const current=runs.find(run=>run.id===selected)??runs[0];
+  const backupReport:BrowserReport|null=current?.engine==="TensorFlow.js"&&current.model_ref?{
+    training:"real",engine:"TensorFlow.js",weights_file:"model.json",model_ref:current.model_ref,
+    dataset_fingerprint:current.dataset_fingerprint,classes:current.classes,samples:current.samples,
+    config:current.config,parameters:current.parameters,requested_epochs:current.requested_epochs,
+    completed_epochs:current.completed_epochs,batch:current.batch,seed:current.seed,
+    metrics:current.metrics,test:current.test,
+  }:null;
   async function classify(file:File) {
     if(!current?.model_ref||current.engine!=="TensorFlow.js")return;
     setPredictionError("");setPredictions([]);setPredicting(true);
@@ -117,6 +126,7 @@ export default function RealCNNResults({projectId}:Props) {
         <section className="panel"><h3>Precisión por época</h3><Curves run={current} kind="accuracy"/></section>
         <section className="panel"><h3>Pérdida por época</h3><Curves run={current} kind="loss"/></section>
       </div>
+      {backupReport&&<CNNBackupActions key={backupReport.model_ref} projectId={projectId} report={backupReport} strictSelection/>}
       {current.engine==="TensorFlow.js"&&current.model_ref&&<div className="browser-cnn-summary cnn-spaced">
         <h3>Reconocer otra imagen con este modelo</h3>
         <p className="caption">El modelo se recupera de IndexedDB en este navegador; no se vuelve a entrenar. Si cambias de equipo o eliminas los datos del navegador, puede no estar disponible.</p>
