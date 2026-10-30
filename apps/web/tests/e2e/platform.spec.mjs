@@ -106,3 +106,63 @@ test('Plataforma: registro de modelos reales editable y persistente',async({page
  await register(page);
  await expect(page.getByRole("heading",{name:"Tu primer proyecto CNN"})).toBeVisible();
 });
+
+
+test('Plataforma: comparación CNN real guardada y exportable sin simulaciones',async({page})=>{
+ await register(page);
+ await create(page,'Proyecto evaluación CNN');
+ const inserted=await page.evaluate(async()=>{
+  const projects=await (await fetch('/api/v1/projects',{credentials:'include'})).json();
+  const project=projects.find(p=>p.name==='Proyecto evaluación CNN');
+  const template={
+   training:'real',engine:'TensorFlow.js',dataset_fingerprint:'a'.repeat(64),
+   classes:['cero','uno'],samples:{train:8,validation:2,test:2},
+   config:{size:28,channels:1,dense:8,layers:[{filters:4,kernel:3,pool:true,activation:'relu'}]},
+   parameters:6329,requested_epochs:2,completed_epochs:2,
+   batch:4,seed:42,
+   metrics:[
+    {epoch:1,accuracy:.5,valAccuracy:.5,loss:.9,valLoss:.9},
+    {epoch:2,accuracy:.75,valAccuracy:.5,loss:.6,valLoss:.7},
+   ],
+   test:{accuracy:.5,loss:.7},weights_file:'model.json',
+  };
+  const responses=[];
+  for(let i=0;i<2;i++){
+   const body={...template,
+    test:{accuracy:i===0?.55:.75,loss:i===0?.7:.5},
+    model_ref:'indexeddb://neurolab-cnn-'+project.id+'-'+crypto.randomUUID()};
+   const r=await fetch('/api/v1/projects/'+project.id+'/real-runs',{
+    method:'POST',credentials:'include',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+   responses.push({status:r.status,data:await r.json()});
+  }
+  return responses;
+ });
+ expect(inserted.map(x=>x.status)).toEqual([201,201]);
+ const ids=inserted.map(x=>x.data.id);
+ await page.getByRole('navigation').getByRole('button',{name:'Evaluación',exact:true}).click();
+ const panel=page.getByRole('region',{name:'Evaluación de CNN reales'});
+ await expect(panel).toBeVisible();
+ for(const id of ids)await panel.getByLabel('Comparar entrenamiento real '+id).check();
+ await expect(panel.getByRole('status').filter({hasText:/Condiciones declaradas compatibles/})).toBeVisible();
+ await expect(panel.getByText(/Mayor precisión de prueba declarada/)).toBeVisible();
+ const csvEvent=page.waitForEvent('download');
+ await panel.getByRole('button',{name:'Exportar comparación real CSV'}).click();
+ const csvFile=await csvEvent;
+ expect(csvFile.suggestedFilename()).toBe('neurolab-comparacion-cnn-real.csv');
+ const jsonEvent=page.waitForEvent('download');
+ await panel.getByRole('button',{name:'Exportar comparación real JSON'}).click();
+ const jsonFile=await jsonEvent;
+ const content=await jsonFile.createReadStream();
+ const chunks=[];for await(const part of content)chunks.push(part);
+ const parsed=JSON.parse(Buffer.concat(chunks).toString());
+ expect(parsed.simulated).toBe(false);
+ expect(parsed.server_verified).toBe(false);
+ expect(parsed.highest_reported_test_accuracy_id).toBe(ids[1]);
+ const epochsEvent=page.waitForEvent('download');
+ await panel.getByRole('button',{name:'Exportar épocas reales CSV'}).click();
+ expect((await epochsEvent).suggestedFilename()).toBe('neurolab-metricas-cnn-real.csv');
+ await page.reload();
+ await page.getByRole('navigation').getByRole('button',{name:'Evaluación',exact:true}).click();
+ await expect(page.getByRole('region',{name:'Evaluación de CNN reales'}).getByLabel('Comparar entrenamiento real '+ids[0])).toBeVisible();
+});

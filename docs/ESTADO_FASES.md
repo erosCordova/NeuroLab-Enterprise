@@ -243,3 +243,11 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Persistencia de pesos limitada al IndexedDB de ese navegador; el respaldo debe conservarse externamente. No hay almacenamiento de pesos en Neon ni sincronización cloud automática.
 - Verificado en GitHub Actions: frontend unitarias + build + **19/19 escenarios Chromium** (incluida descarga, restauración en otro contexto y predicción) aprobados: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937195. API/PostgreSQL aprobada: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937185. Motor Python/Keras aprobado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40998937139. Código funcional comprobado en commit `6c8704b998acb227694521ea429cc44a8be837bf`; commits posteriores hasta esta revisión son de documentación.
 - Avance global estimado de la aplicación: **70%** (anterior 66%), dado que respaldo, restauración e inferencia desde otra sesión ya pasaron pruebas. No representa rendimiento predictivo demostrado ni disponibilidad de modelos en la nube.
+
+## Bloque: evaluación comparativa CNN real
+
+- Preparado panel independiente de resultados de pruebas reales declarados por el cliente, con selección de hasta tres experimentos, filtros, tablas de épocas y exportación CSV/JSON.
+- Comparabilidad condicionada a huella, clases, cantidades, semilla, motor y entrada; nunca certifica particiones idénticas ni superioridad estadística.
+- Panel previo de simulaciones se mantiene separado. No se almacenan ni exportan pesos o imágenes.
+- Pendiente de confirmación final de tests antes de actualizar el avance global (base 74%).
+- Ningún despliegue nuevo autorizado.

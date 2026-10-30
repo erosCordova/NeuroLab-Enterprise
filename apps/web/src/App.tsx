@@ -4,6 +4,7 @@ import RealModelRegistry from "./RealModelRegistry";
 import BrowserCNNTrainer from "./BrowserCNNTrainer";
 import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
+import RealEvaluationPanel from "./RealEvaluationPanel";
 import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
 import type {Project,ProjectDraft} from "./projects";
@@ -34,7 +35,7 @@ const pageDescriptions:Record<Page,string>={
   "Diseñador CNN":"Construye una arquitectura CNN válida para entrenar o simular.",
   Datasets:"Carga, valida y explora las imágenes que utilizará tu proyecto.",
   Entrenamientos:"Entrena CNN reales en tu navegador o revisa las simulaciones didácticas.",
-  Evaluación:"Consulta los resultados de demostración y sus configuraciones.",
+  Evaluación:"Compara métricas de CNN reales y revisa simulaciones por separado.",
   Modelos:"Conserva versiones y revisa las fichas de cada experimento.",
   Fundamentos:"Comprende cada operación de una red convolucional.",
   Reportes:"Reúne la información del proyecto y prepara tus exportaciones.",
@@ -365,7 +366,10 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
           <TrainingHistory key={projectId} jobs={projectJobs} onRepeat={repeatJob} onSelect={setSelectedId}/>
         </>}
 
-        {page==="Evaluación"&&<EvaluationPanel key={projectId} jobs={projectJobs} />}
+        {page==="Evaluación"&&<>
+          {onPersistProject?<RealEvaluationPanel key={projectId} projectId={projectId}/>:<p className="soft">Para comparar informes CNN reales, inicia sesión y registra los resultados en PostgreSQL. Las simulaciones aparecen separadas abajo.</p>}
+          <EvaluationPanel key={projectId} jobs={projectJobs}/>
+        </>}
 
         {page==="Modelos"&&<>
           {onPersistProject?<RealModelRegistry projectId={projectId}/>:<p className="soft">Los modelos CNN reales pueden respaldarse desde Entrenamientos. Inicia sesión para administrarlos con fichas persistentes en PostgreSQL.</p>}
