@@ -29,6 +29,6 @@ jobs:
           cache: pip
           cache-dependency-path: services/api/requirements-ml.txt
       - name: Instalar entorno ML independiente
-        run: python -m pip install -r requirements-ml.txt
+        run: python -m pip install -r requirements-ml.txt pytest==8.3.5
       - name: Ejecutar entrenamiento real y pruebas
         run: python -m pytest -q tests/test_real_cnn.py --tb=short
