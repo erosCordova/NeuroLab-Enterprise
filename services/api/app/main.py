@@ -14,6 +14,7 @@ from psycopg.types.json import Jsonb
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
+from app.real_runs import RealCNNImport
 
 
 def normalize(value):
@@ -198,6 +199,35 @@ def create_app():
         except psycopg.errors.UniqueViolation:
             db.rollback()
             raise HTTPException(409,'Ya existe un proyecto con ese nombre.')
+
+    real_fields='id,project_id,imported_at,dataset_fingerprint,classes,samples,config,parameters,requested_epochs,completed_epochs,batch,seed,metrics,test,source'
+
+    @app.get('/api/v1/projects/{project_id}/real-runs')
+    def list_real_runs(project_id:UUID,user=Depends(current_user),db=Depends(database)):
+        owned=db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',(project_id,user['id'])).fetchone()
+        if not owned:raise HTTPException(404,'Proyecto no encontrado.')
+        return db.execute(f'SELECT {real_fields} FROM real_cnn_runs WHERE project_id=%s AND owner_id=%s ORDER BY imported_at DESC,id DESC LIMIT 50',(project_id,user['id'])).fetchall()
+
+    @app.post('/api/v1/projects/{project_id}/real-runs',status_code=201)
+    def import_real_run(project_id:UUID,body:RealCNNImport,request:Request,user=Depends(current_user),db=Depends(database)):
+        # Las métricas son declaradas por el usuario y no certificadas por el backend.
+        # No se cargan pesos ni imágenes en este endpoint.
+        if request.headers.get('content-length') and int(request.headers['content-length'])>65536:
+            raise HTTPException(413,'El informe excede 64 KiB.')
+        owned=db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',(project_id,user['id'])).fetchone()
+        if not owned:raise HTTPException(404,'Proyecto no encontrado.')
+        row=db.execute(f'''INSERT INTO real_cnn_runs
+            (id,project_id,owner_id,dataset_fingerprint,classes,samples,config,parameters,
+             requested_epochs,completed_epochs,batch,seed,metrics,test)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+            RETURNING {real_fields}''',
+            (uuid4(),project_id,user['id'],body.dataset_fingerprint,
+             Jsonb(body.classes),Jsonb(body.samples.model_dump()),Jsonb(body.config),
+             body.parameters,body.requested_epochs,body.completed_epochs,body.batch,
+             body.seed,Jsonb([point.model_dump() for point in body.metrics]),
+             Jsonb(body.test.model_dump()))).fetchone()
+        db.commit()
+        return row
 
     return app
 
