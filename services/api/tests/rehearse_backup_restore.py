@@ -43,6 +43,7 @@ def run_postgres_tool(command: str, args: list[str], stream, *, output: bool):
     process_env["PGPASSWORD"] = args[0]
     cmd = [
         "docker", "run", "--rm", "--network", "host",
+        *(["-i"] if not output else []),
         "-e", "PGPASSWORD", "postgres:16-alpine", command,
         "--host=127.0.0.1", "--port=5432", "--username=" + args[1],
     ]
