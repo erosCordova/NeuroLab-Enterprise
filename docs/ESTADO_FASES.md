@@ -22,7 +22,7 @@ usuario y no debe presentarse como cumplimiento literal de ese requisito origina
 | Fase | Evidencia actual | Pendiente para cerrar según el documento |
 | --- | --- | --- |
 | 0. Descubrimiento y diseño | Documento maestro, alcance CNN y pantallas implementadas | Consolidar historias y criterios del alcance adaptado; aprobación de sus flujos |
-| 1. Base de plataforma | Shell React, proyectos en memoria y pruebas; CI añadido en esta rama | Autenticación, permisos reales, API, PostgreSQL, migraciones e integración; primera ejecución verde de CI |
+| 1. Base de plataforma | Shell React, proyectos en memoria y pruebas; CI añadido en esta rama | Autenticación, permisos reales, API, PostgreSQL, migraciones e integración; integración del PR validado |
 | 2. Arquitecturas | Constructor CNN validado, formas, parámetros, exportación y versiones en memoria | Guardado y versionado persistente mediante API; validación del servidor |
 | 3. Entrenamiento | Cola y parada temprana de demostración | Worker Python, TensorFlow/Keras y estados persistidos; entrenamiento real de extremo a extremo |
 | 4. Tiempo real y evaluación | Dos gráficos y cancelación de simulación | Eventos autenticados, métricas reales, recuperación y reconexión |
@@ -51,14 +51,19 @@ para considerar terminados los componentes aplazados.
 - npm ci: correcto.
 - npm run test:unit: 27 aprobadas.
 - npm run build: correcto.
-- La suite E2E contiene 13 escenarios; ejecución completa pendiente.
-  En el entorno de revisión no se pudo instalar Chromium: la descarga falló.
-  Esto no se registra como fallo funcional de la aplicación ni como aprobación E2E.
-- CI: configuración añadida, resultado remoto pendiente de consultar en GitHub.
+- GitHub Actions: 27 pruebas unitarias y 13 escenarios E2E aprobados; build correcto.
+- Evidencia remota: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40983413937
+  Código probado: commit 1490a98d778f1aa4b5b4031664e3fd68f3ae6935.
+- La descarga local de Chromium no estuvo disponible; el resultado E2E procede
+  del runner de GitHub, que sí instaló y ejecutó el navegador.
+- Validación automatizada de este incremento: 40/40 pruebas aprobadas (100%).
+  Este porcentaje mide la suite ejecutada, no el avance global del producto.
+- La exportación prueba bytes y manifiesto con un adaptador; el diálogo nativo
+  de permisos sigue requiriendo comprobación manual en el navegador del usuario.
 
 ## Próximo cierre
 
-1. Obtener resultado E2E y CI verde del frontend adaptado.
+1. Integrar el PR del frontend adaptado, con CI verde comprobada.
 2. Revisar los criterios del alcance CNN antes de ampliar módulos.
 3. Mantener API, autenticación y persistencia aplazadas hasta que el usuario
    autorice avanzar más allá del frontend sin base de datos.
