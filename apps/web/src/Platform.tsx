@@ -49,7 +49,7 @@ export default function Platform(){
   if(user)return <main className="platform-onboarding"><div className="panel-head"><h1>Tu primer proyecto CNN</h1><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>
     <p className="muted">Los proyectos se guardarán en tu cuenta de PostgreSQL.</p>{error&&<p role="alert">{error}</p>}
     <ProjectsPanel projects={[]} activeId="" persistent onSave={save} onOpen={()=>{}}/></main>;
-  return <main className="platform-auth"><section className="platform-story"><div className="eyebrow">NEUROLAB ENTERPRISE</div><h1>Tu laboratorio de visión artificial.</h1><p>Organiza tus proyectos CNN en una cuenta y recupera su contexto cuando vuelvas.</p><div className="platform-note">Proyectos persistentes en PostgreSQL. Las imágenes, arquitecturas y simulaciones siguen en memoria durante esta etapa.</div></section>
+  return <main className="platform-auth"><section className="platform-story"><div className="eyebrow">NEUROLAB ENTERPRISE</div><h1>Tu laboratorio de visión artificial.</h1><p>Organiza tus proyectos CNN, entrena imágenes y recupera los informes asociados a tu cuenta.</p><div className="platform-note">Proyectos e informes de entrenamientos persistentes en PostgreSQL. Los pesos CNN se conservan únicamente en el navegador que los entrenó.</div></section>
     <section className="panel platform-form" aria-label="Acceso a NeuroLab"><span className="badge">PLATAFORMA CNN</span><h2>{register?"Crear cuenta":"Iniciar sesión"}</h2>
       <p className="muted">{register?"Empieza con una cuenta personal.":"Continúa con tus proyectos guardados."}</p>
       <form onSubmit={async event=>{
