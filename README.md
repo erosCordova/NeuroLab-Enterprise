@@ -9,8 +9,8 @@ La API persiste cuentas, sesiones y proyectos. Consulta
 [la conexión React/API](docs/CONEXION_REACT_API.md) para activarla.
 La base de plataforma ya está creada en Neon; consulta [su estado y conexión](docs/NEON.md).
 La vista previa sigue en demo hasta desplegar el backend.
-El despliegue conjunto de React y API está preparado en
-[la guía de Render](docs/DESPLIEGUE_RENDER.md).
+La arquitectura elegida usa backend en Render y frontend en Vercel; consulta
+[la guía de despliegue](docs/DESPLIEGUE_RENDER.md).
 Las imágenes y su preprocesamiento son
 reales; el entrenamiento y las métricas son simulados. Dropout y L2 se conservan
 como configuración y no modifican esas curvas. No se generan pesos entrenados.

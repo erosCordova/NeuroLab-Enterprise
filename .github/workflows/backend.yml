@@ -49,25 +49,36 @@ jobs:
       - run: npm run test:platform
         working-directory: apps/web
 
-      - name: Build production image with connected React
-        run: docker build -f Dockerfile.render -t neurolab-hosted-ci .
+      - name: Build Render backend image
+        run: docker build -t neurolab-api-ci services/api
         working-directory: .
       - name: Start production image on isolated CI PostgreSQL
         run: >-
-          docker run -d --name neurolab-hosted-ci --network host
+          docker run -d --name neurolab-api-ci --network host
           -e DATABASE_URL="$TEST_DATABASE_URL"
           -e DATABASE_URL_UNPOOLED="$TEST_DATABASE_URL"
-          -e PORT=4189 -e COOKIE_SECURE=false
+          -e PORT=4190 -e COOKIE_SECURE=false
           -e APP_ORIGINS=http://127.0.0.1:4189
-          neurolab-hosted-ci
+          neurolab-api-ci
       - name: Wait for database readiness
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4190/api/v1/health
+      - name: Build Vercel frontend in connected mode
+        run: VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build
+        working-directory: apps/web
+      - name: Start isolated static frontend and API reverse proxy
+        run: >-
+          docker run -d --name neurolab-frontend-ci --network host
+          -v "$GITHUB_WORKSPACE/apps/web/dist:/usr/share/nginx/html:ro"
+          -v "$GITHUB_WORKSPACE/apps/web/tests/fixtures/frontend-proxy.conf:/etc/nginx/nginx.conf:ro"
+          nginx:alpine
+      - name: Wait for frontend API proxy
         run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/health
       - name: Verify production bundle, login and project persistence
         run: npx playwright test --config playwright.hosted.config.mjs
         working-directory: apps/web
       - name: Inspect failed image
         if: failure()
-        run: docker logs neurolab-hosted-ci
+        run: docker logs neurolab-api-ci
       - name: Stop isolated CI image
         if: always()
-        run: docker rm -f neurolab-hosted-ci || true
+        run: docker rm -f neurolab-api-ci neurolab-frontend-ci || true

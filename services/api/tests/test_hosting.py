@@ -1,42 +1,50 @@
 from fastapi.testclient import TestClient
-import pytest
 from app.main import create_app, database
 
 
-def test_frontend_and_api_share_origin_without_exposing_other_files(tmp_path, monkeypatch):
-    public = tmp_path / 'public'
-    public.mkdir()
-    (public / 'index.html').write_text('<h1>NeuroLab conectado</h1>')
-    (public / 'app.js').write_text('window.bundleLoaded = true;')
-    (tmp_path / 'private.env').write_text('private-fixture')
-    monkeypatch.setenv('FRONTEND_DIST', str(public))
+def hosting_app(monkeypatch):
+    monkeypatch.delenv('APP_ORIGINS', raising=False)
+    monkeypatch.setenv('RENDER_EXTERNAL_URL', 'https://neurolab-api.example')
     app = create_app()
     app.dependency_overrides[database] = lambda: None
-    with TestClient(app) as client:
-        assert 'NeuroLab conectado' in client.get('/').text
-        assert client.get('/app.js').status_code == 200
-        assert client.get('/private.env').status_code == 404
-        assert client.get('/%2e%2e/private.env').status_code == 404
-        assert client.get('/api/v1/auth/login').status_code != 200
-        assert client.post('/api/v1/auth/login', json={}).status_code == 422
+    return app
 
 
-def test_missing_bundle_fails_instead_of_showing_a_demo(monkeypatch, tmp_path):
-    monkeypatch.setenv('FRONTEND_DIST', str(tmp_path))
-    with pytest.raises(RuntimeError, match='compiled frontend'):
-        create_app()
+def test_backend_exposes_no_frontend_bundle(monkeypatch):
+    with TestClient(hosting_app(monkeypatch)) as client:
+        assert client.get('/').status_code == 404
+        assert client.get('/index.html').status_code == 404
 
 
-def test_render_origin_is_accepted_and_untrusted_origin_rejected(monkeypatch):
-    monkeypatch.delenv('FRONTEND_DIST', raising=False)
-    monkeypatch.delenv('APP_ORIGINS', raising=False)
-    monkeypatch.setenv('RENDER_EXTERNAL_URL', 'https://neurolab-hosting.example')
+def test_exact_vercel_origin_is_accepted_and_others_rejected(monkeypatch):
+    hosting_app(monkeypatch)
+    monkeypatch.setenv('APP_ORIGINS', 'https://neurolab.vercel.app')
     app = create_app()
     app.dependency_overrides[database] = lambda: None
     with TestClient(app) as client:
         assert client.post('/api/v1/auth/login', json={}, headers={
-            'Origin': 'https://neurolab-hosting.example',
+            'Origin': 'https://neurolab.vercel.app',
         }).status_code == 422
         assert client.post('/api/v1/auth/login', json={}, headers={
-            'Origin': 'https://untrusted.example',
+            'Origin': 'https://neurolab.vercel.app.attacker.example',
         }).status_code == 403
+
+
+def test_preflight_allows_only_the_configured_frontend(monkeypatch):
+    hosting_app(monkeypatch)
+    monkeypatch.setenv('APP_ORIGINS', 'https://neurolab.vercel.app')
+    with TestClient(create_app()) as client:
+        headers = {'Origin': 'https://neurolab.vercel.app', 'Access-Control-Request-Method': 'POST'}
+        response = client.options('/api/v1/auth/login', headers=headers)
+        assert response.status_code == 200
+        assert response.headers['access-control-allow-origin'] == headers['Origin']
+        assert response.headers['access-control-allow-credentials'] == 'true'
+        response = client.options('/api/v1/auth/login', headers={**headers, 'Origin': 'https://another.vercel.app'})
+        assert 'access-control-allow-origin' not in response.headers
+
+
+def test_api_responses_and_errors_are_never_cached(monkeypatch):
+    with TestClient(hosting_app(monkeypatch)) as client:
+        for response in [client.post('/api/v1/auth/login', json={}), client.get('/api/v1/missing')]:
+            assert response.headers['cache-control'] == 'private, no-store'
+            assert response.headers['vercel-cdn-cache-control'] == 'no-store'

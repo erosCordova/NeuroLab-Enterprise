@@ -5,7 +5,6 @@ import re
 import secrets
 import unicodedata
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Literal
 from uuid import UUID, uuid4
 
@@ -14,7 +13,6 @@ from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
 
@@ -114,8 +112,14 @@ def create_app():
     async def verify_origin(request, call_next):
         if request.method in ('POST', 'PUT', 'DELETE') and request.headers.get('origin') and request.headers['origin'] not in origins:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=403, content={'detail':'Origen no permitido.'})
-        return await call_next(request)
+            response = JSONResponse(status_code=403, content={'detail':'Origen no permitido.'})
+        else:
+            response = await call_next(request)
+        if request.url.path.startswith('/api/'):
+            response.headers['Cache-Control'] = 'private, no-store'
+            response.headers['CDN-Cache-Control'] = 'no-store'
+            response.headers['Vercel-CDN-Cache-Control'] = 'no-store'
+        return response
 
     def start_session(db, response, user):
         token = secrets.token_urlsafe(32)
@@ -194,15 +198,6 @@ def create_app():
         except psycopg.errors.UniqueViolation:
             db.rollback()
             raise HTTPException(409,'Ya existe un proyecto con ese nombre.')
-
-    # Optional production bundle: React and /api share one HTTPS origin and cookie.
-    # Register last so API routes retain their authentication and JSON responses.
-    frontend = os.getenv('FRONTEND_DIST')
-    if frontend:
-        directory = Path(frontend).resolve()
-        if not (directory / 'index.html').is_file():
-            raise RuntimeError('FRONTEND_DIST must contain the compiled frontend')
-        app.mount('/', StaticFiles(directory=str(directory), html=True), name='frontend')
 
     return app
 

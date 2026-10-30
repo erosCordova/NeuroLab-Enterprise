@@ -187,3 +187,14 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Referencias y configuración en DESPLIEGUE_RENDER.md. No se ha creado un servicio:
   Render requiere confirmar el workspace, que todavía no está seleccionado.
 - La vista privada permanece en demo; no se declara conexión pública con Neon.
+
+## Arquitectura de despliegue corregida según el usuario
+
+- Backend exclusivamente en Render, frontend en Vercel y PostgreSQL en Neon.
+- Se retira Dockerfile.render y el hosting de estáticos desde FastAPI.
+- Imagen de API independiente y configuración Vercel programática con destino
+  explícito; /api se reenvía a Render manteniendo las cookies del frontend.
+- Origen Vercel exacto, respuestas privadas sin caché y pruebas del proxy en CI.
+- Proyecto neurolab-enterprise creado en el equipo EROSSS de Vercel, sin publicar.
+- Render pendiente de confirmar My Workspace; no hay servicio creado ni se
+  declara operativo el despliegue. Avance global estimado conservado: 50%.

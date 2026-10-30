@@ -35,8 +35,9 @@ Una cuenta nueva no recibe los proyectos de la demo ni de otra cuenta.
 ## Despliegue
 
 VITE_USE_API y VITE_API_BASE_URL son variables de compilación. Por defecto,
-VITE_API_BASE_URL es /api/v1. En producción se recomienda servir /api desde el
-mismo origen HTTPS del frontend mediante reverse proxy, con COOKIE_SECURE=true.
+VITE_API_BASE_URL es /api/v1. En producción el frontend estará en Vercel y la API en Render. El proxy
+/api de Vercel conserva el mismo origen visible al navegador, con COOKIE_SECURE=true.
+La configuración y los destinos explícitos están en DESPLIEGUE_RENDER.md.
 No publiques URLs de PostgreSQL ni contraseñas como variables VITE_.
 
 La vista previa de Sites no aloja el backend Python/PostgreSQL. Sigue en modo demo

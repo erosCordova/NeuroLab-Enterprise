@@ -1,4 +1,4 @@
-"""Start the single-origin deployment after transactional migrations succeed."""
+"""Start the Render API after transactional migrations succeed."""
 import os
 import uvicorn
 from app.migrate import migrate
