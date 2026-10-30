@@ -27,3 +27,9 @@ service-account*.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Python backend
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
