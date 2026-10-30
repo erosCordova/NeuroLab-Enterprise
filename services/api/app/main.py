@@ -17,6 +17,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field, field_validator
 from app.real_runs import RealCNNImport
 from app.auth_throttle import check_attempt, clear_attempts
+from app.readiness import schema_is_ready
 
 
 def normalize(value):
@@ -191,6 +192,14 @@ def create_app():
     def health(db=Depends(database)):
         db.execute('SELECT 1')
         return {'status':'ok','database':'postgresql','training':'browser-tensorflowjs (not server)'}
+
+    @app.get('/api/v1/ready')
+    def ready(db=Depends(database)):
+        # This URL intentionally has no detailed schema/credential diagnostics.
+        if not schema_is_ready(db):
+            raise HTTPException(503, 'El laboratorio aún no está preparado.')
+        return {'status':'ready'}
+
 
     @app.post('/api/v1/auth/register', status_code=201)
     def register(body:Registration, response:Response, db=Depends(database)):

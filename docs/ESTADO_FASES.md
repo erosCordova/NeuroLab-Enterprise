@@ -351,3 +351,13 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Pruebas de esta versión: **55 Python/API**, **11 integradas/hosting**, **20 navegador** y **3 motor CNN**; frontend: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274919; motor: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274908.
 - **Avance global: 93%** (antes 91%; +2 puntos por ensayo fiel a la línea base de Neon y verificación de migraciones de solo lectura).
 - No se ha ejecutado ninguna actualización en la base remota.
+
+## Puerta de disponibilidad del esquema (en validación)
+
+- \`/api/v1/ready\` comprueba exclusivamente por consultas SQL que las cinco
+  migraciones, sus sumas de verificación y las tablas necesarias están presentes.
+- CI verifica la ruta desde Docker API y proxy y ejecuta un preflight de
+  variables Render con valores sintéticos de prueba dentro de la imagen.
+- Verificado por SQL de solo lectura que \`001_platform.sql\` del código y de
+  Neon tienen la misma huella SHA-256. Restan las migraciones \`002\`–\`005\`.
+- Se mantiene 93% hasta concluir toda la validación.

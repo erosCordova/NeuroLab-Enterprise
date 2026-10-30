@@ -4,7 +4,7 @@ from uuid import uuid4
 import psycopg
 import pytest
 from fastapi.testclient import TestClient
-from app.main import create_app
+from app.main import create_app, database
 from app.migrate import migrate
 
 
@@ -201,3 +201,28 @@ def test_register_limit_and_hmac_privacy(client):
     with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
         keys=[row[0] for row in db.execute('SELECT key_hash FROM auth_attempt_windows').fetchall()]
     assert email not in keys
+
+
+def test_readiness_requires_all_migrations_and_tables(client):
+    response=client.get('/api/v1/ready')
+    assert response.status_code==200,response.text
+    assert response.json()=={'status':'ready'}
+    assert 'password' not in response.text and 'migration' not in response.text
+    assert response.headers['Cache-Control']=='private, no-store'
+
+
+def test_readiness_denies_missing_schema_without_leaking_details():
+    # A stub never touches Neon or modifies the CI database.
+    class MissingSchema:
+        def execute(self, sql, args=None):
+            return self
+        def fetchone(self):
+            return (None,)
+
+    app=create_app()
+    app.dependency_overrides[database]=lambda: MissingSchema()
+    with TestClient(app) as test_client:
+        result=test_client.get('/api/v1/ready')
+    assert result.status_code==503
+    assert result.json()=={'detail':'El laboratorio aún no está preparado.'}
+    assert 'schema' not in result.text and 'password' not in result.text

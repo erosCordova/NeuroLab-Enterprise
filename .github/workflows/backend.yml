@@ -63,6 +63,17 @@ jobs:
           docker run --rm --entrypoint python neurolab-api-ci
           -c "import importlib.util; assert importlib.util.find_spec('pytest') is None; assert importlib.util.find_spec('httpx') is None; print('NEUROLAB_RUNTIME_MINIMO=OK')"
         working-directory: .
+      - name: Check Render production preflight inside Docker without touching Neon
+        run: >-
+          docker run --rm --entrypoint python
+          -e RENDER=true
+          -e DATABASE_URL="$TEST_DATABASE_URL"
+          -e DATABASE_URL_UNPOOLED="$TEST_DATABASE_URL"
+          -e NEUROLAB_RATE_LIMIT_SECRET="$NEUROLAB_RATE_LIMIT_SECRET"
+          -e COOKIE_SECURE=true
+          -e APP_ORIGINS=https://neurolab-enterprise-xi.vercel.app
+          neurolab-api-ci
+          -c "from app.release_readiness import validate_render_config; result=validate_render_config(); assert result['production'] and result['valid']; print('RENDER_PREFLIGHT=APROBADO')"
       - name: Start production image on isolated CI PostgreSQL
         run: >-
           docker run -d --name neurolab-api-ci --network host
@@ -73,7 +84,7 @@ jobs:
           -e NEUROLAB_RATE_LIMIT_SECRET="$NEUROLAB_RATE_LIMIT_SECRET"
           neurolab-api-ci
       - name: Wait for database readiness
-        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4190/api/v1/health
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4190/api/v1/ready
       - name: Build Vercel frontend in connected mode
         run: VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build
         working-directory: apps/web
@@ -84,7 +95,7 @@ jobs:
           -v "$GITHUB_WORKSPACE/apps/web/tests/fixtures/frontend-proxy.conf:/etc/nginx/nginx.conf:ro"
           nginx:alpine
       - name: Wait for frontend API proxy
-        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/health
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/ready
       - name: Verify production bundle, login and project persistence
         run: npx playwright test --config playwright.hosted.config.mjs
         working-directory: apps/web

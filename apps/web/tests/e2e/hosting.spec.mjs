@@ -4,6 +4,9 @@ test('Despliegue: el bundle conectado y la API se sirven desde el mismo origen',
   const health = await request.get('/api/v1/health');
   expect(health.ok()).toBe(true);
   expect(await health.json()).toEqual({status: 'ok', database: 'postgresql', training: 'browser-tensorflowjs (not server)'});
+  const readiness = await request.get('/api/v1/ready');
+  expect(readiness.ok()).toBe(true);
+  expect(await readiness.json()).toEqual({status: 'ready'});
   const home = await request.get('/');
   const csp = home.headers()['content-security-policy-report-only'];
   expect(csp).toContain("script-src 'self'");

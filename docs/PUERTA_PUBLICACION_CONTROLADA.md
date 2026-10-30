@@ -86,3 +86,28 @@ autorizado.** No se han ejecutado en producción desde ChatGPT.
   https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008274908.
 - Neon, Render y Vercel **sin cambios de publicación**. La prueba sintética no
   sustituye una copia de respaldo y verificación de las variables de producción.
+
+## Comprobaciones operativas de salud y preparación
+
+- \`GET /api/v1/health\` indica conectividad a PostgreSQL; **no certifica**
+  que todas las migraciones y tablas necesarias existan.
+- \`GET /api/v1/ready\` es una lectura sin autenticación que devuelve
+  \`{"status":"ready"}\` solo cuando las cinco migraciones y sus sumas SHA-256
+  coinciden con los archivos y existen las seis tablas esenciales. Si falta
+  alguna, devuelve HTTP 503 con un mensaje genérico, sin revelar estructura,
+  nombres de cuentas o credenciales.
+- GitHub Actions probará la misma ruta desde el contenedor Docker de API y
+  a través del proxy de frontend. También ejecutará una validación de variables
+  de producción dentro de la imagen con **valores de CI sintéticos**, sin
+  conectarse a Neon real.
+- La comprobación **no sustituye las pruebas funcionales** de autenticación,
+  datos existentes, entrenamiento TensorFlow.js e inferencia en el sitio
+  público tras el futuro despliegue autorizado.
+
+### Comprobación read-only de migración 001 de Neon
+
+El 30 de octubre de 2026 se comprobó con una instrucción SELECT que la huella
+SHA-256 de la migración local \`001_platform.sql\` es idéntica a la huella
+registrada en \`schema_migrations\` de la rama predeterminada de Neon. Las
+migraciones \`002\`–\`005\` siguen pendientes. Esta comprobación no leyó
+credenciales ni cambió objetos.
