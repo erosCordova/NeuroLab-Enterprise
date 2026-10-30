@@ -1,10 +1,20 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { createImageFixture } from "../fixtures/images.mjs";
 
-const datasetDirectory = fs.readFileSync(
-  path.resolve("../../runtime/ultimo_dataset.txt"), "utf8"
-).trim();
+const externalDataset = process.env.NEUROLAB_E2E_DATASET;
+const datasetDirectory = externalDataset
+  ? path.resolve(externalDataset)
+  : fs.mkdtempSync(path.join(os.tmpdir(), "neurolab-cnn-e2e-"));
+
+test.beforeAll(() => {
+  if (!externalDataset) createImageFixture(datasetDirectory);
+});
+test.afterAll(() => {
+  if (!externalDataset) fs.rmSync(datasetDirectory, {recursive:true,force:true});
+});
 
 async function navigate(page, name) {
   await page.getByRole("navigation").getByRole("button", {
@@ -16,7 +26,7 @@ async function navigate(page, name) {
   })).toBeVisible();
 }
 
-async function applyMNIST(page) {
+async function applyDataset(page) {
   await navigate(page, "Datasets");
 
   await page.getByLabel("Carpeta de imágenes", {
@@ -38,6 +48,8 @@ async function applyMNIST(page) {
 }
 
 async function createJob(page, epochs = "3") {
+  await navigate(page, "Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN", {exact:true}).selectOption("manual");
   await navigate(page, "Entrenamientos");
   await page.getByLabel(/^Épocas/).fill(epochs);
   await page.getByRole("button", {
@@ -68,8 +80,8 @@ test("Los diez módulos corresponden exclusivamente a CNN", async ({ page }) => 
   )).toHaveCount(0);
 });
 
-test("MNIST: decodifica 200 imágenes y aplica las diez clases", async ({ page }) => {
-  await applyMNIST(page);
+test("Dataset de prueba: decodifica 200 imágenes y aplica las diez clases", async ({ page }) => {
+  await applyDataset(page);
 
   const applied = page.getByRole("heading", {
     name: "Dataset aplicado", exact: true,
@@ -98,7 +110,7 @@ test("MNIST: decodifica 200 imágenes y aplica las diez clases", async ({ page }
 });
 
 test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Diseñador CNN");
 
   await page.getByRole("button", {
@@ -221,7 +233,7 @@ test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", asy
 });
 
 test("La pausa y cancelación conservan los estados terminales", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await createJob(page, "100");
 
   await page.getByRole("button", {
@@ -263,7 +275,7 @@ test("La pausa y cancelación conservan los estados terminales", async ({ page }
 });
 
 test("Los límites de Administración controlan la cola CNN", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Administración");
 
   await page.getByLabel(/^Máximo de pendientes/).fill("1");
@@ -321,7 +333,7 @@ test("El diseñador CNN funciona en pantalla pequeña y con teclado", async ({ p
     name: "Proyectos", level: 1, exact: true,
   })).toBeVisible();
 
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Diseñador CNN");
 
   await expect(page.getByRole("button", {
@@ -358,7 +370,7 @@ test("El diseñador CNN funciona en pantalla pequeña y con teclado", async ({ p
 });
 
 test("Explorador CNN: filtros, paginación, ampliación y exportación", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
 
   const explorer=page.getByRole("region",{
     name:"Explorador de imágenes",exact:true
@@ -446,8 +458,8 @@ test("Explorador CNN: filtros, paginación, ampliación y exportación", async (
   )).toBe(true);
 });
 
-test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor",async({page})=>{
-  await applyMNIST(page);
+test("Preprocesamiento CNN: píxeles de imagen, normalización y exportación de tensor",async({page})=>{
+  await applyDataset(page);
 
   const explorer=page.getByRole("region",{
     name:"Explorador de imágenes",exact:true
@@ -484,6 +496,7 @@ test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor
   await page.keyboard.press("Escape");
   await navigate(page,"Diseñador CNN");
 
+  await page.getByLabel("Modo de configuración CNN", {exact:true}).selectOption("manual");
   await page.getByLabel(/^Tamaño de entrada/).selectOption("32");
   await page.getByLabel(/^Canales/).selectOption("3");
 
@@ -517,7 +530,7 @@ test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor
 });
 
 test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
 
   async function inventory(){
     const event=page.waitForEvent("download");
@@ -534,7 +547,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
   expect(first.fingerprint).toMatch(/^[a-f0-9]{64}$/);
   expect(first.files.every(image=>/^[a-f0-9]{64}$/.test(image.checksum))).toBe(true);
 
-  await applyMNIST(page);
+  await applyDataset(page);
   const second=await inventory();
   expect(second.fingerprint).toBe(first.fingerprint);
 
@@ -573,7 +586,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
 });
 
 test("CNN automática: propone capas y configuración de regularización",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page,"Diseñador CNN");
 
   const panel=page.getByRole("region",{
@@ -589,7 +602,7 @@ test("CNN automática: propone capas y configuración de regularización",async(
 });
 
 test("Exportación CNN: entrega imágenes originales y manifiesto al destino elegido",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
 
   await page.evaluate(()=>{
     window.__cnnExport=[];
@@ -654,4 +667,56 @@ test("Exportación CNN: entrega imágenes originales y manifiesto al destino ele
     expect(written.bytes).toBe(image.bytes);
     expect(written.checksum).toBe(image.checksum);
   }
+});
+
+
+test("Modos CNN: automático predeterminado y ajustes manuales conservados", async ({page}) => {
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  const mode=page.getByLabel("Modo de configuración CNN",{exact:true});
+  const filters=page.getByLabel(/^Filtros · 1 a 128/).first();
+  await expect(mode).toHaveValue("automatic");
+  await expect(filters).toBeDisabled();
+  await expect(page.getByLabel("Dropout",{exact:true})).toBeDisabled();
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByLabel("Épocas",{exact:true})).toHaveValue("60");
+  await expect(page.getByLabel("Épocas",{exact:true})).toBeDisabled();
+
+  await navigate(page,"Diseñador CNN");
+  await mode.selectOption("manual");
+  await expect(filters).toBeEnabled();
+  await filters.fill("24");
+  await page.getByLabel("Dropout",{exact:true}).fill("0.2");
+  await navigate(page,"Entrenamientos");
+  await page.getByLabel("Épocas",{exact:true}).fill("7");
+
+  await navigate(page,"Diseñador CNN");
+  await mode.selectOption("automatic");
+  await expect(filters).toHaveValue("8");
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await expect(mode).toHaveValue("automatic");
+  await mode.selectOption("manual");
+  await expect(filters).toHaveValue("24");
+  await expect(page.getByLabel("Dropout",{exact:true})).toHaveValue("0.2");
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByLabel("Épocas",{exact:true})).toHaveValue("7");
+});
+
+test("Modos CNN: cada proyecto conserva su selección y sus ajustes", async ({page}) => {
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Proyectos");
+  await page.getByLabel("Nuevo proyecto CNN",{exact:true}).fill("Segundo proyecto CNN");
+  await page.getByRole("button",{name:"Crear proyecto",exact:true}).click();
+  await page.getByLabel("Proyecto activo",{exact:true}).selectOption({label:"Segundo proyecto CNN"});
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await expect(page.getByLabel("Modo de configuración CNN",{exact:true})).toHaveValue("automatic");
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("8");
+  await page.getByLabel("Proyecto activo",{exact:true}).selectOption("CNN-001");
+  await expect(page.getByLabel("Modo de configuración CNN",{exact:true})).toHaveValue("manual");
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("24");
 });
