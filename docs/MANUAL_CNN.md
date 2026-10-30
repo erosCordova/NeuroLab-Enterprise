@@ -238,6 +238,28 @@ Las curvas son simuladas y se generan con fórmulas ilustrativas.
 No demuestran el efecto de filtros, imágenes ni batch size.
 No se presentan resultados reales del conjunto de prueba.
 
+## 7.1. Historial y repetición de simulaciones
+
+Debajo de la cola está Historial de entrenamientos. Puedes buscar por ID, nombre
+de proyecto o dataset y combinar la búsqueda con un estado. El CSV exporta solo
+las filas que coinciden con los filtros y conserva la huella del dataset.
+
+Cada nueva ejecución registra creación, inicio y finalización. El CSV conserva
+fechas ISO; la pantalla usa el formato local del navegador. La duración se muestra
+al terminar y cuenta el tiempo desde que empieza a ejecutar, incluyendo pausas.
+Una cancelación antes del inicio no tiene duración de ejecución. Las ejecuciones
+anteriores sin fechas se muestran con un guion, sin inventar datos.
+
+Ver selecciona la ejecución en el panel de detalle. Repetir está disponible solo
+para trabajos completados o cancelados y crea un ID nuevo, desde la primera época.
+Conserva modo, arquitectura, dataset, épocas, batch y referencia de versión de origen.
+No cambia el trabajo anterior ni usa cambios posteriores del diseñador.
+No se reanudan ni restauran pesos: el entrenamiento sigue siendo simulado.
+
+La nueva ejecución conserva el ID de origen y respeta los límites de Administración.
+Los proyectos archivados no admiten repeticiones hasta que se reactiven.
+Recargar elimina el historial, igual que el resto de la sesión sin base de datos.
+
 ## 8. Evaluación y modelos
 
 Evaluación presenta resultados de simulaciones completadas del proyecto activo.

@@ -99,3 +99,19 @@ para considerar terminados los componentes aplazados.
 - Avance global estimado comunicado: 35% (antes 32%). Estimación del alcance
   integral CNN, no un porcentaje de fases completadas ni de pruebas aprobadas.
 - La Fase 1 integral sigue parcial; se avanzó en la interfaz de fases 4 y 5.
+
+
+## Incremento: historial y repetición de simulaciones CNN
+
+- Búsqueda, filtros y CSV del historial del proyecto activo.
+- Fechas de creación/inicio/fin; duración de ejecuciones terminadas, sin inventar
+  fechas para registros anteriores ni duración de trabajos cancelados antes del inicio.
+- Repetición desde la primera época con ID nuevo y vínculo al origen; conserva
+  configuración, dataset y versión. No reanuda pesos ni altera el trabajo anterior.
+- Repeticiones sujetas a cuotas y al estado archivado del proyecto.
+- Evidencia: 43/43 unitarias, 18/18 escenarios Chromium y build aprobados:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40985276837
+  Código: 317788915d8a1b4d3ac932801d5f494afd2cbf51.
+- Avance global estimado comunicado: 38% (antes 35%). El porcentaje es una
+  estimación del producto integral CNN, no la proporción de pruebas aprobadas.
+- Sin base de datos ni entrenamiento real. La Fase 1 integral sigue parcial.
