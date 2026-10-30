@@ -291,10 +291,15 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 86%** (anterior 83%; +3 puntos por endurecimiento, eliminación de dependencias de prueba y verificación integral).
 - Sin nuevos despliegues a Vercel/Render. Continúa pendiente la auditoría de límites de acceso distribuido, CSP y el paquete de publicación autorizado.
 
-## Auditoría de publicación: acceso distribuido y CSP (pendiente de CI)
+## Auditoría de publicación: acceso distribuido y CSP (validada en CI)
 
 - Añadida cuota de autenticación por correo mediante HMAC y tabla PostgreSQL `005_auth_attempt_windows.sql`; límites entre instancias y expiración, sin revelar correo ni IP.
 - Nueva variable obligatoria de Render `NEUROLAB_RATE_LIMIT_SECRET` (mínimo 32 bytes): necesaria antes de autorizar publicación.
 - CSP en modo observación y comprobación de cabeceras en bundle conectado. No bloquear TensorFlow.js hasta probarlo con CSP obligatorio.
 - Lista de verificación de Vercel, Render y Neon documentada. No se ha modificado ningún servicio publicado.
-- Avance base: 86% hasta validar los flujos.
+- API y PostgreSQL: **34 pruebas Python aprobadas**, además de **5 pruebas de plataforma** y **6 del paquete de producción**, verificadas en https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41004273993.
+- Frontend: build, unitarias y **20 pruebas Chromium aprobadas**, incluida comprobación de CSP en observación en hosting conectado: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41004273922.
+- Motor CNN Python/Keras: **3 pruebas aprobadas** en https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41004273957.
+- **Avance global estimado: 89%** (anterior 86%; +3 puntos por controles de acceso, políticas del frontend y validación de release en CI).
+- Importante: la variable `NEUROLAB_RATE_LIMIT_SECRET` **aún debe configurarse en Render antes de autorizar un despliegue**; de lo contrario, login/registro devolverían 503. La migración 005 tampoco se ha aplicado a la base Neon de producción.
+- CSP sigue en modo **Report-Only**; sus restricciones no se aplican en modo bloqueo hasta probar el entrenamiento e inferencia real sobre el bundle desplegado.
