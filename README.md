@@ -8,7 +8,7 @@ Automático es el modo predeterminado; Manual permite editar la configuración.
 La API persiste cuentas, sesiones y proyectos. Consulta
 [la conexión React/API](docs/CONEXION_REACT_API.md) para activarla.
 La base de plataforma ya está creada en Neon; consulta [su estado y conexión](docs/NEON.md).
-La vista previa sigue en demo hasta desplegar el backend.
+El backend ya está publicado en Render y el frontend se compiló y publicó en Vercel desde la rama de integración. Falta confirmar el recorrido completo contra Neon desde un navegador externo; el entrenamiento sigue simulado.
 La arquitectura elegida usa backend en Render y frontend en Vercel; consulta
 [la guía de despliegue](docs/DESPLIEGUE_RENDER.md).
 Las imágenes y su preprocesamiento son
