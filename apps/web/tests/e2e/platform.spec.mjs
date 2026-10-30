@@ -15,6 +15,7 @@ async function create(page,name){
  await page.getByLabel('Nuevo proyecto CNN',{exact:true}).fill(name);
  await page.getByLabel('Descripción del problema',{exact:true}).fill('Proyecto persistente para dígitos.');
  await page.getByRole('button',{name:'Crear proyecto',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'Dashboard',level:1,exact:true})).toBeVisible();
 }
 async function projects(page){await page.getByRole('navigation').getByRole('button',{name:'Proyectos',exact:true}).click();}
 
