@@ -200,7 +200,7 @@ def create_app():
             db.rollback()
             raise HTTPException(409,'Ya existe un proyecto con ese nombre.')
 
-    real_fields='id,project_id,imported_at,dataset_fingerprint,classes,samples,config,parameters,requested_epochs,completed_epochs,batch,seed,metrics,test,source'
+    real_fields='id,project_id,imported_at,dataset_fingerprint,classes,samples,config,parameters,requested_epochs,completed_epochs,batch,seed,metrics,test,source,engine,weights_file,model_ref'
 
     @app.get('/api/v1/projects/{project_id}/real-runs')
     def list_real_runs(project_id:UUID,user=Depends(current_user),db=Depends(database)):
@@ -218,14 +218,16 @@ def create_app():
         if not owned:raise HTTPException(404,'Proyecto no encontrado.')
         row=db.execute(f'''INSERT INTO real_cnn_runs
             (id,project_id,owner_id,dataset_fingerprint,classes,samples,config,parameters,
-             requested_epochs,completed_epochs,batch,seed,metrics,test)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+             requested_epochs,completed_epochs,batch,seed,metrics,test,source,engine,weights_file,model_ref)
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             RETURNING {real_fields}''',
             (uuid4(),project_id,user['id'],body.dataset_fingerprint,
              Jsonb(body.classes),Jsonb(body.samples.model_dump()),Jsonb(body.config),
              body.parameters,body.requested_epochs,body.completed_epochs,body.batch,
              body.seed,Jsonb([point.model_dump() for point in body.metrics]),
-             Jsonb(body.test.model_dump()))).fetchone()
+             Jsonb(body.test.model_dump()),
+             'navegador' if body.engine == 'TensorFlow.js' else 'importado',
+             body.engine,body.weights_file,body.model_ref)).fetchone()
         db.commit()
         return row
 
