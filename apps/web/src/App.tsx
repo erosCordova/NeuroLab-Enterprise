@@ -1,3 +1,5 @@
+import TrainingHistory from "./TrainingHistory";
+import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
 import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
@@ -231,8 +233,20 @@ export default function App() {
       if(pending>=limits.pending||jobs.length>=limits.jobs)throw new Error(`Límite activo: ${limits.pending} trabajos pendientes y ${limits.jobs} por sesión.`);
       const version=[...versions].reverse().find(item=>item.projectId===projectId&&JSON.stringify(item.config)===JSON.stringify(config)&&item.datasetFingerprint===dataset.fingerprint);
       const id=`CNN-${crypto.randomUUID().slice(0,8)}`;
-      const job:Job={configurationMode:automatic?"automatic":"manual",id,projectId,name:project.name,config:structuredClone(config),dataset:datasetMeta(dataset),versionId:version?.id??null,epochs:count,batch:batchSize,epoch:0,status:"En cola",metrics:[]};
+      const job:Job={createdAt:new Date().toISOString(),configurationMode:automatic?"automatic":"manual",id,projectId,name:project.name,config:structuredClone(config),dataset:datasetMeta(dataset),versionId:version?.id??null,epochs:count,batch:batchSize,epoch:0,status:"En cola",metrics:[]};
       setJobs(current=>[...current,job]);setSelectedId(id);
+    } catch(cause){fail(cause);}
+  }
+
+  function repeatJob(source:Job) {
+    setError("");setMessage("");
+    try {
+      if(source.projectId!==projectId)throw new Error("Selecciona una ejecución de este proyecto.");
+      if(project.status==="Archivado")throw new Error("Activa el proyecto antes de repetir una simulación.");
+      if(pending>=limits.pending||jobs.length>=limits.jobs)throw new Error(`Límite activo: ${limits.pending} trabajos pendientes y ${limits.jobs} por sesión.`);
+      const next=repeatRun(source,`CNN-${crypto.randomUUID().slice(0,8)}`,new Date().toISOString());
+      setJobs(current=>[...current,next]);setSelectedId(next.id);
+      setMessage("Nueva simulación creada con la configuración original.");
     } catch(cause){fail(cause);}
   }
 
@@ -335,9 +349,10 @@ export default function App() {
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
           <div className="training-layout"><section className="panel"><h2>Cola del proyecto</h2>{!projectJobs.length&&<div className="cnn-empty"><p>Todavía no hay ejecuciones en este proyecto.</p><button className="secondary" onClick={()=>navigate(dataset?"Diseñador CNN":"Datasets")}>{dataset?"Revisar arquitectura":"Cargar imágenes"}</button></div>}{[...projectJobs].reverse().map(job=><button className={selected?.id===job.id?"queue-item chosen":"queue-item"} key={job.id} onClick={()=>setSelectedId(job.id)}><strong>{job.name}</strong><span data-status={job.status}>{job.status}</span><small>{job.id}</small><progress max={job.epochs} value={job.status==="Completado"?job.epochs:job.epoch} /><small>{job.epoch}/{job.epochs} épocas</small></button>)}</section>
           <div className="training-detail">{selected&&<>
-            <section className="panel"><div className="panel-head"><h2>{selected.name}</h2><span className="badge" data-status={selected.status}>{selected.status}</span></div><progress max={selected.epochs} value={selected.status==="Completado"?selected.epochs:selected.epoch} /><p className="caption">{selected.epoch}/{selected.epochs} épocas · {selected.dataset.name} · {selected.dataset.classes.length} clases · {selected.config.layers.length} bloques CNN</p><button className="secondary" disabled={terminal(selected.status)} onClick={()=>setJobs(current=>current.map(job=>job.id===selected.id&&!terminal(job.status)?{...job,status:"Cancelado"}:job))}>Cancelar simulación</button></section>
+            <section className="panel"><div className="panel-head"><h2>{selected.name}</h2><span className="badge" data-status={selected.status}>{selected.status}</span></div><progress max={selected.epochs} value={selected.status==="Completado"?selected.epochs:selected.epoch} /><p className="caption">{selected.epoch}/{selected.epochs} épocas · {selected.dataset.name} · {selected.dataset.classes.length} clases · {selected.config.layers.length} bloques CNN</p><button className="secondary" disabled={terminal(selected.status)} onClick={()=>setJobs(current=>current.map(job=>job.id===selected.id?cancelRun(job,new Date().toISOString()):job))}>Cancelar simulación</button></section>
             <p className="soft">{selected.stopReason??"Simulación en curso."} {selected.bestEpoch?`Época de referencia de mejora: ${selected.bestEpoch}.`:""} No se restauran pesos porque el entrenamiento es simulado.</p><div className="cnn-two-charts"><section className="panel"><h2>Precisión de entrenamiento</h2><p className="caption">Entrenamiento y validación · simulado</p><Chart job={selected} kind="accuracy" /></section><section className="panel"><h2>Pérdida</h2><p className="caption">Entrenamiento y validación · simulado</p><Chart job={selected} kind="loss" /></section></div>
           </>}</div></div>
+          <TrainingHistory key={projectId} jobs={projectJobs} onRepeat={repeatJob} onSelect={setSelectedId}/>
         </>}
 
         {page==="Evaluación"&&<EvaluationPanel key={projectId} jobs={projectJobs} />}

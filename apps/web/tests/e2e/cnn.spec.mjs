@@ -819,3 +819,34 @@ test("Evaluación CNN: advierte si cambian las particiones del dataset",async({p
   await checks.nth(0).check();await checks.nth(1).check();
   await expect(page.getByRole("region",{name:"Comparación de ejecuciones",exact:true}).getByRole("status")).toContainText("no son directamente comparables");
 });
+
+
+test("Historial CNN: repetir una cancelación conserva la configuración de origen",async({page})=>{
+  await applyDataset(page);await createJob(page,"2");
+  await page.getByRole("button",{name:"Cancelar simulación",exact:true}).click();
+  const history=page.getByRole("region",{name:"Historial de entrenamientos",exact:true});
+  const sourceId=(await page.locator(".queue-item small").first().innerText()).trim();
+  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Cancelado");
+  await expect(history.locator("tbody tr")).toHaveCount(1);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Entrenamientos");
+  await history.getByRole("button",{name:`Repetir ejecución ${sourceId}`,exact:true}).click();
+  await expect(page.locator(".queue-item")).toHaveCount(2);
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Completado");
+  await expect(history.locator("tbody tr")).toHaveCount(1);
+  await expect(history.locator("tbody")).toContainText(`Origen: ${sourceId}`);
+  const event=page.waitForEvent("download");
+  await history.getByRole("button",{name:"Exportar historial CSV",exact:true}).click();
+  const csv=fs.readFileSync(await(await event).path(),"utf8");
+  expect(csv).toContain(sourceId);expect(csv).toContain("CNN_SIMULADA");
+  await navigate(page,"Modelos");
+  await page.getByRole("button",{name:"Registrar ficha",exact:true}).click();
+  const modelEvent=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Exportar ficha JSON",exact:true}).click();
+  const result=JSON.parse(fs.readFileSync(await(await modelEvent).path(),"utf8"));
+  expect(result.record.job.config.layers[0].filters).toBe(8);
+  expect(result.record.job.repeatedFrom).toBe(sourceId);
+  expect(result.record.job.startedAt).toBeTruthy();expect(result.record.job.endedAt).toBeTruthy();
+});
