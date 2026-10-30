@@ -99,6 +99,34 @@ class ProjectUpdate(ProjectInput):
     revision: int = Field(ge=1)
 
 
+
+class ModelRegistration(BaseModel):
+    run_id: UUID
+    display_name: str = Field(min_length=3, max_length=80)
+    notes: str = Field(default='', max_length=1000)
+
+    @field_validator('display_name')
+    @classmethod
+    def valid_name(cls,value):
+        value=normalize(value)
+        if len(value)<3:raise ValueError('Escribe un nombre válido.')
+        return value
+
+
+class ModelEdit(BaseModel):
+    display_name: str = Field(min_length=3, max_length=80)
+    notes: str = Field(default='', max_length=1000)
+    status: Literal['Registrado','Archivado'] = 'Registrado'
+    favorite: bool = False
+    revision: int = Field(ge=1)
+
+    @field_validator('display_name')
+    @classmethod
+    def valid_name(cls,value):
+        value=normalize(value)
+        if len(value)<3:raise ValueError('Escribe un nombre válido.')
+        return value
+
 def create_app():
     app = FastAPI(title='NeuroLab CNN API', version='0.1.0')
     # Render supplies this exact public origin. Never derive trust from Host headers.
@@ -134,7 +162,7 @@ def create_app():
     @app.get('/api/v1/health')
     def health(db=Depends(database)):
         db.execute('SELECT 1')
-        return {'status':'ok','database':'postgresql','training':'simulated'}
+        return {'status':'ok','database':'postgresql','training':'browser-tensorflowjs (not server)'}
 
     @app.post('/api/v1/auth/register', status_code=201)
     def register(body:Registration, response:Response, db=Depends(database)):
@@ -228,6 +256,67 @@ def create_app():
              Jsonb(body.test.model_dump()),
              'navegador' if body.engine == 'TensorFlow.js' else 'importado',
              body.engine,body.weights_file,body.model_ref)).fetchone()
+        db.commit()
+        return row
+
+
+    model_fields=('m.id,m.project_id,m.run_id,m.display_name,m.notes,m.status,m.favorite,'
+                  'm.revision,m.created_at,m.updated_at,r.engine,r.model_ref,'
+                  'r.classes,r.test,r.parameters,r.completed_epochs,r.dataset_fingerprint')
+    model_join='JOIN real_cnn_runs r ON r.id=m.run_id'
+
+    @app.get('/api/v1/projects/{project_id}/real-models')
+    def real_models(project_id:UUID,user=Depends(current_user),db=Depends(database)):
+        if not db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',
+                          (project_id,user['id'])).fetchone():
+            raise HTTPException(404,'Proyecto no encontrado.')
+        return db.execute(f'SELECT {model_fields} FROM real_cnn_models m {model_join} '
+                          'WHERE m.owner_id=%s AND m.project_id=%s '
+                          'ORDER BY m.favorite DESC,m.updated_at DESC,m.id LIMIT 50',
+                          (user['id'],project_id)).fetchall()
+
+    @app.post('/api/v1/projects/{project_id}/real-models',status_code=201)
+    def register_real_model(project_id:UUID,body:ModelRegistration,user=Depends(current_user),db=Depends(database)):
+        if not db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',
+                          (project_id,user['id'])).fetchone():
+            raise HTTPException(404,'Proyecto no encontrado.')
+        run=db.execute('SELECT engine,model_ref FROM real_cnn_runs '
+                       'WHERE id=%s AND owner_id=%s AND project_id=%s',
+                       (body.run_id,user['id'],project_id)).fetchone()
+        if not run:raise HTTPException(404,'Entrenamiento no encontrado en este proyecto.')
+        if run['engine']!='TensorFlow.js' or not run['model_ref']:
+            raise HTTPException(422,'Solo se registran modelos TensorFlow.js que tengan referencia a pesos.')
+        total=db.execute('SELECT count(*) AS n FROM real_cnn_models WHERE owner_id=%s AND project_id=%s',
+                         (user['id'],project_id)).fetchone()['n']
+        if total>=50:raise HTTPException(409,'Máximo de 50 modelos registrados por proyecto.')
+        try:
+            row=db.execute(f'''WITH inserted AS (
+              INSERT INTO real_cnn_models(id,owner_id,project_id,run_id,display_name,notes)
+              VALUES (%s,%s,%s,%s,%s,%s) RETURNING *
+            ) SELECT {model_fields} FROM inserted m {model_join}''',
+            (uuid4(),user['id'],project_id,body.run_id,body.display_name,body.notes.strip())).fetchone()
+            db.commit()
+            return row
+        except psycopg.errors.UniqueViolation:
+            db.rollback()
+            raise HTTPException(409,'Este entrenamiento ya tiene una ficha de modelo.')
+
+    @app.put('/api/v1/projects/{project_id}/real-models/{model_id}')
+    def edit_real_model(project_id:UUID,model_id:UUID,body:ModelEdit,
+                        user=Depends(current_user),db=Depends(database)):
+        row=db.execute(f'''WITH updated AS (
+          UPDATE real_cnn_models SET display_name=%s,notes=%s,status=%s,favorite=%s,
+          revision=revision+1,updated_at=now()
+          WHERE id=%s AND project_id=%s AND owner_id=%s AND revision=%s
+          RETURNING *
+        ) SELECT {model_fields} FROM updated m {model_join}''',
+        (body.display_name,body.notes.strip(),body.status,body.favorite,
+         model_id,project_id,user['id'],body.revision)).fetchone()
+        if not row:
+            exists=db.execute('SELECT 1 FROM real_cnn_models WHERE id=%s AND project_id=%s AND owner_id=%s',
+                              (model_id,project_id,user['id'])).fetchone()
+            raise HTTPException(409 if exists else 404,
+               'La ficha cambió; vuelve a cargarla.' if exists else 'Modelo no encontrado.')
         db.commit()
         return row
 
