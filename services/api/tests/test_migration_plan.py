@@ -62,6 +62,8 @@ def test_plan_rejects_invalid_names(local_migrations):
         local_manifest(local_migrations)
 
 
-def test_migration_plan_does_not_include_connection_secrets(monkeypatch):
+def test_migration_plan_requires_explicit_database_configuration(monkeypatch):
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    monkeypatch.delenv("DATABASE_URL_UNPOOLED", raising=False)
     with pytest.raises(MigrationPlanError, match="Falta DATABASE_URL"):
         migration_plan(url="")
