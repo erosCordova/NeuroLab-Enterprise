@@ -192,3 +192,20 @@ Si la base cambia, si el historial tiene un hash distinto o si hay
 migraciones nuevas no incluidas en la lista revisada, se rechaza la
 operación. Un fallo seguro del arranque puede causar indisponibilidad;
 no sustituye una estrategia de rollback con respaldos validados.
+
+## Evidencia final de la barrera de autorización (GitHub CI)
+
+El flujo `41010208087` comprobó en una base PostgreSQL efímera que
+la migración 001→005 se **rechaza sin autorización explícita** sin
+cambiar el historial, y que después se aplica al aprobar exactamente
+las cuatro versiones revisadas. El respaldo y la restauración temporal
+también volvieron a aprobar.
+
+- API/CI: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010208087
+- Frontend: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010113039
+- Entrenamiento Keras: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010207909
+
+**Quedan bloqueos reales:** no se ha verificado el valor de las variables
+Render, no existe respaldo real de Neon comprobado, faltan las migraciones
+002–005 en esa base y falta el despliegue y la prueba en producción.
+Estos pasos no se harán sin autorización expresa del propietario.

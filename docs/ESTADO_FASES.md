@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
-**Avance global estimado: 96%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `fcce8f9078db5406e090c6c25ac12e09f77a42cc` mediante
+**Avance global estimado: 97%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación funcional: commit `5a55fed1b49db216b51652ef0750c8e8b16a7338` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -378,10 +378,14 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global estimado: 96%** (anterior 95%; +1 punto por comprobación efectiva de respaldo y restauración en CI).
 - El respaldo REAL de Neon sigue pendiente de autorización. No hay desplegados nuevos ni migraciones remotas aplicadas.
 
-## Barrera final de migraciones no autorizadas (en validación)
+## Barrera final de migraciones no autorizadas (validada en CI)
 
 - La API Render requiere una confirmación explícita y la lista exacta de migraciones pendientes antes de aplicar modificaciones al esquema de Neon.
 - El control se ejecuta dentro de `migrate()`, por lo que también protege invocaciones directas cuando `RENDER=true`.
 - Cuando el esquema ya está actualizado, los reinicios de Render no necesitan mantener el permiso de migración.
 - Ensayo automatizado 001→005 con intento denegado, sin modificaciones, seguido de autorización exacta y aplicación sobre PostgreSQL efímero.
-- Avance base: 96% hasta que las pruebas CI finalicen correctamente. Vercel, Render y Neon siguen sin modificación.
+- **Verificación integral aprobada:** API/Python **74 pruebas**; integración **5 pruebas** y alojamiento **6 pruebas**; actualización sintética 001→005, respaldo y restauración; https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010208087.
+- Frontend/Chromium **20 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010113039; motor Python/Keras **3 pruebas**: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41010207909.
+- En el ensayo, Render simulado rechazó la migración sin aprobación, mantuvo el estado inicial, y después aplicó exclusivamente los cuatro cambios con autorización y lista exacta.
+- **Avance global estimado: 97%** (anterior 96%, +1 punto por protección de migraciones y ensayo integral aprobados).
+- Vercel conserva el despliegue de producción `df162826`; Render tiene autoDeploy desactivado; Neon permanece con solo `001_platform.sql`. Ninguna actualización de producción autorizada ni ejecutada.
