@@ -145,7 +145,7 @@ export async function trainInBrowser(
   }
   let model:tf.Sequential|undefined;
   // Se liberan incluso si fit(), onProgress o la evaluación generan un error.
-  let bestWeights:tf.Tensor[]|null=null;
+  const bestWeights:{value:tf.Tensor[]|null}={value:null};
   const tensors:tf.Tensor[]=[];
   const remember=<T extends tf.Tensor>(value:T):T=>{tensors.push(value);return value;};
   try {
@@ -176,8 +176,8 @@ export async function trainInBrowser(
           if(config.earlyStopping){
             if(bestLoss-point.valLoss>(config.minDelta??.01)){
               bestLoss=point.valLoss;
-              bestWeights?.forEach(weight=>weight.dispose());
-              bestWeights=model!.getWeights().map(weight=>weight.clone());
+              bestWeights.value?.forEach(weight=>weight.dispose());
+              bestWeights.value=model!.getWeights().map(weight=>weight.clone());
               stale=0;
             }else stale++;
             if(stale>=(config.patience??5))model!.stopTraining=true;
@@ -189,7 +189,7 @@ export async function trainInBrowser(
     });
     if(signal?.aborted)throw new TrainingCancelled();
     if(!metrics.length||!history.history.loss?.length)throw new Error("El entrenamiento no devolvió épocas.");
-    if(bestWeights){model.setWeights(bestWeights);bestWeights.forEach(weight=>weight.dispose());bestWeights=null;}
+    if(bestWeights.value){model.setWeights(bestWeights.value);bestWeights.value.forEach(weight=>weight.dispose());bestWeights.value=null;}
     const evaluated=model.evaluate(xTest,yTest,{batchSize:Math.min(batch,16),verbose:0});
     const outputs=Array.isArray(evaluated)?evaluated:[evaluated];
     const result=outputs.map(item=>item.dataSync()[0]);
@@ -216,8 +216,9 @@ export async function trainInBrowser(
       weights_file:"model.json",model_ref:name,
     };
   }finally{
-    bestWeights?.forEach(weight=>weight.dispose());
+    bestWeights.value?.forEach(weight=>weight.dispose());
     tensors.forEach(tensor=>tensor.dispose());
+    model?.optimizer?.dispose();
     model?.dispose();
   }
 }
