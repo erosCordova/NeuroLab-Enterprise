@@ -191,7 +191,7 @@ test('Plataforma: Dashboard e informe CNN real exportan resultados sin pesos',as
  await page.getByRole('navigation').getByRole('button',{name:'Dashboard',exact:true}).click();
  const dash=page.getByRole('region',{name:'Indicadores CNN reales del proyecto'});
  await dash.getByRole('button',{name:'Actualizar indicadores'}).click();
- await expect(dash.getByText('75.0%')).toBeVisible();
+ await expect(dash.locator('.project-report-kpi').last().getByText('75.0%')).toBeVisible();
  await page.getByRole('navigation').getByRole('button',{name:'Reportes',exact:true}).click();
  const panel=page.getByRole('region',{name:'Informe profesional de CNN reales'});
  await expect(panel).toBeVisible();
