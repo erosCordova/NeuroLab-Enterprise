@@ -209,3 +209,15 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - La publicación no se verificó aún navegando desde un cliente externo: la lectura HTTP del health y de la página no estuvo accesible en el entorno de revisión. No se afirma éxito E2E real en producción. La protección SSO del proyecto Vercel puede requerir inicio de sesión.
 - Continúan pendientes: entrenamientos CNN reales en Python, persistencia de datasets, arquitecturas y resultados, monitorización y verificación de uso en producción. La Fase 1 sigue parcial.
 - **Avance global estimado: 55%** (antes 50%) por la publicación comprobada de ambos componentes. Es una estimación de alcance, no porcentaje de pruebas ni cierre de fase.
+
+
+## Incremento: motor Python de entrenamiento CNN real
+
+- Se incorporó `services/api/app/real_cnn.py`: carga PNG/JPG/WebP por clase, valida formato y duplicados, redimensiona, normaliza y particiona de modo estratificado.
+- El constructor Keras implementa Conv2D, MaxPooling, Flatten y Dense con activación de salida adecuada para dos o múltiples clases; admite dropout, L2, semilla y parada temprana. Acepta la configuración del diseñador exportada a JSON.
+- `model.fit` genera métricas observadas por época; el test independiente produce precisión y pérdida reales. `model.keras` almacena pesos y `metrics.json` almacena resultados. `predict` reutiliza el modelo sin entrenamiento adicional.
+- Dependencias de ML separadas en `requirements-ml.txt`: el contenedor público de Render NO las instala todavía, para evitar carga de TensorFlow en el servicio gratuito.
+- GitHub Actions entrenó y realizó pruebas de preprocesamiento, divisiones, rechazo de duplicados, arquitectura, guardado, carga y predicción: ejecución `40994891105` con conclusión **success**.
+- La ejecución de CI trabaja con imágenes sintéticas generadas dentro de la prueba, por lo que no representa precisión de un dataset real ni rendimiento de producción.
+- Estado: motor Python **comprobado**, conexión de React a worker de entrenamiento y persistencia de artefactos **pendientes**. Los gráficos públicos siguen simulados; no se afirma haber concluido la fase de entrenamiento del MVP.
+- Avance global estimado comunicado: **58%** (anterior 55%). El incremento corresponde a un motor funcional aislado, no a la integración completa.
