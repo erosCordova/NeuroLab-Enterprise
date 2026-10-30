@@ -264,3 +264,13 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Verificación del bloque en GitHub Actions: frontend y Chromium https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571786 y API/PostgreSQL https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571595 (ambos exitosos); motor CNN https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41001571577 (exitoso).
 - Avance global estimado: **80%** (anterior 77%), por integración y validación de informes profesionales CNN reales.
 - Continúa sin desplegarse la rama de desarrollo; Vercel conserva el despliegue anterior hasta la autorización explícita.
+
+## Bloque UX y accesibilidad (pendiente de validación)
+
+- Navegación accesible con enlace para saltar al contenido y foco gestionado al cambiar de sección.
+- Menú móvil plegable con estado anunciado y navegación accesible desde teclado.
+- Accesos rápidos a datasets, entrenamiento real y evaluación desde el Dashboard.
+- Indicadores de sesión rotulados explícitamente como simulaciones, para no confundirlos con registros reales.
+- Mejoras responsivas, contraste, tamaños de botones y estado visual de foco; acceso y registro más legibles.
+- Tests de navegación móvil, enlace de salto, foco, estado activo, título de página y control de desbordamiento.
+- No modifica la API ni las migraciones. Sin despliegue a Vercel ni Render.

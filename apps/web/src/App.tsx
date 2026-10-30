@@ -85,6 +85,9 @@ function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
 
 export default function App({initialProjects,onPersistProject}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>}={}) {
   const [page,setPage]=useState<Page>("Dashboard");
+  const [mobileMenuOpen,setMobileMenuOpen]=useState(true);
+  const pageHeading=useRef<HTMLHeadingElement>(null);
+  const previousPage=useRef<Page>("Dashboard");
   const [projects,setProjects]=useState<Project[]>(initialProjects??[{id:"CNN-001",name:"Clasificación de imágenes",description:"Explora la clasificación de imágenes con una arquitectura CNN.",status:"Activo",tags:["CNN"]}]);
   const [projectId,setProjectId]=useState(initialProjects?.[0]?.id??"CNN-001");
   const [configs,setConfigs]=useState<Record<string,Config>>({});
@@ -165,6 +168,14 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
     const timer=window.setInterval(()=>setJobs(current=>advanceJobs(current)),700);
     return ()=>window.clearInterval(timer);
   },[paused]);
+
+  useEffect(()=>{
+    document.title=page+" | NeuroLab Enterprise";
+    if(previousPage.current!==page){
+      previousPage.current=page;
+      pageHeading.current?.focus();
+    }
+  },[page]);
 
   function navigate(next:Page) {setPage(next);setError("");setMessage("");}
   function changeProject(id:string) {
@@ -285,24 +296,40 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
   }
 
   return <div className="shell">
+    <a className="cnn-skip-link" href="#neurolab-main-content">Saltar al contenido principal</a>
     <aside className="sidebar">
-      <div className="brand"><span className="brand-icon">N</span><div>NeuroLab<strong>Enterprise</strong><small>LABORATORIO CNN</small></div></div>
+      <div className="cnn-brand-row">
+        <div className="brand"><span className="brand-icon" aria-hidden="true">N</span><div>NeuroLab<strong>Enterprise</strong><small>LABORATORIO CNN</small></div></div>
+        <button className="cnn-mobile-menu" type="button" aria-expanded={mobileMenuOpen} aria-controls="neurolab-main-nav" onClick={()=>setMobileMenuOpen(open=>!open)}>
+          {mobileMenuOpen?"Ocultar menú":"Mostrar menú"}
+        </button>
+      </div>
       <div className="workspace"><span>CNN</span><div><strong>Visión computacional</strong><small>Clasificación de imágenes</small></div></div>
       <p className="nav-label">ESPACIO DE TRABAJO</p>
-      <nav aria-label="Navegación principal">{pages.map(item=><button className={page===item?"nav-item active":"nav-item"} key={item} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>)}</nav>
+      <nav id="neurolab-main-nav" className="cnn-main-nav" data-collapsed={mobileMenuOpen?undefined:"true"} aria-label="Navegación principal">{pages.map(item=><button type="button" className={page===item?"nav-item active":"nav-item"} key={item} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>)}</nav>
       <div className="sidebar-foot">Exclusivamente CNN<small>{onPersistProject?"Proyectos y métricas en PostgreSQL":"Datos de esta sesión en memoria"}</small></div>
     </aside>
-    <main>
+    <main id="neurolab-main-content" tabIndex={-1}>
       <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · REAL + DEMO</span></header>
       <div className="content">
-        <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
+        <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1 ref={pageHeading} tabIndex={-1}>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
         <div className="notice"><strong>Alcance actual:</strong> puedes entrenar CNN reales con TensorFlow.js y guardar los pesos en este navegador (IndexedDB). La cola de simulaciones, sus métricas y las fichas de demostración están claramente separadas de los resultados reales. {onPersistProject?"Proyectos y reportes CNN se conservan en PostgreSQL; las imágenes y arquitecturas aún no se sincronizan.":"Sin iniciar sesión, las métricas y proyectos no se sincronizan con PostgreSQL."}</div>
         <label className="field cnn-project no-print"><span>Proyecto activo</span><select aria-label="Proyecto activo" value={projectId} onChange={event=>changeProject(event.target.value)}>{projects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-        <p className="error" role="alert">{error}</p><p className="feedback" role="status">{message}</p>
+        {error&&<p className="error" role="alert">{error}</p>}{message&&<p className="feedback" role="status">{message}</p>}
 
         {page==="Dashboard"&&<>
           {onPersistProject&&<ProjectCNNReport projectId={projectId} projectName={project.name} mode="dashboard"/>}
-          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",Object.keys(datasets).length],["Simulaciones pendientes",pending],["Fichas registradas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
+          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",Object.keys(datasets).length],["Simulaciones pendientes",pending],["Fichas simuladas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
+          <section className="panel cnn-quick-actions" aria-label="Accesos rápidos del laboratorio">
+            <div><div className="eyebrow">CONTINÚA TU EXPERIMENTO</div><h2>¿Qué quieres hacer ahora?</h2>
+              <p className="muted">Accede directamente a las herramientas de tu proyecto, sin salir del laboratorio.</p></div>
+            <div className="cnn-quick-buttons">
+              <button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes</button>
+              <button className="secondary" onClick={()=>navigate("Entrenamientos")}>Abrir entrenamiento real</button>
+              <button className="secondary" onClick={()=>navigate("Evaluación")}>Evaluar resultados CNN</button>
+            </div>
+          </section>
+          <p className="cnn-demo-heading">Actividad didáctica de esta sesión · No incluye entrenamientos reales registrados</p>
           <section className="panel recent"><h2>Flujo de trabajo CNN</h2><div className="workflow">{["Carga imágenes por clase","Configura convolución y pooling","Entrena una CNN real y analiza las curvas","Registra y exporta resultados"].map((text,index)=><div key={text}><span>0{index+1}</span><strong>{text}</strong></div>)}</div><button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes →</button></section>
         </>}
 
@@ -407,3 +434,4 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
 }
 
 import "./premium.css";
+import "./ux-accessibility.css";

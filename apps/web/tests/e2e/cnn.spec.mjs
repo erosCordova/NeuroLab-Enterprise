@@ -898,3 +898,33 @@ test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar"
     await expect(restored.getByRole("alert")).toContainText("ya existe en este navegador");
   }finally{await isolated.close();}
 });
+
+
+test("Accesibilidad: salto al contenido, navegación y menú adaptable al móvil",async({page})=>{
+  const skip=page.getByRole("link",{name:"Saltar al contenido principal"});
+  await expect(skip).toBeAttached();
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#neurolab-main-content")).toBeFocused();
+
+  await page.setViewportSize({width:390,height:844});
+  const menu=page.getByRole("button",{name:"Ocultar menú"});
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("aria-expanded","true");
+  await menu.click();
+  const nav=page.getByRole("navigation",{name:"Navegación principal",includeHidden:true});
+  await expect(nav).toBeHidden();
+  await page.getByRole("button",{name:"Mostrar menú"}).click();
+  await expect(nav).toBeVisible();
+  await nav.getByRole("button",{name:"Reportes",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Reportes",level:1,exact:true})).toBeFocused();
+  await expect(nav.getByRole("button",{name:"Reportes",exact:true})).toHaveAttribute("aria-current","page");
+  expect(await page.title()).toBe("Reportes | NeuroLab Enterprise");
+  await nav.getByRole("button",{name:"Dashboard",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Dashboard",level:1,exact:true})).toBeFocused();
+  await expect(page.getByRole("region",{name:"Accesos rápidos del laboratorio"})).toBeVisible();
+  await page.getByRole("button",{name:"Abrir entrenamiento real",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Entrenamientos",level:1,exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});

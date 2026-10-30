@@ -1,0 +1,68 @@
+/* NeuroLab Enterprise: navegación, accesibilidad y jerarquía visual */
+.cnn-skip-link{
+  position:fixed;top:9px;left:14px;z-index:9999;
+  padding:12px 17px;background:#fff;color:#163e78;border:2px solid #4167b2;
+  border-radius:10px;font-size:13px;font-weight:700;
+  transform:translateY(-160%);transition:transform .15s ease;
+}
+.cnn-skip-link:focus{transform:translateY(0)}
+#neurolab-main-content:focus{outline:none}
+.heading h1:focus{outline:none}
+.cnn-brand-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+.cnn-main-nav{scrollbar-width:thin}
+.cnn-main-nav .nav-item{
+  min-height:43px;line-height:1.35;font-weight:550;
+  position:relative;transition:background .15s ease,transform .15s ease;
+}
+.cnn-main-nav .nav-item:focus-visible{outline:3px solid #b2ddf8;outline-offset:2px}
+.cnn-main-nav .nav-item[aria-current="page"]{font-weight:750}
+.cnn-main-nav .nav-item[aria-current="page"]::before{
+  content:"";position:absolute;left:2px;top:10px;bottom:10px;
+  width:3px;border-radius:3px;background:#a9efe0;
+}
+.cnn-mobile-menu{display:none;border:1px solid #6281a5;color:white;background:#294a70;
+  border-radius:9px;font-size:12px;font-weight:700;padding:10px 13px;cursor:pointer}
+.cnn-quick-actions{
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  background:linear-gradient(120deg,#edf5ff,#f1fcf9);
+  border:1px solid #d0e6ef;margin:19px 0;padding:22px;
+}
+.cnn-quick-actions h2{font-size:18px;color:#234d77}
+.cnn-quick-actions .muted{font-size:12px;max-width:450px}
+.cnn-quick-actions .eyebrow{margin:0 0 8px;color:#386c89}
+.cnn-quick-buttons{display:flex;flex-wrap:wrap;gap:10px}
+.cnn-quick-buttons button{min-height:43px;font-size:12px}
+.cnn-demo-heading{margin:20px 0 -6px;color:#647993;font-size:11px}
+.table-scroll{border-radius:9px;scrollbar-width:thin;overscroll-behavior-x:contain}
+.table-scroll:focus-within{outline-offset:2px}
+.field input,.field select,.field textarea{min-height:41px}
+button:not(:disabled){touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{
+  outline:3px solid #8772d0;outline-offset:3px;
+}
+@media(max-width:800px){
+  .cnn-brand-row{width:100%}
+  .cnn-mobile-menu{display:inline-flex;align-items:center;min-height:42px;flex-shrink:0}
+  .cnn-main-nav{width:100%;max-width:100%;margin-top:14px;
+    padding:6px 0;scroll-padding-inline:8px;overscroll-behavior-x:contain}
+  .cnn-main-nav[data-collapsed="true"]{display:none}
+  .cnn-main-nav .nav-item{min-height:44px;scroll-snap-align:start;flex-shrink:0}
+  .cnn-quick-buttons{width:100%}
+}
+@media(max-width:520px){
+  .cnn-quick-actions{padding:16px}
+  .cnn-quick-buttons{display:grid;grid-template-columns:1fr;width:100%}
+  .cnn-quick-buttons button{width:100%}
+  .topbar>.badge{white-space:normal;max-width:135px;text-align:center;line-height:1.3}
+}
+@media(prefers-contrast:more){
+  .muted,.caption{color:#314962}
+  .cnn-quick-actions,.project-real-report{border-color:#3a536f}
+  .cnn-mobile-menu{border-color:white}
+}
+@media(prefers-reduced-motion:reduce){
+  .cnn-skip-link,.cnn-main-nav .nav-item{transition:none}
+}
+@media print{
+  .cnn-skip-link,.cnn-mobile-menu,.cnn-quick-actions,.cnn-demo-heading{display:none!important}
+}
