@@ -576,7 +576,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
     exact:true
   }).setInputFiles(duplicateRoot);
 
-  await expect(page.getByRole("alert")).toContainText("Archivo idéntico repetido");
+  await expect(page.getByRole("alert").filter({hasText:"Archivo idéntico repetido"})).toBeVisible();
 
   const applied=page.getByRole("heading",{
     name:"Dataset aplicado",exact:true
