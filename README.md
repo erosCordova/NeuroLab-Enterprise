@@ -65,3 +65,7 @@ y [el alcance CNN](docs/ALCANCE_CNN.md) para distinguir frontend y MVP completo.
 
 GitHub Actions ejecuta unitarias, build y E2E en los pull requests y al actualizar
 main. Los resultados efectivos se consultan en la pestaña Actions del repositorio.
+
+## Entrenamiento CNN real en Python (componente independiente)
+
+Se incorporó el motor `services/api/app/real_cnn.py`, que utiliza TensorFlow/Keras para entrenar y guardar modelos reales fuera del backend web de Render. Consulta [ENTRENAMIENTO_REAL_CNN.md](docs/ENTRENAMIENTO_REAL_CNN.md) para instalar el entorno ML, entrenar por CLI, evaluar en test y predecir sin reentrenar. **La web sigue mostrando simulaciones** hasta implementar el flujo remoto, la cola y el almacenamiento persistente de pesos.
