@@ -1,21 +1,23 @@
 # NeuroLab Enterprise — CNN
 
 Frontend para diseñar arquitecturas CNN, cargar imágenes por clase, explorar
-particiones y observar simulaciones con gráficos de precisión y pérdida.
+particiones, entrenar CNN reales con TensorFlow.js en el navegador y observar
+simulaciones didácticas claramente diferenciadas.
 Automático es el modo predeterminado; Manual permite editar la configuración.
 
-**Estado:** frontend demo y modo conectado opcional a FastAPI/PostgreSQL.
+**Estado:** CNN real entrenable en navegador, simulaciones didácticas y modo conectado a FastAPI/PostgreSQL.
 La API persiste cuentas, sesiones y proyectos. Consulta
 [la conexión React/API](docs/CONEXION_REACT_API.md) para activarla.
 La base de plataforma ya está creada en Neon; consulta [su estado y conexión](docs/NEON.md).
-El backend ya está publicado en Render y el frontend se compiló y publicó en Vercel desde la rama de integración. Falta confirmar el recorrido completo contra Neon desde un navegador externo; el entrenamiento sigue simulado.
+El backend ya está publicado en Render y el frontend se compiló y publicó en Vercel desde la rama de integración. Falta confirmar el recorrido completo contra Neon desde un navegador externo; el entrenamiento Python/Keras sigue separado de la interfaz, pero el navegador ya incorpora TensorFlow.js real.
 La arquitectura elegida usa backend en Render y frontend en Vercel; consulta
 [la guía de despliegue](docs/DESPLIEGUE_RENDER.md).
-Las imágenes y su preprocesamiento son
-reales; el entrenamiento y las métricas son simulados. Dropout y L2 se conservan
-como configuración y no modifican esas curvas. No se generan pesos entrenados.
-En demo los datos se pierden al recargar. En modo conectado se conservan
-los proyectos; imágenes, arquitecturas y simulaciones todavía son de sesión.
+Las imágenes y su preprocesamiento son reales. El modo TensorFlow.js entrena y guarda
+pesos en IndexedDB del navegador; la antigua cola de simulación mantiene curvas
+ilustrativas para aprendizaje y no debe confundirse con el entrenamiento real.
+En modo conectado se conservan los proyectos y reportes reales en PostgreSQL.
+Las imágenes y arquitecturas siguen siendo de sesión; los pesos TensorFlow.js
+quedan solo en el IndexedDB del navegador que los entrenó.
 
 ## Ejecución local
 
@@ -68,4 +70,8 @@ main. Los resultados efectivos se consultan en la pestaña Actions del repositor
 
 ## Entrenamiento CNN real en Python (componente independiente)
 
-Se incorporó el motor `services/api/app/real_cnn.py`, que utiliza TensorFlow/Keras para entrenar y guardar modelos reales fuera del backend web de Render. Consulta [ENTRENAMIENTO_REAL_CNN.md](docs/ENTRENAMIENTO_REAL_CNN.md) para instalar el entorno ML, entrenar por CLI, evaluar en test y predecir sin reentrenar. **La web sigue mostrando simulaciones** hasta implementar el flujo remoto, la cola y el almacenamiento persistente de pesos.
+Se incorporó el motor `services/api/app/real_cnn.py`, que utiliza TensorFlow/Keras para entrenar y guardar modelos reales fuera del backend web de Render. Consulta [ENTRENAMIENTO_REAL_CNN.md](docs/ENTRENAMIENTO_REAL_CNN.md) para instalar el entorno ML, entrenar por CLI, evaluar en test y predecir sin reentrenar. **La web también incorpora entrenamiento real en el navegador**, separado del motor Python. Para los límites, el historial y la predicción consulta [ENTRENAMIENTO_NAVEGADOR.md](docs/ENTRENAMIENTO_NAVEGADOR.md). El procesamiento remoto Python y el almacenamiento de pesos en la nube siguen pendientes.
+
+## Despliegue controlado
+
+El bloque TensorFlow.js está implementado y probado en la rama `fix/validacion-frontend-cnn`, **no publicado**. Vercel y Render solo se actualizarán después de la autorización explícita del propietario, agrupando funcionalidades para ahorrar despliegues.

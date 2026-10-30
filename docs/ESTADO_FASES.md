@@ -221,3 +221,15 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - La ejecución de CI trabaja con imágenes sintéticas generadas dentro de la prueba, por lo que no representa precisión de un dataset real ni rendimiento de producción.
 - Estado: motor Python **comprobado**, conexión de React a worker de entrenamiento y persistencia de artefactos **pendientes**. Los gráficos públicos siguen simulados; no se afirma haber concluido la fase de entrenamiento del MVP.
 - Avance global estimado comunicado: **58%** (anterior 55%). El incremento corresponde a un motor funcional aislado, no a la integración completa.
+
+## Incremento: CNN real en navegador, historial y predicción
+
+- Se integró TensorFlow.js 4.22.0 en `apps/web`, cargado bajo demanda únicamente al entrenar o clasificar.
+- La sección **Entrenamientos** distingue entrenamiento CNN real en navegador de la cola de simulaciones didácticas. Se entrena desde imágenes cargadas, con particiones de entrenamiento y validación; se evalúa por separado sobre test.
+- Los límites explícitos son 200 imágenes, 32×32 píxeles, 500 000 parámetros CNN, 40 épocas y batch máximo de 64. Hay visualización de métricas observadas por época y cancelación.
+- Los pesos se guardan mediante `model.save('indexeddb://...')`; se recuperan con `loadLayersModel` para reconocer imágenes nuevas **sin reentrenar**. Solo están disponibles en el mismo navegador mientras se conserven sus datos.
+- La migración `003_browser_cnn.sql` distingue resultados del motor Python/Keras y del navegador. Las métricas del navegador se guardan en Neon, asociadas al usuario y proyecto, pero **ninguno de los reportes del cliente está certificado por el servidor**. Los pesos no se guardan en Neon.
+- Las pruebas frontend incluyen entrenamiento verdadero con TensorFlow.js, prueba completa Chromium con imágenes sintéticas y guardado IndexedDB; API/PostgreSQL comprueba permisos, reportes y migraciones; el motor Python se prueba por separado.
+- Referencia de prueba aprobada para la integración: frontend https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590491 y API/PostgreSQL https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590355; motor Python https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590345.
+- **Limitación:** los modelos se entrenan en el navegador, no en un worker remoto Python; no se sincronizan los pesos entre equipos. No se ha desplegado este bloque; el despliegue de Vercel permanece en el commit `df162826`, por decisión expresa del usuario.
+- Avance global estimado: **66%** (anterior 60%). No equivale a cierre íntegro de las fases del documento maestro ni a prueba de la publicación en producción.
