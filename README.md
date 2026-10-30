@@ -75,3 +75,7 @@ Se incorporó el motor `services/api/app/real_cnn.py`, que utiliza TensorFlow/Ke
 ## Despliegue controlado
 
 El bloque TensorFlow.js está implementado y probado en la rama `fix/validacion-frontend-cnn`, **no publicado**. Vercel y Render solo se actualizarán después de la autorización explícita del propietario, agrupando funcionalidades para ahorrar despliegues.
+
+## Respaldo portable de modelos CNN
+
+El navegador permite descargar un solo archivo `.ncnn` con arquitectura, pesos y métricas, restaurarlo en el mismo proyecto y reconocer imágenes sin reentrenar. Consulta [RESPALDOS_CNN.md](docs/RESPALDOS_CNN.md). Esta función está preparada en la rama de desarrollo; no modifica el despliegue público hasta autorización explícita.

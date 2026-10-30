@@ -233,3 +233,13 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - Referencia de prueba aprobada para la integración: frontend https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590491 y API/PostgreSQL https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590355; motor Python https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40997590345.
 - **Limitación:** los modelos se entrenan en el navegador, no en un worker remoto Python; no se sincronizan los pesos entre equipos. No se ha desplegado este bloque; el despliegue de Vercel permanece en el commit `df162826`, por decisión expresa del usuario.
 - Avance global estimado: **66%** (anterior 60%). No equivale a cierre íntegro de las fases del documento maestro ni a prueba de la publicación en producción.
+
+## Incremento: respaldo y recuperación de pesos CNN
+
+- Preparado un archivo portable `.ncnn` sin ZIP con arquitectura, métricas y pesos TensorFlow.js; no incluye imágenes ni contraseñas.
+- Respaldo y restauración para el mismo proyecto y entrenamiento, con validación de topología, límite de tamaño, SHA-256 y protección contra sobrescritura de pesos existentes.
+- Predicción posterior sin reentrenar incluso si no se ha vuelto a cargar el dataset.
+- Integración de acciones en el panel de entrenamiento y en el historial de reportes reales.
+- Persistencia de pesos limitada al IndexedDB de ese navegador; el respaldo debe conservarse externamente. No hay almacenamiento de pesos en Neon ni sincronización cloud automática.
+- Pendiente: confirmar las pruebas completas del nuevo flujo en Chromium; los cambios no están desplegados.
+- El avance global de referencia se mantiene en 66% hasta contar con validación del bloque.
