@@ -215,7 +215,7 @@ test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", asy
 
   const csvEvent = page.waitForEvent("download");
   await page.getByRole("button", {
-    name: "Exportar CSV", exact: true,
+    name: "Exportar CSV simulado", exact: true,
   }).click();
 
   const csvDownload = await csvEvent;
