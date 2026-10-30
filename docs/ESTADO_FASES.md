@@ -83,3 +83,19 @@ para considerar terminados los componentes aplazados.
   alcance integral CNN; no equivale al porcentaje de pruebas ni al cierre de fase.
 - La Fase 1 permanece parcial: autenticación, API, permisos y persistencia siguen
   aplazados por la restricción vigente de trabajar solo el frontend.
+
+
+## Incremento: evaluación y comparación de ejecuciones CNN
+
+- Hasta tres ejecuciones completadas del mismo proyecto, comparadas lado a lado.
+- Configuración, modo y huella de dataset conservados; advertencia si cambian
+  las particiones o las imágenes. No se calcula una clasificación de ganadores.
+- JSON/CSV de comparación y CSV completo por época; paginación de diez épocas.
+- Mínimo observado de pérdida separado de la referencia de parada temprana.
+- No incluye predicciones, entrenamiento real ni medidas reales de generalización.
+- Evidencia: 38/38 pruebas unitarias, 17/17 escenarios Chromium y build aprobados:
+  https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/40984772219
+  Código probado: 737feedc6e119d695738c5361f6940848a084a7a.
+- Avance global estimado comunicado: 35% (antes 32%). Estimación del alcance
+  integral CNN, no un porcentaje de fases completadas ni de pruebas aprobadas.
+- La Fase 1 integral sigue parcial; se avanzó en la interfaz de fases 4 y 5.

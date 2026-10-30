@@ -240,7 +240,25 @@ No se presentan resultados reales del conjunto de prueba.
 
 ## 8. Evaluación y modelos
 
-Evaluación presenta resultados de simulaciones completadas.
+Evaluación presenta resultados de simulaciones completadas del proyecto activo.
+Los trabajos cancelados o en curso no se presentan como resultados finales.
+
+Marca entre una y tres ejecuciones para compararlas lado a lado. Se conservan
+la huella del dataset y sus particiones, el modo, la configuración CNN, el número
+de parámetros, las épocas ejecutadas y máximas, Dropout, L2 y métricas finales.
+La cuarta selección queda bloqueada hasta desmarcar una de las anteriores.
+Si las huellas difieren, se advierte que no son directamente comparables.
+La comparación no identifica ganadores ni prueba precisión predictiva real.
+
+Exportar comparación JSON conserva las configuraciones y los metadatos.
+Exportar comparación CSV genera un resumen. Ambos identifican la simulación;
+no incluyen imágenes, predicciones ni pesos. El CSV expresa precisión entre 0 y 1.
+
+Inspeccionar muestra el detalle por época, con páginas de diez registros y
+exportación CSV de todo el historial de esa ejecución. El mínimo numérico de
+pérdida observado puede diferir de la referencia usada por la parada temprana.
+La diferencia de precisión se muestra en puntos porcentuales y no constituye
+un diagnóstico de sobreajuste sobre estas curvas ilustrativas.
 
 En Modelos se puede registrar una ficha de cada ejecución completada.
 Una ejecución no puede registrarse dos veces.
