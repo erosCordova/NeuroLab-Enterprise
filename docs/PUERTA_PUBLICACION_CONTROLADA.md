@@ -111,3 +111,19 @@ SHA-256 de la migración local \`001_platform.sql\` es idéntica a la huella
 registrada en \`schema_migrations\` de la rama predeterminada de Neon. Las
 migraciones \`002\`–\`005\` siguen pendientes. Esta comprobación no leyó
 credenciales ni cambió objetos.
+
+## Resultado del control de preparación (CI aprobado)
+
+En el commit `08f7c4bd537185890351ba9909d6ce312166afd1`, el nuevo
+`GET /api/v1/ready` fue validado junto con 57 pruebas Python. El contenedor
+Docker verificó los valores sintéticos de producción (RENDER_PREFLIGHT=APROBADO).
+También aprobaron 11 pruebas conectadas y 20 recorridos Chromium.
+
+- API y contenedor: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926192
+- Frontend: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926140
+- Motor CNN (3 pruebas): https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926310
+
+**Las pruebas de CI no sustituyen una prueba sobre Render y Neon publicados.**
+Antes de continuar se deben confirmar las variables reales de Render, el
+respaldo verificable de Neon, y la autorización explícita para aplicar
+migraciones 002–005 y publicar backend y frontend conjuntamente.

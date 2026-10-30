@@ -1,7 +1,7 @@
 # Estado de NeuroLab Enterprise por fases
 
-**Avance global estimado: 93%** · Versión candidata en GitHub · **No desplegada**.
-Última verificación funcional: commit `0f9120f87a74cc4012080b40248308c785080932` mediante
+**Avance global estimado: 95%** · Versión candidata en GitHub · **No desplegada**.
+Última verificación funcional: commit `08f7c4bd537185890351ba9909d6ce312166afd1` mediante
 GitHub Actions. El porcentaje es una estimación del alcance del producto adaptado,
 no una medición de calidad predictiva ni una certificación de producción.
 
@@ -352,7 +352,7 @@ estos componentes; el motor de entrenamiento sigue simulado.
 - **Avance global: 93%** (antes 91%; +2 puntos por ensayo fiel a la línea base de Neon y verificación de migraciones de solo lectura).
 - No se ha ejecutado ninguna actualización en la base remota.
 
-## Puerta de disponibilidad del esquema (en validación)
+## Puerta de disponibilidad del esquema (verificada)
 
 - \`/api/v1/ready\` comprueba exclusivamente por consultas SQL que las cinco
   migraciones, sus sumas de verificación y las tablas necesarias están presentes.
@@ -360,4 +360,8 @@ estos componentes; el motor de entrenamiento sigue simulado.
   variables Render con valores sintéticos de prueba dentro de la imagen.
 - Verificado por SQL de solo lectura que \`001_platform.sql\` del código y de
   Neon tienen la misma huella SHA-256. Restan las migraciones \`002\`–\`005\`.
-- Se mantiene 93% hasta concluir toda la validación.
+- **Suite de API:** 57 pruebas Python, 5 de plataforma y 6 de alojamiento; `ENSAYO_MIGRACION_001_A_005=APROBADO`, `NEUROLAB_RUNTIME_MINIMO=OK` y `RENDER_PREFLIGHT=APROBADO`. Evidencia: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926192.
+- **Frontend/Chromium:** 20 pruebas aprobadas, incluido `/api/v1/ready` tras el proxy: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926140.
+- **Motor Python/Keras:** 3 pruebas aprobadas: https://github.com/erosCordova/NeuroLab-Enterprise/actions/runs/41008926310.
+- **Avance global estimado: 95%** (anterior 93%, +2 puntos por la comprobación de esquema, la imagen Docker y la configuración sintética de producción).
+- **Limitación:** variables y secretos reales de Render y respaldo de Neon todavía sin verificar. Las migraciones 002–005 siguen pendientes en producción, así como su despliegue autorizado y las pruebas finales del sistema publicado.
