@@ -1,6 +1,6 @@
 import * as tf from "@tensorflow/tfjs";
 import type {Config,ImageDataset,Metric} from "./cnn";
-import {summary} from "./cnn";
+import {summary} from "./cnn.ts";
 
 export type BrowserReport={
   training:"real";
