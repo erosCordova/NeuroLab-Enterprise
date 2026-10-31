@@ -3,7 +3,7 @@ import type {Config,Metric} from "./cnn.ts";
 import {summary} from "./cnn.ts";
 import {buildBrowserCNN,TrainingCancelled} from "./browserCNN.ts";
 import type {BrowserReport} from "./browserCNN.ts";
-import {mnistFingerprint,partitionMnist} from "./mnistDataset.ts";
+import {mnistFingerprint,partitionMnist,isFashionDataset,classNamesForSource} from "./mnistDataset.ts";
 import type {MnistData} from "./mnistDataset.ts";
 import {captureNetworkTrace} from "./networkTelemetry.ts";
 import {augmentMnistPixels} from "./mnistRobust.ts";
@@ -80,13 +80,14 @@ export async function trainMnistInBrowser(
   let bestLoss=Infinity,stale=0;
   const metrics:Metric[]=[];
   let currentEpoch=0,currentBatch=0;
-  const train=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.train,config,batchSize,signal,true,true).repeat();
+  const train=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.train,config,batchSize,signal,true,!isFashionDataset(data.source)).repeat();
   const validation=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.validation,config,batchSize,signal).repeat();
   const sampleIndex=partitions.validation[0];
   const samplePixels=new Float32Array(784);
   for(let p=0;p<784;p++)samplePixels[p]=data.trainPixels[sampleIndex*784+p]/255;
   const sample=tf.tensor4d(samplePixels,[1,28,28,1]);
-  const sampleLabel=String(data.trainLabels[sampleIndex]);
+  const classNames=classNamesForSource(data.source);
+  const sampleLabel=classNames[data.trainLabels[sampleIndex]];
   try{
     await model.fitDataset(train,{
       epochs,batchesPerEpoch:steps,validationData:validation,validationBatches:validationSteps,verbose:0,yieldEvery:"batch",
@@ -106,7 +107,7 @@ export async function trainMnistInBrowser(
           const point=unpack(epoch+1,logs);
           metrics.push(point);
           if(onTrace){
-            try{onTrace(captureNetworkTrace(model,sample,config,Array.from({length:10},(_,i)=>String(i)),epoch+1,sampleLabel));}
+            try{onTrace(captureNetworkTrace(model,sample,config,classNames,epoch+1,sampleLabel));}
             catch{/* La medición opcional no modifica el entrenamiento. */}
           }
           onEpoch(epoch+1,epochs,point);
@@ -139,7 +140,7 @@ export async function trainMnistInBrowser(
     return {
       training:"real",engine:"TensorFlow.js",
       dataset_fingerprint:await mnistFingerprint(data.source,data.limit),
-      classes:Array.from({length:10},(_,i)=>String(i)),
+      classes:classNames,
       samples:{train:partitions.train.length,validation:partitions.validation.length,test:partitions.test.length},
       config:structuredClone(config),parameters:architecture.total,
       requested_epochs:epochs,completed_epochs:metrics.length,batch:batchSize,seed:42,

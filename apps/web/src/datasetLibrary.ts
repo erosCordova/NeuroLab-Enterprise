@@ -77,8 +77,9 @@ function meta(content:LibraryContent){
     name:content.dataset.name,source:"Equipo",
     summary:content.dataset.images.length+" imágenes · "+content.dataset.classes.length+" clases"
   };
-  return {name:"MNIST · "+content.dataset.limit.toLocaleString("es-PE"),
-    source:content.dataset.source,summary:"Dígitos manuscritos · 10 clases"};
+  const fashion=content.dataset.source==="https://github.com/zalandoresearch/fashion-mnist";
+  return {name:(fashion?"Fashion-MNIST":"MNIST")+" · "+content.dataset.limit.toLocaleString("es-PE"),
+    source:content.dataset.source,summary:(fashion?"Prendas y accesorios":"Dígitos manuscritos")+" · 10 clases"};
 }
 export async function listLibrary(owner:string,projectId:string):Promise<{items:LibraryEntry[];activeId:string|null}>{
   const db=await openLibrary();

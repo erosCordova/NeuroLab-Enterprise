@@ -8,6 +8,7 @@ import PredictionPanel from "./PredictionPanel";
 import NetworkFlow from "./NetworkFlow";
 import type {NetworkTrace} from "./networkTelemetry";
 import type {MnistData} from "./mnistDataset";
+import {classNamesForSource,isFashionDataset} from "./mnistDataset";
 import "./browser-cnn.css";
 
 type Props={
@@ -133,7 +134,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     if(!blob)return;
     const url=URL.createObjectURL(blob);
     const a=document.createElement("a");
-    a.href=url;a.download="mnist-prueba-digito-"+mnist.testLabels[index]+".png";
+    a.href=url;a.download=(isFashionDataset(mnist.source)?"fashion-prueba-":"mnist-prueba-digito-")+mnist.testLabels[index]+".png";
     a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 
@@ -148,12 +149,13 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       const {partitionMnist,mnistFingerprint}=await import("./mnistDataset");
       const {pixelsOfImage}=await import("./browserCNN");
       let values:Float32Array,label:string;
-      const digits=report.classes.length===10&&report.classes.every((item,index)=>item===String(index));
-      if(mnist&&digits&&await mnistFingerprint(mnist.source,mnist.limit)===report.dataset_fingerprint){
+      const correctClasses=mnist?classNamesForSource(mnist.source):[];
+      const matches=report.classes.length===10&&report.classes.every((item,index)=>item===correctClasses[index]);
+      if(mnist&&matches&&await mnistFingerprint(mnist.source,mnist.limit)===report.dataset_fingerprint){
         const index=partitionMnist(mnist).validation[0];
         values=new Float32Array(28*28);
         for(let p=0;p<784;p++)values[p]=mnist.trainPixels[index*784+p]/255;
-        label=String(mnist.trainLabels[index]);
+        label=correctClasses[mnist.trainLabels[index]];
       }else if(dataset&&dataset.fingerprint===report.dataset_fingerprint){
         const index=dataset.validation[0];
         values=await pixelsOfImage(dataset.images[index].file,report.config);
@@ -192,11 +194,11 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     </div>
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
     <NetworkFlow config={config} classCount={mnist?10:dataset?.classes.length??report?.classes.length??2} working={working} realMetrics={metrics} realEpochs={report?.requested_epochs??Number(epochs)} realComplete={Boolean(report)} trace={networkTrace} history={networkHistory}
-      classNames={report?.classes??(mnist?Array.from({length:10},(_,i)=>String(i)):dataset?.classes)}
+      classNames={report?.classes??(mnist?classNamesForSource(mnist.source):dataset?.classes)}
       batchState={batchState}/>
     {!dataset&&!mnist?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
-      {mnist?<p><strong>MNIST · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
-      {mnist&&<p className="mnist-usage">El entrenamiento MNIST usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}
+      {mnist?<p><strong>{isFashionDataset(mnist.source)?"Fashion-MNIST":"MNIST"} · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
+      {mnist&&<p className="mnist-usage">El entrenamiento IDX usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}
       {reason&&<p className="error" role="alert">{reason}</p>}
       <div className="cnn-three">
         <label className="field"><span>Épocas reales (1–40)</span>
@@ -235,14 +237,14 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
         <button className="secondary cnn-spaced" onClick={exportReport}>Exportar informe JSON de entrenamiento real</button>
       </div>}
     </>}
-    {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
+    {mnist&&<p className="caption">Importación IDX en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
       setReport(restored);setNetworkTrace(null);setNetworkHistory([]);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
       <h3>Reconocer una imagen con los pesos guardados</h3>
-      {mnist&&<><p className="caption">MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro.</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>Descargar dígito oficial de prueba (PNG)</button></>}
+      {mnist&&<><p className="caption">{isFashionDataset(mnist.source)?"Fashion-MNIST utiliza imágenes oficiales en escala de grises de 28×28.":"MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro."}</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>{isFashionDataset(mnist.source)?"Descargar prenda oficial de prueba (PNG)":"Descargar dígito oficial de prueba (PNG)"}</button></>}
       <p className="caption">El modelo no se reentrena: se recupera de IndexedDB y se aplica a una imagen nueva.</p>
       <PredictionPanel key={report.model_ref} inputLabel="Imagen para clasificar"
         inputAriaLabel="Imagen para predecir con modelo respaldado"

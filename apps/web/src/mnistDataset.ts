@@ -4,6 +4,13 @@
  * Se admiten solo dos enlaces del origen MNIST reconocido, no URLs arbitrarias.
  */
 export const MNIST_REPOSITORY="https://github.com/cvdfoundation/mnist";
+export const FASHION_REPOSITORY="https://github.com/zalandoresearch/fashion-mnist";
+const FASHION_RAW="https://raw.githubusercontent.com/zalandoresearch/fashion-mnist/master/data/fashion/";
+export const FASHION_LABELS_ES=["Camiseta","Pantalón","Jersey","Vestido","Abrigo","Sandalia","Camisa","Zapatilla","Bolso","Botín"] as const;
+export function isFashionDataset(source:string){return source===FASHION_REPOSITORY;}
+export function classNamesForSource(source:string):string[]{
+  return isFashionDataset(source)?[...FASHION_LABELS_ES]:Array.from({length:10},(_,i)=>String(i));
+}
 const GCS="https://storage.googleapis.com/cvdf-datasets/mnist/";
 // Ruta local: Vercel y Vite entregan el archivo público como mismo origen,
 // evitando depender de CORS del bucket externo.
@@ -33,12 +40,19 @@ export function validateMnistUrl(value:string) {
   throw new Error("Por seguridad, la importación de esta versión admite únicamente el repositorio público cvdfoundation/mnist o su espejo oficial de Google Storage.");
 }
 
+export function validateIdxSourceUrl(value:string){
+  const normalized=value.trim().replace(/\/+$/,"").toLowerCase();
+  if(normalized===FASHION_REPOSITORY||normalized===FASHION_REPOSITORY+"/tree/master"||
+    normalized===FASHION_REPOSITORY+"/tree/main"||normalized===FASHION_RAW.replace(/\/$/,""))return FASHION_REPOSITORY;
+  return validateMnistUrl(value);
+}
+
 function u32(view:DataView,offset:number){return view.getUint32(offset,false);}
 export function parseIdxImages(raw:Uint8Array,count:number) {
   if(raw.byteLength!==16+count*784)throw new Error("El archivo IDX de imágenes tiene un tamaño inesperado.");
   const view=new DataView(raw.buffer,raw.byteOffset,raw.byteLength);
   if(u32(view,0)!==2051 || u32(view,4)!==count || u32(view,8)!==28 || u32(view,12)!==28)
-    throw new Error("El encabezado IDX de imágenes es inválido: se requieren dígitos de 28×28.");
+    throw new Error("El encabezado IDX de imágenes es inválido: se requieren imágenes de 28×28.");
   return raw.subarray(16);
 }
 export function parseIdxLabels(raw:Uint8Array,count:number) {
@@ -47,7 +61,7 @@ export function parseIdxLabels(raw:Uint8Array,count:number) {
   if(u32(view,0)!==2049||u32(view,4)!==count)
     throw new Error("El encabezado IDX de etiquetas es inválido.");
   const data=raw.subarray(8);
-  if(data.some(d=>d>9))throw new Error("Las etiquetas MNIST deben estar entre 0 y 9.");
+  if(data.some(d=>d>9))throw new Error("Las etiquetas deben estar entre 0 y 9.");
   return data;
 }
 
@@ -55,7 +69,7 @@ async function readGzip(url:string,expected:number,signal:AbortSignal|undefined,
   if(typeof DecompressionStream==="undefined")throw new Error("Este navegador no permite descomprimir gzip mediante DecompressionStream.");
   let response:Response;
   try {
-    response=await fetch(url,{method:"GET",mode:"same-origin",credentials:"omit",signal,cache:"force-cache"});
+    response=await fetch(url,{method:"GET",mode:url.startsWith("https://")?"cors":"same-origin",credentials:"omit",signal,cache:"force-cache"});
   }catch(cause){
     if(signal?.aborted)throw cause;
     throw new Error("No se pudo conectar con la ruta de descarga MNIST de NeuroLab. Revisa tu conexión o vuelve a intentarlo.");
@@ -80,12 +94,13 @@ async function readGzip(url:string,expected:number,signal:AbortSignal|undefined,
 }
 
 export async function importMnist(link:string,limit:MnistLimit,onProgress:(value:ImportProgress)=>void,signal?:AbortSignal):Promise<MnistData> {
-  const source=validateMnistUrl(link);
+  const source=validateIdxSourceUrl(link);
+  const prefix=isFashionDataset(source)?FASHION_RAW:MNIST_PROXY_PATH;
   if(!([1000,10000,60000] as number[]).includes(limit))throw new Error("Selecciona un volumen MNIST admitido.");
   const data:Uint8Array[]=[];
   for(let i=0;i<SOURCES.length;i++){
     const [file,expected]=SOURCES[i];
-    const raw=await readGzip(MNIST_PROXY_PATH+file,expected,signal,received=>onProgress({file,step:i+1,total:4,received,expected}));
+    const raw=await readGzip(prefix+file,expected,signal,received=>onProgress({file,step:i+1,total:4,received,expected}));
     data.push(raw);
   }
   const [trainRaw,trainLabelsRaw,testRaw,testLabelsRaw]=data;

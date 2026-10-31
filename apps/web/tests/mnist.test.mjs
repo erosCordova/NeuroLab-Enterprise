@@ -2,7 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import * as tf from "@tensorflow/tfjs";
 import {gzipSync} from "node:zlib";
-import {MNIST_REPOSITORY,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
+import {MNIST_REPOSITORY,FASHION_REPOSITORY,FASHION_LABELS_ES,isFashionDataset,classNamesForSource,validateIdxSourceUrl,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
 import {makeMnistBatches} from "../src/mnistTrain.ts";
 import {augmentMnistPixels,mnistInferenceViews} from "../src/mnistRobust.ts";
 test("MNIST: valida el repositorio y rechaza dominios arbitrarios",()=>{
@@ -81,4 +81,18 @@ test("MNIST: aumentos del entrenamiento preservan dimensión y normalización",(
  assert.ok(out.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
  assert.ok(out.reduce((a,b)=>a+b,0)>0);
  assert.equal(data[12*28+14],1);
+});
+
+
+test("Fashion-MNIST: origen oficial, clases en español y aislamiento frente a dígitos",()=>{
+  assert.equal(validateIdxSourceUrl(FASHION_REPOSITORY),FASHION_REPOSITORY);
+  assert.equal(validateIdxSourceUrl(FASHION_REPOSITORY+"/tree/master"),FASHION_REPOSITORY);
+  assert.equal(validateIdxSourceUrl(MNIST_REPOSITORY),MNIST_REPOSITORY);
+  assert.equal(isFashionDataset(FASHION_REPOSITORY),true);
+  assert.equal(isFashionDataset(MNIST_REPOSITORY),false);
+  assert.deepEqual(classNamesForSource(FASHION_REPOSITORY),[...FASHION_LABELS_ES]);
+  assert.deepEqual(classNamesForSource(MNIST_REPOSITORY),Array.from({length:10},(_,i)=>String(i)));
+  assert.equal(classNamesForSource(FASHION_REPOSITORY)[7],"Zapatilla");
+  assert.equal(classNamesForSource(FASHION_REPOSITORY)[8],"Bolso");
+  assert.throws(()=>validateIdxSourceUrl("https://untrusted.example.org/labels.gz"),/únicamente/);
 });
