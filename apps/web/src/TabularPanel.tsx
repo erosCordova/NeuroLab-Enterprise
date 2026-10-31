@@ -6,12 +6,13 @@ import type {TabularResult,TabularMetric} from "./tabularTrain";
 import "./tabular.css";
 
 type Props={dataset?:TabularDataset;onApply:(dataset:TabularDataset)=>void;
+  onImport?:(dataset:TabularDataset)=>Promise<void>;
   onRemove:()=>void;report?:TabularResult|null;onSaveReport?:(result:TabularResult|null)=>void};
 const taskName:Record<PredictionTask,string>={
   binary:"Clasificación binaria",multiclass:"Clasificación multiclase",regression:"Regresión"
 };
 const fmt=(n:number)=>n.toLocaleString("es-PE",{maximumFractionDigits:4});
-export default function TabularPanel({dataset,onApply,onRemove,report,onSaveReport}:Props){
+export default function TabularPanel({dataset,onApply,onImport,onRemove,report,onSaveReport}:Props){
   const [mode,setMode]=useState<"file"|"url">("file");
   const [url,setUrl]=useState("");
   const [busy,setBusy]=useState(false);
@@ -31,7 +32,8 @@ export default function TabularPanel({dataset,onApply,onRemove,report,onSaveRepo
       if(!/\.(csv|tsv|txt)$/i.test(file.name))throw new Error("Selecciona un archivo CSV o TSV.");
       if(file.size>12*1024*1024)throw new Error("Archivo demasiado grande (máximo 12 MB).");
       const next=parseTable(await file.text(),file.name);
-      onApply(next);setResult(null);onSaveReport?.(null);setHistory([]);
+      if(onImport)await onImport(next);else onApply(next);
+      setResult(null);onSaveReport?.(null);setHistory([]);
       setStatus("Dataset analizado correctamente.");
     }catch(cause){setError(cause instanceof Error?cause.message:"No se pudo leer el archivo.");}
     finally{setBusy(false);}
@@ -42,7 +44,8 @@ export default function TabularPanel({dataset,onApply,onRemove,report,onSaveRepo
     try{
       const next=await fetchPublicTable(url,controller.signal);
       if(controller.signal.aborted)return;
-      onApply(next);setResult(null);onSaveReport?.(null);setHistory([]);
+      if(onImport)await onImport(next);else onApply(next);
+      setResult(null);onSaveReport?.(null);setHistory([]);
       setStatus("Dataset importado desde la URL.");
     }catch(cause){if(!controller.signal.aborted)setError(cause instanceof Error?cause.message:"No se pudo importar la URL.");}
     finally{setBusy(false);if(abort.current===controller)abort.current=null;}
