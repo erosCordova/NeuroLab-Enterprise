@@ -5,6 +5,8 @@ import {buildBrowserCNN,TrainingCancelled} from "./browserCNN.ts";
 import type {BrowserReport} from "./browserCNN.ts";
 import {mnistFingerprint,partitionMnist} from "./mnistDataset.ts";
 import type {MnistData} from "./mnistDataset.ts";
+import {captureNetworkTrace} from "./networkTelemetry.ts";
+import type {NetworkTrace} from "./networkTelemetry.ts";
 
 export type BatchState={epoch:number;epochs:number;batch:number;batches:number;tensorBytes:number};
 const safe=(v:number,min:number,max:number)=>Number.isInteger(v)&&v>=min&&v<=max;
@@ -52,6 +54,7 @@ export async function trainMnistInBrowser(
   onEpoch:(epoch:number,total:number,metric:Metric)=>void,
   onBatch:(status:BatchState)=>void,
   signal?:AbortSignal,
+  onTrace?:(trace:NetworkTrace)=>void,
 ):Promise<BrowserReport>{
   if(config.size!==28||config.channels!==1)throw new Error("Configura la CNN a 28×28 píxeles y escala de grises para MNIST.");
   const architecture=summary(config,10);
@@ -72,6 +75,11 @@ export async function trainMnistInBrowser(
   let currentEpoch=0,currentBatch=0;
   const train=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.train,config,batchSize,signal,true).repeat();
   const validation=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.validation,config,batchSize,signal).repeat();
+  const sampleIndex=partitions.validation[0];
+  const samplePixels=new Float32Array(784);
+  for(let p=0;p<784;p++)samplePixels[p]=data.trainPixels[sampleIndex*784+p]/255;
+  const sample=tf.tensor4d(samplePixels,[1,28,28,1]);
+  const sampleLabel=String(data.trainLabels[sampleIndex]);
   try{
     await model.fitDataset(train,{
       epochs,batchesPerEpoch:steps,validationData:validation,validationBatches:validationSteps,verbose:0,yieldEvery:"batch",
@@ -90,6 +98,10 @@ export async function trainMnistInBrowser(
           if(signal?.aborted)model.stopTraining=true;
           const point=unpack(epoch+1,logs);
           metrics.push(point);
+          if(onTrace){
+            try{onTrace(captureNetworkTrace(model,sample,config,Array.from({length:10},(_,i)=>String(i)),epoch+1,sampleLabel));}
+            catch{/* La medición opcional no modifica el entrenamiento. */}
+          }
           onEpoch(epoch+1,epochs,point);
           if(config.earlyStopping){
             if(bestLoss-point.valLoss>(config.minDelta??.01)){
@@ -130,6 +142,7 @@ export async function trainMnistInBrowser(
     if(saved)await tf.io.removeModel(name).catch(()=>undefined);
     throw err;
   }finally{
+    sample.dispose();
     bestWeights.value?.forEach(w=>w.dispose());
     model.optimizer?.dispose();
     model.dispose();
