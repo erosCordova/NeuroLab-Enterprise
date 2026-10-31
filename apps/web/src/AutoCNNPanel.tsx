@@ -5,13 +5,12 @@ type Props={
   dataset:ImageDataset;
   config:Config;
   automatic:boolean;
-  onModeChange:(mode:"automatic"|"manual")=>void;
   onChange:(config:Config)=>void;
   onApply:(config:Config,epochs:number)=>void;
 };
 
 export default function AutoCNNPanel({
-  dataset,config,automatic,onModeChange,onChange,onApply,
+  dataset,config,automatic,onChange,onApply,
 }:Props) {
   const proposal=recommendCNN(dataset,{
     size:28,channels:1,dense:64,layers:[],
@@ -20,17 +19,7 @@ export default function AutoCNNPanel({
   return <section className="panel recent auto-cnn" aria-label="Configuración automática CNN">
     <div className="panel-head">
       <div><h2>Configuración automática CNN</h2><p className="muted">{proposal.reason}</p></div>
-      <label className="field">
-        <span>Modo de configuración</span>
-        <select
-          aria-label="Modo de configuración CNN"
-          value={automatic?"automatic":"manual"}
-          onChange={event=>onModeChange(event.target.value as "automatic"|"manual")}
-        >
-          <option value="automatic">Automático · predeterminado</option>
-          <option value="manual">Manual</option>
-        </select>
-      </label>
+
     </div>
 
     <p className="soft" role="status">

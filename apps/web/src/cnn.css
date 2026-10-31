@@ -161,3 +161,14 @@ textarea:focus-visible{outline:3px solid #8b83ed;outline-offset:3px}
 .stats .stat:nth-child(4){background:linear-gradient(140deg,#fff,#fff8ee)}
 .brand .nl-brand{white-space:nowrap}
 .brand .nl-brand img{border-radius:10px}
+
+/* Selector visible para cualquier origen de datos (incluye MNIST y Fashion-MNIST). */
+.cnn-designer-mode-head{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin:0 0 12px}
+.cnn-designer-mode-head h2{margin:0 0 5px}
+.cnn-designer-mode-head p{margin:0}
+.cnn-mode-switch{display:inline-flex;align-items:center;padding:5px;gap:4px;border:1px solid #b9dfd8;background:#ebf7f4;border-radius:13px}
+.cnn-mode-switch button{min-width:122px;padding:12px 17px;font-size:13px;font-weight:800;border:0;border-radius:10px;background:transparent;color:#2d6963;cursor:pointer}
+.cnn-mode-switch button.active,.cnn-mode-switch button[aria-pressed="true"]{background:#0a8479;color:#fff;box-shadow:0 4px 13px #13675b24}
+.cnn-mode-note{padding:12px 15px;border-radius:10px;border:1px solid #d1e8e0;background:#f0fbf6;color:#28685e;font-size:12px;line-height:1.7;margin:10px 0 17px}
+.cnn-mode-fields:disabled{opacity:.92}
+@media(max-width:650px){.cnn-mode-switch{width:100%}.cnn-mode-switch button{min-width:0;flex:1}}

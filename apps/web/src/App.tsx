@@ -19,6 +19,8 @@ import ProjectsPanel from "./ProjectsPanel";
 import {saveProject} from "./projects";
 import type {Project,ProjectDraft} from "./projects";
 import AutoCNNPanel from "./AutoCNNPanel";
+import NetworkFlow from "./NetworkFlow";
+import {isFashionDataset} from "./mnistDataset";
 import DatasetTransfer from "./DatasetTransfer";
 import {recommendCNN} from "./adaptiveTraining";
 import {fingerprintDataset,validateCompletedJob} from "./integrity";
@@ -146,6 +148,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   const tabularActive=datasetOrigin[projectId]==="tabular"&&Boolean(tabular);
   const mnistActive=datasetOrigin[projectId]==="mnist"&&Boolean(mnist);
   const activeClasses=tabularActive?undefined:mnistActive?10:dataset?.classes.length;
+  const activeDatasetName=mnistActive&&mnist?(isFashionDataset(mnist.source)?"Fashion-MNIST":"MNIST"):dataset?.name??"Sin dataset";
   const automatic=(cnnModes[projectId]??"automatic")==="automatic";
   const proposal=dataset?recommendCNN(dataset,defaultConfig()):null;
   const config=automatic
@@ -535,7 +538,19 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
             <button className="primary" onClick={()=>navigate("Entrenamientos")}>Abrir entrenamiento tabular</button>
           </section>}
         {page==="Diseñador CNN"&&!tabularActive&&<div className="designer">
-          <section className="panel"><h2>Constructor convolucional</h2>{dataset&&<AutoCNNPanel dataset={dataset} config={config} automatic={automatic} onModeChange={changeCNNMode} onChange={updateConfig} onApply={(next,count)=>{updateConfig(next);setEpochs(String(count));}} />}<fieldset disabled={automatic} className="cnn-mode-fields">
+          <section className="panel"><div className="cnn-designer-mode-head">
+              <div><h2>Constructor convolucional</h2><p className="muted">Elige cómo configurar la arquitectura del proyecto.</p></div>
+              <div className="cnn-mode-switch" role="group" aria-label="Modo de configuración CNN">
+                <button type="button" aria-pressed={automatic} className={automatic?"active":""} onClick={()=>changeCNNMode("automatic")}>Automático</button>
+                <button type="button" aria-pressed={!automatic} className={!automatic?"active":""} onClick={()=>changeCNNMode("manual")}>Manual</button>
+              </div>
+            </div>
+            <p className="cnn-mode-note" role="status">{automatic
+              ?"Automático: NeuroLab propone la arquitectura según el dataset activo. No necesitas configurar las capas."
+              :"Manual: puedes modificar tamaño, canales, filtros, capas, funciones de activación y regularización."}</p>
+            {mnistActive&&<p className="caption">Dataset IDX activo: {activeDatasetName}, 10 clases. El entrenamiento real de este origen utiliza 28 × 28 píxeles y un canal.</p>}
+            {dataset&&<AutoCNNPanel dataset={dataset} config={config} automatic={automatic} onChange={updateConfig} onApply={(next,count)=>{updateConfig(next);setEpochs(String(count));}} />}
+            <fieldset disabled={automatic} className="cnn-mode-fields">
             <legend>Arquitectura CNN · {automatic?"calculada automáticamente":"edición manual"}</legend>
             {automatic&&<p className="caption">Para modificar estos valores, selecciona Manual.</p>}
             <div className="cnn-three">
@@ -543,7 +558,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
             <label className="field"><span>Canales</span><select value={config.channels} onChange={event=>updateConfig({...config,channels:Number(event.target.value)})}><option value={1}>Escala de grises · 1</option><option value={3}>RGB · 3</option></select></label>
             <label className="field"><span>Unidades Dense</span><input type="number" min="1" max="512" value={config.dense} onChange={event=>updateConfig({...config,dense:Number(event.target.value)})} /></label>
           </div>
-          <div className="cnn-flow" role="region" aria-label="Diagrama desplazable de la arquitectura CNN" tabIndex={0}><span>Entrada<br />{config.size} × {config.size} × {config.channels}</span>{config.layers.map((layer,index)=><span key={layer.id}>Conv2D {index+1}<br />{layer.filters} filtros{layer.pool?<><br />MaxPool 2 × 2</>:null}</span>)}<span>Flatten<br />{info?.flattened??"—"}</span><span>Dense<br />{config.dense}</span><span>Salida<br />{info?`${info.output} · ${info.activation}`:"Requiere dataset"}</span></div>
+          <NetworkFlow config={config} classCount={activeClasses??2} working={false} realMetrics={[]} realEpochs={1} realComplete={false} classNames={mnistActive?Array.from({length:10},(_,i)=>String(i)):dataset?.classes} />
           {config.layers.map((layer,index)=><article className="cnn-block" key={layer.id}>
             <div className="panel-head"><h3>Bloque convolucional {index+1}</h3><div className="actions"><button className="secondary" disabled={index===0} aria-label={`Subir bloque ${index+1}`} onClick={()=>{const layers=[...config.layers];[layers[index-1],layers[index]]=[layers[index],layers[index-1]];updateConfig({...config,layers});}}>↑</button><button className="secondary" disabled={config.layers.length===1} onClick={()=>updateConfig({...config,layers:config.layers.filter(item=>item.id!==layer.id)})}>Eliminar bloque</button></div></div>
             <div className="cnn-three"><label className="field"><span>Filtros · 1 a 128</span><input type="number" min="1" max="128" value={layer.filters} onChange={event=>updateConfig({...config,layers:config.layers.map(item=>item.id===layer.id?{...item,filters:Number(event.target.value)}:item)})} /></label>
@@ -556,7 +571,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           </fieldset>
           {architectureError&&<p className="error">{architectureError}</p>}
           </section>
-          <section className="panel properties"><h2>Resumen CNN</h2><dl><dt>Dataset</dt><dd>{dataset?.name??"Sin dataset"}</dd><dt>Clases</dt><dd>{dataset?.classes.length??"—"}</dd><dt>Parámetros</dt><dd>{info?.total.toLocaleString("es-PE")??"Pendiente"}</dd><dt>Salida</dt><dd>{info?.activation??"Pendiente"}</dd><dt>Pérdida prevista</dt><dd>{info?.loss??"Pendiente"}</dd></dl><button className="primary full" onClick={saveVersion}>Guardar versión CNN</button><button className="secondary full cnn-spaced" onClick={()=>navigate("Entrenamientos")}>Continuar al entrenamiento →</button>
+          <section className="panel properties"><h2>Resumen CNN</h2><dl><dt>Dataset</dt><dd>{activeDatasetName}</dd><dt>Clases</dt><dd>{dataset?.classes.length??"—"}</dd><dt>Parámetros</dt><dd>{info?.total.toLocaleString("es-PE")??"Pendiente"}</dd><dt>Salida</dt><dd>{info?.activation??"Pendiente"}</dd><dt>Pérdida prevista</dt><dd>{info?.loss??"Pendiente"}</dd></dl><button className="primary full" onClick={saveVersion}>Guardar versión CNN</button><button className="secondary full cnn-spaced" onClick={()=>navigate("Entrenamientos")}>Continuar al entrenamiento →</button>
           <h3 className="cnn-spaced">Versiones</h3>{versions.filter(item=>item.projectId===projectId).map(item=><div className="cnn-version" key={item.id}>CNN v{item.version} · {item.config.layers.length} bloques <button className="text-button" onClick={()=>download(`cnn-arquitectura-v${item.version}.json`,JSON.stringify({containsWeights:false,architecture:item},null,2),"application/json")}>Exportar JSON</button></div>)}
           </section>
         </div>}
