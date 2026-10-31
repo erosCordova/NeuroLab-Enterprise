@@ -36,3 +36,8 @@ export function persistProject(draft:ProjectDraft,id:string,previous?:StoredProj
     body:JSON.stringify({...draft,tags:draft.tags.split(",").map(value=>value.trim()).filter(Boolean),...(previous?{revision:previous.revision}:{})}),
   });
 }
+
+
+export function deleteStoredProject(project:StoredProject) {
+  return api<void>("/projects/"+encodeURIComponent(project.id)+"?revision="+project.revision,{method:"DELETE"});
+}

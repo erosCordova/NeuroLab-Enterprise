@@ -237,3 +237,31 @@ def test_release_fingerprint_is_safe_and_never_cached(client, monkeypatch):
     assert response.headers["Cache-Control"] == "private, no-store"
     monkeypatch.setenv("RENDER_GIT_COMMIT", "invalid-secret")
     assert client.get("/api/v1/release").json()["commit"] is None
+
+
+def test_delete_project_enforces_owner_revision_and_cascade(client):
+    from test_real_runs_api import report
+    register(client)
+    targeted=project(client,'Proyecto de eliminación')
+    safe=project(client,'Proyecto intacto')
+    endpoint=f'/api/v1/projects/{targeted["id"]}'
+    with TestClient(create_app()) as outsider:
+        register(outsider)
+        assert outsider.delete(endpoint,params={'revision':targeted['revision']}).status_code==404
+    assert client.delete(endpoint,params={'revision':99}).status_code==409
+    assert client.get(endpoint).status_code==200
+    body={**report(),'engine':'TensorFlow.js','weights_file':'model.json',
+          'model_ref':'indexeddb://neurolab-cnn-'+targeted['id']+'-'+str(uuid4())}
+    run=client.post(endpoint+'/real-runs',json=body)
+    assert run.status_code==201,run.text
+    model=client.post(endpoint+'/real-models',json={'run_id':run.json()['id'],
+                                                     'display_name':'Modelo CNN temporal'})
+    assert model.status_code==201,model.text
+    assert client.delete(endpoint,params={'revision':targeted['revision']}).status_code==204
+    with psycopg.connect(os.environ['TEST_DATABASE_URL']) as db:
+        assert db.execute('SELECT count(*) FROM real_cnn_runs WHERE project_id=%s',
+                          (targeted['id'],)).fetchone()[0]==0
+        assert db.execute('SELECT count(*) FROM real_cnn_models WHERE project_id=%s',
+                          (targeted['id'],)).fetchone()[0]==0
+    assert client.delete(endpoint,params={'revision':targeted['revision']}).status_code==404
+    assert [p['id'] for p in client.get('/api/v1/projects').json()]==[safe['id']]

@@ -275,6 +275,21 @@ def create_app():
             db.rollback()
             raise HTTPException(409,'Ya existe un proyecto con ese nombre.')
 
+    @app.delete('/api/v1/projects/{project_id}',status_code=204)
+    def delete_project(project_id:UUID,revision:int,user=Depends(current_user),db=Depends(database)):
+        if revision<1:raise HTTPException(422,'Revisión del proyecto inválida.')
+        # Propietario y revisión actual obligatorios. Los informes y fichas
+        # se eliminan mediante ON DELETE CASCADE en PostgreSQL.
+        row=db.execute('DELETE FROM projects WHERE id=%s AND owner_id=%s AND revision=%s RETURNING id',
+                       (project_id,user['id'],revision)).fetchone()
+        if not row:
+            exists=db.execute('SELECT 1 FROM projects WHERE id=%s AND owner_id=%s',
+                              (project_id,user['id'])).fetchone()
+            raise HTTPException(409 if exists else 404,
+                'El proyecto cambió. Actualiza la página antes de eliminarlo.' if exists else 'Proyecto no encontrado.')
+        db.commit()
+        return Response(status_code=204)
+
     real_fields='id,project_id,imported_at,dataset_fingerprint,classes,samples,config,parameters,requested_epochs,completed_epochs,batch,seed,metrics,test,source,engine,weights_file,model_ref'
 
     @app.get('/api/v1/projects/{project_id}/real-runs')

@@ -1,7 +1,7 @@
 import {useEffect,useState} from "react";
 import App from "./App";
 import ProjectsPanel from "./ProjectsPanel";
-import {api,apiEnabled,persistProject} from "./api";
+import {api,apiEnabled,persistProject,deleteStoredProject} from "./api";
 import type {Account,StoredProject} from "./api";
 import type {ProjectDraft} from "./projects";
 import "./platform.css";
@@ -37,6 +37,12 @@ export default function Platform(){
     setProjects(current=>current.some(project=>project.id===result.id)?current.map(project=>project.id===result.id?result:project):[...current,result]);
     return result;
   }
+  async function deleteProject(id:string){
+    const selected=projects.find(project=>project.id===id);
+    if(!selected)throw new Error("No se encontró el proyecto para eliminar.");
+    await deleteStoredProject(selected);
+    setProjects(current=>current.filter(project=>project.id!==id));
+  }
   async function logout(){
     setError("");
     try{await api<void>("/auth/logout",{method:"POST"});setUser(null);setProjects([]);setPassword("");}
@@ -45,7 +51,7 @@ export default function Platform(){
   if(!apiEnabled)return <App/>;
   if(loading)return <main className="platform-loading"><p role="status">Conectando con NeuroLab…</p></main>;
   if(user&&projects.length)return <><div className="account-strip"><span><strong>{user.display_name}</strong> · Proyectos en PostgreSQL</span><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>{error&&<p role="alert">{error}</p>}
-    <App key={user.id} initialProjects={projects} onPersistProject={save}/></>;
+    <App key={user.id} initialProjects={projects} onPersistProject={save} onDeleteProject={deleteProject}/></>;
   if(user)return <main className="platform-onboarding"><div className="panel-head"><h1>Tu primer proyecto CNN</h1><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>
     <p className="muted">Los proyectos se guardarán en tu cuenta de PostgreSQL.</p>{error&&<p role="alert">{error}</p>}
     <ProjectsPanel projects={[]} activeId="" persistent onSave={save} onOpen={()=>{}}/></main>;
