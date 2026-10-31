@@ -1,7 +1,7 @@
 import {useId,useMemo,useState} from "react";
 import type {Config,Metric} from "./cnn";
 import type {NetworkTrace} from "./networkTelemetry";
-import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth} from "./networkGraph";
+import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphEnergyRoutes} from "./networkGraph";
 import "./network-flow.css";
 
 type Props={
@@ -26,7 +26,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
   const epochs=Math.max(1,realEpochs),done=Math.min(epochs,realMetrics.length);
   const latest=epochView==="latest"?realMetrics.at(-1):realMetrics.find(m=>String(m.epoch)===epochView)??realMetrics.at(-1);
   const labels=classNames?.length===classCount?classNames:Array.from({length:classCount},(_,i)=>String(i));
-  const running=Boolean(visible)&&motion;
+  // La animación ilustrativa no depende de que la primera época haya terminado.
+  const running=motion;
+  const routes=useMemo(()=>graphEnergyRoutes(stages),[stages]);
   const width=graphCanvasWidth(stages.length);
   const counts=stages.map(visibleNodeCount);
   const positions=stages.map((_,column)=>Array.from({length:counts[column]},(_,index)=>graphNodePosition(column,index,counts[column])));
@@ -56,16 +58,16 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
           <button type="button" className={view==="3d"?"selected":""} aria-pressed={view==="3d"} onClick={()=>setView("3d")}>3D</button>
           <button type="button" className={view==="2d"?"selected":""} aria-pressed={view==="2d"} onClick={()=>setView("2d")}>2D</button>
         </div>
-        {visible&&<button type="button" className="nl-motion-toggle" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}>{motion?"Pausar":"Animar"}</button>}
+        <button type="button" className="nl-motion-toggle" aria-pressed={motion} aria-label={motion?"Pausar animación del flujo neuronal":"Reanudar animación del flujo neuronal"} onClick={()=>setMotion(v=>!v)}>{motion?"Pausar animación":"Reanudar animación"}</button>
       </div>
     </div>
     <div className="nl-neural-data-heading">
       {visible?<><span className="nl-epoch-pill">Época {visible.epoch}</span>
         <span>Original: <strong>{visible.sampleLabel}</strong></span><span aria-hidden="true">→</span>
         <span>Predicción: <strong>{visible.predictedLabel}</strong> <small>{percent(visible.confidence)}</small></span></>:
-        <span className="nl-empty-pill">Vista de arquitectura · sin mediciones de entrenamiento</span>}
+        <span className="nl-empty-pill">{working?"Entrenamiento iniciado · esperando primeras métricas":"Vista de arquitectura · aún sin mediciones"} · Flujo {motion?"ilustrativo animado":"en pausa"}</span>}
     </div>
-    {stages.length?<div className="nl-neural-window" data-view={view} data-motion={running?"running":"paused"}>
+    {stages.length?<div className="nl-neural-window" data-view={view} data-motion={running?"running":"paused"} data-training={working?"true":"false"}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Diagrama desplazable de neuronas y conexiones">
         <svg className="nl-neural-svg" viewBox={"0 0 "+width+" 352"} width={width} height="352" role="img" aria-label="Grafo de la red: neuronas conectadas de entrada a convoluciones, pooling, Flatten, Dense y salida">
           <defs>
@@ -89,6 +91,14 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 strokeWidth={selectedLink?1.15:.75}
                 strokeOpacity={measured.size?Math.min(.5,.085+power*.28):.16}/>;
             })))}
+          {/* Pulsos visibles desde el primer render: flujo conceptual, no métricas inventadas. */}
+          {running&&<g className="nl-energy-streams" aria-hidden="true">
+            {routes.map(route=><circle key={route.key} className="nl-energy-particle" r={working?4.4:3.5}
+              fill={route.column%2?"#9df4ff":"#6bffe0"}>
+              <animateMotion path={route.path} dur={`${(route.duration*(working?.68:1)).toFixed(2)}s`}
+                begin={`-${route.delay.toFixed(2)}s`} repeatCount="indefinite"/>
+            </circle>)}
+          </g>}
           {stages.map((stage,column)=><g key={stage.key} className={selected?.key===stage.key?"nl-column chosen":"nl-column"}>
             <text className="nl-svg-label" x={85+column*146} y="32" textAnchor="middle">{stage.label}</text>
             <text className="nl-svg-shape" x={85+column*146} y="49" textAnchor="middle">{stage.shape}</text>
@@ -99,8 +109,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
               return <g key={nodeIndex} className={"nl-neuron "+(running&&observed?"live":"")}>
                 {view==="3d"&&<><circle cx={point.x+7} cy={point.y-6} r={r+2} fill="#050e21" stroke={column%2?"#9686eb":"#167f8f"} strokeOpacity=".65"/>
                   <line x1={point.x+7} y1={point.y-6} x2={point.x} y2={point.y} stroke="#96eee2" strokeOpacity=".28"/></>}
+                {running&&<circle className="nl-neuron-halo" cx={point.x} cy={point.y} r={r+6} fill="#32e4cc" opacity=".11" style={{animationDelay:`${(column*.22+nodeIndex*.09).toFixed(2)}s`}}/>}
                 {chosen&&<circle cx={point.x} cy={point.y} r={r+6} fill="none" stroke="#64fce0" strokeOpacity=".36"/>}
-                <circle cx={point.x} cy={point.y} r={r} fill={observed?"url(#"+gradientId+"-node)":"#2c6678"}
+                <circle className="nl-neuron-core" style={{animationDelay:`${(column*.22+nodeIndex*.09).toFixed(2)}s`}} cx={point.x} cy={point.y} r={r} fill={observed?"url(#"+gradientId+"-node)":"#2c6678"}
                   fillOpacity={observed ? .55+value*.45 : .65} stroke={observed?"#a5ffeb":"#82b5ce"} strokeWidth={chosen?1.7:1.0}/>
                 {observed&&<circle cx={point.x-2} cy={point.y-2} r={Math.max(1.5,r*.26)} fill="#e9ffff" fillOpacity=".55"/>}
               </g>;
@@ -138,7 +149,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
         <span>Validación <strong>{percent(latest.valAccuracy)}</strong></span>
         <span>Pérdida <strong>{latest.valLoss.toFixed(3)}</strong></span></div>}
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
-      <p className="nl-neural-disclaimer">{visible?"Brillo de neuronas: resumen de activaciones medidas.":"Estructura ilustrativa antes de entrenar."} Las conexiones representan la arquitectura simplificada, no pesos individuales.</p>
+      <p className="nl-neural-disclaimer">{visible?"Brillo de neuronas: resumen de activaciones medidas.":"El flujo luminoso es ilustrativo, no son mediciones hasta completar una época."} Las conexiones representan la arquitectura simplificada, no pesos individuales.</p>
     </div>
   </section>;
 }

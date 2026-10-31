@@ -54,3 +54,28 @@
 .nl-neural-error{padding:16px;color:#a53645}
 @media(max-width:650px){.nl-neural-head{padding:12px}.nl-neural-data-heading{padding:0 12px 12px}.nl-neural-window{margin:0 6px}.nl-node-selector{padding:10px 6px 0}.nl-layer-details{margin:10px 7px 0}.nl-neural-footer{padding:12px}}
 @media(prefers-reduced-motion:reduce){.nl-neural-svg *, .nl-neural-panel *{animation:none!important;transition:none!important}}
+
+/* Animación continua independiente de los callbacks de TensorFlow.js.
+   Un pequeño conjunto de partículas usa SVG nativo; el grafo completo
+   permanece estático para reducir el consumo de CPU. */
+.nl-neural-controls .nl-motion-toggle{background:#e4f9f1;border-color:#97d3c2;color:#08705f;font-weight:800}
+.nl-neural-window[data-motion="running"] .nl-neuron-halo{
+  animation:nl-halo-pulse 1.85s ease-in-out infinite alternate;
+  transform-box:fill-box;transform-origin:center;
+}
+.nl-neural-window[data-motion="running"] .nl-neuron-core{
+  animation:nl-core-pulse 2.1s ease-in-out infinite alternate;
+  transform-box:fill-box;transform-origin:center;
+}
+.nl-energy-particle{opacity:.96;filter:drop-shadow(0 0 5px #5cffd9) drop-shadow(0 0 3px #abfbff)}
+.nl-neural-window[data-training="true"] .nl-energy-particle{
+  filter:drop-shadow(0 0 9px #52ffe4) drop-shadow(0 0 4px #e8fffe);
+}
+.nl-neural-window[data-training="true"] .nl-neuron-halo{animation-duration:1.2s}
+.nl-neural-window[data-training="true"] .nl-neuron-core{animation-duration:1.3s}
+@keyframes nl-halo-pulse{0%{opacity:.07;transform:scale(.85)}100%{opacity:.48;transform:scale(1.35)}}
+@keyframes nl-core-pulse{0%{stroke-opacity:.35;opacity:.75}100%{stroke-opacity:1;opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .nl-energy-streams{display:none!important}
+  .nl-neuron-halo,.nl-neuron-core{animation:none!important}
+}

@@ -33,3 +33,25 @@ export function graphNodePosition(column:number,index:number,total:number){
 export function graphCanvasWidth(columns:number){
   return Math.max(900,170+Math.max(0,columns-1)*146);
 }
+
+/** Rutas cortas y estables para pulsos animados visibles, aun antes de medir activaciones. */
+export type GraphEnergyRoute={key:string;column:number;path:string;duration:number;delay:number};
+export function graphEnergyRoutes(stages:readonly GraphStage[]):GraphEnergyRoute[]{
+  const routes:GraphEnergyRoute[]=[];
+  for(let column=0;column<stages.length-1;column++){
+    const left=visibleNodeCount(stages[column]),right=visibleNodeCount(stages[column+1]);
+    for(let lane=0;lane<4;lane++){
+      const fromIndex=Math.round((lane+.5)*(left-1)/4);
+      const toIndex=Math.round((((lane*3+1)%4)+.5)*(right-1)/4);
+      const start=graphNodePosition(column,fromIndex,left);
+      const end=graphNodePosition(column+1,toIndex,right);
+      routes.push({
+        key:column+"-"+lane,column,
+        path:"M "+(start.x+9)+" "+start.y+" L "+(end.x-9)+" "+end.y,
+        duration:1.55+.12*(lane%3)+.12*(column%3),
+        delay:.21*(column+lane),
+      });
+    }
+  }
+  return routes;
+}

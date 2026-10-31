@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {defaultConfig} from "../src/cnn.ts";
-import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth} from "../src/networkGraph.ts";
+import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth,graphEnergyRoutes} from "../src/networkGraph.ts";
 
 test("Grafo neuronal reproduce el flujo de conv, pooling, dense y salida real",()=>{
   const config=defaultConfig();
@@ -24,4 +24,23 @@ test("El grafo cambia según arquitectura manual, incluido Dropout y binario",()
   assert.ok(stages.some(s=>s.key==="dropout"));
   assert.equal(stages.at(-1).shape,"2 clases");
   assert.throws(()=>graphNodePosition(0,5,3),/no válido/);
+});
+
+test("La animación tiene rutas válidas antes de existir métricas o trazas",()=>{
+  const stages=graphStages(defaultConfig(),10);
+  const first=graphEnergyRoutes(stages);
+  assert.equal(first.length,4*(stages.length-1));
+  assert.deepEqual(graphEnergyRoutes(stages),first);
+  for(const route of first){
+    assert.match(route.path,/^M [0-9]+ [0-9]+ L [0-9]+ [0-9]+$/);
+    assert.ok(route.duration>=1&&route.duration<=2.5);
+    assert.ok(route.delay>=0);
+  }
+});
+test("Las rutas se adaptan también a capas manuales y conjuntos binarios",()=>{
+  const config=defaultConfig();
+  config.layers[1].pool=false;
+  const stages=graphStages(config,2);
+  assert.equal(graphEnergyRoutes(stages).length,4*(stages.length-1));
+  assert.ok(graphEnergyRoutes(stages).every(route=>!route.path.includes("NaN")));
 });
