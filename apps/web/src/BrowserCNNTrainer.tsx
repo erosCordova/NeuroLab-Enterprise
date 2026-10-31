@@ -51,6 +51,8 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
   const [batchState,setBatchState]=useState("");
   const [tensorBytes,setTensorBytes]=useState(0);
+  const [savingHistory,setSavingHistory]=useState(false);
+  const [historySaved,setHistorySaved]=useState(false);
   const controller=useRef<AbortController|null>(null);
 
   useEffect(()=>()=>controller.current?.abort(),[]);
@@ -62,9 +64,24 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     }catch(cause){reason=cause instanceof Error?cause.message:"Arquitectura no válida.";}
   }
 
+  async function saveHistory(value:BrowserReport){
+    if(!connected)return;
+    setSavingHistory(true);
+    try{
+      await api("/projects/"+projectId+"/real-runs",{method:"POST",body:JSON.stringify(value)});
+      setHistorySaved(true);
+      setError("");
+      setMessage("Modelo guardado en el navegador y métricas conservadas en PostgreSQL.");
+      onSaved();
+    }catch(cause){
+      setHistorySaved(false);
+      setError("Los pesos están guardados en este navegador, pero el historial no se pudo registrar en PostgreSQL: "+(cause instanceof Error?cause.message:"error de red")+". Puedes reintentar sin volver a entrenar.");
+    }finally{setSavingHistory(false);}
+  }
+
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setMetrics([]);setBatchState("");setTensorBytes(0);setWorking(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setBatchState("");setTensorBytes(0);setWorking(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
@@ -83,17 +100,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       setReport(result);
       setStage("Modelo CNN guardado en este navegador.");
       setMessage("Pesos guardados en IndexedDB. Puedes utilizarlos aquí para realizar predicciones sin reentrenar.");
-      if(connected){
-        try{
-          await api("/projects/"+projectId+"/real-runs",{method:"POST",body:JSON.stringify(result)});
-          if(!abort.signal.aborted){
-            setMessage("Modelo guardado en este navegador y métricas conservadas en PostgreSQL.");
-            onSaved();
-          }
-        }catch(cause) {
-          setError("El modelo sí se guardó en este navegador, pero no se pudo conservar el historial en PostgreSQL: "+(cause instanceof Error?cause.message:"error de red")+". Puedes exportar el JSON.");
-        }
-      }
+      if(connected&&!abort.signal.aborted)await saveHistory(result);
     }catch(cause){
       if(!abort.signal.aborted)setError(cause instanceof Error?cause.message:"No se pudo entrenar la CNN.");
       setStage("Sin entrenamiento completado.");
@@ -184,12 +191,15 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
           <div><small>Épocas ejecutadas</small><strong>{report.completed_epochs}</strong></div>
           <div><small>Parámetros</small><strong>{report.parameters.toLocaleString("es-PE")}</strong></div>
         </div>
+        {connected&&!historySaved&&<button className="primary cnn-spaced" type="button" disabled={savingHistory||working} onClick={()=>void saveHistory(report)}>
+          {savingHistory?"Guardando historial…":"Reintentar guardar historial en PostgreSQL"}
+        </button>}
         <button className="secondary cnn-spaced" onClick={exportReport}>Exportar informe JSON de entrenamiento real</button>
       </div>}
     </>}
     {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setReport(restored);setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">

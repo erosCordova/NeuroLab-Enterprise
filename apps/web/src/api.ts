@@ -10,7 +10,23 @@ export async function api<T>(path:string,options:RequestInit={}):Promise<T> {
   if(!response.ok){
     if(response.status===401&&!path.startsWith("/auth/"))window.dispatchEvent(new Event("neurolab-session-expired"));
     const payload=await response.json().catch(()=>null);
-    throw new Error(typeof payload?.detail==="string"?payload.detail:response.status===422?"Revisa los campos y utiliza una contraseña de al menos doce caracteres.":"No se pudo completar la operación en el servidor.");
+    const detail=payload?.detail;
+    if(typeof detail==="string")throw new Error(detail);
+    if(response.status===422&&Array.isArray(detail)){
+      const items=detail.slice(0,3).map((issue:unknown)=>{
+        if(!issue||typeof issue!=="object")return "";
+        const entry=issue as {loc?:unknown;msg?:unknown};
+        const where=Array.isArray(entry.loc)
+          ?entry.loc.filter((part:unknown)=>part!=="body"&&(typeof part==="string"||typeof part==="number")).join(" · ")
+          :"";
+        const message=typeof entry.msg==="string"?entry.msg.replace(/^Value error,\s*/i,""):"Datos no válidos.";
+        return where?where+": "+message:message;
+      }).filter(Boolean).join(" | ");
+      throw new Error(items||"Los datos enviados no cumplen los requisitos.");
+    }
+    throw new Error(response.status===422
+      ?path.startsWith("/auth/")?"Revisa los datos de acceso. La contraseña debe tener al menos doce caracteres.":"Los datos del informe CNN no cumplen los requisitos del servidor."
+      :"No se pudo completar la operación en el servidor.");
   }
   return response.status===204?undefined as T:response.json();
 }

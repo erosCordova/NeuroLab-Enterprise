@@ -5,6 +5,7 @@ La procedencia de un JSON importado no está certificada por el servidor.
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import Literal
 from math import isfinite
+from hashlib import sha256
 
 from app.real_cnn import TrainingInputError, validated_config
 
@@ -61,8 +62,34 @@ class RealCNNImport(BaseModel):
             raise ValueError('Las clases deben ser únicas y estar ordenadas.')
         if any(not name or len(name) > 100 or '/' in name or '\\' in name for name in self.classes):
             raise ValueError('Nombres de clase inválidos.')
-        if self.samples.train + self.samples.validation + self.samples.test > 500:
-            raise ValueError('El reporte supera 500 imágenes.')
+        total = self.samples.train + self.samples.validation + self.samples.test
+        if total > 500:
+            # Solamente el contrato MNIST del importador propio puede exceder
+            # el límite de 500. Los pesos e imágenes nunca llegan a la API.
+            # La huella identifica la configuración declarada; no certifica
+            # que el cliente haya entrenado realmente esos píxeles.
+            sizes = {
+                1000: (900, 100, 1000),
+                10000: (9000, 1000, 10000),
+                60000: (54000, 6000, 10000),
+            }
+            mnist_valid = (
+                self.engine == 'TensorFlow.js'
+                and self.weights_file == 'model.json'
+                and self.classes == [str(i) for i in range(10)]
+                and self.seed == 42
+                and self.config.get('size') == 28
+                and self.config.get('channels') == 1
+                and any(
+                    (self.samples.train, self.samples.validation, self.samples.test) == split
+                    and self.dataset_fingerprint == sha256(
+                        f'mnist-cvdf-idx-v1:https://github.com/cvdfoundation/mnist:{size}:42'.encode()
+                    ).hexdigest()
+                    for size, split in sizes.items()
+                )
+            )
+            if not mnist_valid:
+                raise ValueError('La cantidad de imágenes supera 500. Para MNIST grande se exige una partición y una huella compatibles con el importador oficial.')
         if self.completed_epochs > self.requested_epochs or len(self.metrics) != self.completed_epochs:
             raise ValueError('Cantidad de épocas inconsistente.')
         if [item.epoch for item in self.metrics] != list(range(1, self.completed_epochs + 1)):
