@@ -108,10 +108,32 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     setPredicting(true);setPredictionError("");setPredictions([]);
     try{
       const {predictInBrowser}=await import("./browserCNN");
-      const values=await predictInBrowser(report.model_ref,file,report.config,report.classes);
+      const isMnist=Boolean(mnist)&&report.classes.length===10&&report.classes.every((name,index)=>name===String(index));
+      const values=await predictInBrowser(report.model_ref,file,report.config,report.classes,isMnist);
       setPredictions(values);
     }catch(cause){setPredictionError(cause instanceof Error?cause.message:"No se pudo reconocer la imagen.");}
     finally{setPredicting(false);}
+  }
+
+  async function downloadMnistExample(){
+    if(!mnist)return;
+    const index=0,offset=index*784;
+    const canvas=document.createElement("canvas");
+    canvas.width=28;canvas.height=28;
+    const ctx=canvas.getContext("2d");
+    if(!ctx)return;
+    const img=ctx.createImageData(28,28);
+    for(let pixel=0;pixel<784;pixel++){
+      const v=mnist.testPixels[offset+pixel],pos=pixel*4;
+      img.data[pos]=v;img.data[pos+1]=v;img.data[pos+2]=v;img.data[pos+3]=255;
+    }
+    ctx.putImageData(img,0,0);
+    const blob=await new Promise<Blob|null>(resolve=>canvas.toBlob(resolve,"image/png"));
+    if(!blob)return;
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url;a.download="mnist-prueba-digito-"+mnist.testLabels[index]+".png";
+    a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 
   function exportReport(){
@@ -172,6 +194,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
       <h3>Reconocer una imagen con los pesos guardados</h3>
+      {mnist&&<><p className="caption">MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro.</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>Descargar dígito oficial de prueba (PNG)</button></>}
       <p className="caption">El modelo no se reentrena: se recupera de IndexedDB y se aplica a una imagen nueva.</p>
       <label className="field"><span>Imagen para clasificar</span><input aria-label="Imagen para predecir con modelo respaldado" type="file" accept="image/png,image/jpeg,image/webp" disabled={working||predicting} onChange={event=>{
         const file=event.target.files?.[0];event.target.value="";if(file)void classify(file);

@@ -949,3 +949,41 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
   await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","running");
   await expect(visual.getByText(/no son activaciones, pesos ni gradientes medidos/)).toBeVisible();
 });
+
+
+test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas las imágenes a tensores", async ({page})=>{
+  const {gzipSync}=await import("node:zlib");
+  const base="https://storage.googleapis.com/cvdf-datasets/mnist/";
+  const sources=[
+    ["train-images-idx3-ubyte.gz",60000,2051,16],
+    ["train-labels-idx1-ubyte.gz",60000,2049,8],
+    ["t10k-images-idx3-ubyte.gz",10000,2051,16],
+    ["t10k-labels-idx1-ubyte.gz",10000,2049,8],
+  ];
+  const files=new Map();
+  for(const [file,count,magic,header] of sources){
+    const bytes=Buffer.alloc(header+count*(header===16?784:1));
+    bytes.writeUInt32BE(magic,0);bytes.writeUInt32BE(count,4);
+    if(header===16){bytes.writeUInt32BE(28,8);bytes.writeUInt32BE(28,12);}
+    else for(let i=0;i<count;i++)bytes[8+i]=i%10;
+    files.set(base+file,gzipSync(bytes,{level:1}));
+  }
+  await page.route("https://storage.googleapis.com/cvdf-datasets/mnist/*",async route=>{
+    const bytes=files.get(route.request().url());
+    if(!bytes)return route.abort();
+    await route.fulfill({status:200,contentType:"application/octet-stream",
+      headers:{"access-control-allow-origin":"*"},body:bytes});
+  });
+  await navigate(page,"Datasets");
+  await expect(page.getByRole("heading",{name:"Importar MNIST desde repositorio"})).toBeVisible();
+  await page.getByRole("button",{name:"Conectar e importar MNIST"}).click();
+  await expect(page.getByText(/MNIST cargado · activo para entrenamiento/)).toBeVisible({timeout:30000});
+  await expect(page.getByText("900",{exact:true})).toBeVisible();
+  await expect(page.getByText("100",{exact:true})).toBeVisible();
+  await expect(page.getByText("10.000",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Usar cantidad seleccionada"}).click();
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByText(/MNIST · origen público/)).toBeVisible();
+  await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
+  await expect(page.locator(".nl-neural-stage").filter({hasText:"SALIDA"})).toBeVisible();
+});

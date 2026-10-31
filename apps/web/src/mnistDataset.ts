@@ -89,6 +89,18 @@ export async function importMnist(link:string,limit:MnistLimit,onProgress:(value
 }
 export function selectMnistIndices(labels:Uint8Array,count:number,seed:number) {
   if(!Number.isInteger(count)||count<10||count>labels.length)throw new Error("Cantidad MNIST fuera de rango.");
+  // Las 60 000 imágenes oficiales no tienen exactamente 6 000 ejemplos por dígito.
+  // Para el conjunto completo conservar la distribución original y mezclar los índices.
+  if(count===labels.length){
+    const all=Array.from({length:labels.length},(_,i)=>i);
+    let state=seed>>>0;
+    for(let i=all.length-1;i>0;i--){
+      state=(Math.imul(1664525,state)+1013904223)>>>0;
+      const j=Math.floor(state/4294967296*(i+1));
+      [all[i],all[j]]=[all[j],all[i]];
+    }
+    return all;
+  }
   const groups=Array.from({length:10},()=>[] as number[]);
   for(let i=0;i<labels.length;i++)groups[labels[i]].push(i);
   let rng=seed>>>0;
