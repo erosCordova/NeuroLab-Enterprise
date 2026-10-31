@@ -9,7 +9,13 @@ export function createDeploymentConfig(value) {
     framework: 'vite',
     buildCommand: 'VITE_RELEASE_SHA=$VERCEL_GIT_COMMIT_SHA VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build',
     outputDirectory: 'dist',
-    rewrites: [{source: '/api/:path*', destination: `${url.origin}/api/:path*`}],
+    rewrites: [
+      {source: '/api/:path*', destination: `${url.origin}/api/:path*`},
+      {source: '/datasets/mnist/train-images-idx3-ubyte.gz', destination: 'https://storage.googleapis.com/cvdf-datasets/mnist/train-images-idx3-ubyte.gz'},
+      {source: '/datasets/mnist/train-labels-idx1-ubyte.gz', destination: 'https://storage.googleapis.com/cvdf-datasets/mnist/train-labels-idx1-ubyte.gz'},
+      {source: '/datasets/mnist/t10k-images-idx3-ubyte.gz', destination: 'https://storage.googleapis.com/cvdf-datasets/mnist/t10k-images-idx3-ubyte.gz'},
+      {source: '/datasets/mnist/t10k-labels-idx1-ubyte.gz', destination: 'https://storage.googleapis.com/cvdf-datasets/mnist/t10k-labels-idx1-ubyte.gz'},
+    ],
     headers: [
       {source: '/api/:path*', headers: [
         {key: 'Cache-Control', value: 'private, no-store'},

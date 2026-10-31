@@ -954,7 +954,7 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
 test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas las imágenes a tensores", async ({page})=>{
   test.setTimeout(180000);
   const {gzipSync}=await import("node:zlib");
-  const base="https://storage.googleapis.com/cvdf-datasets/mnist/";
+  const base="http://127.0.0.1:4189/datasets/mnist/";
   const sources=[
     ["train-images-idx3-ubyte.gz",60000,2051,16],
     ["train-labels-idx1-ubyte.gz",60000,2049,8],
@@ -969,7 +969,7 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
     else for(let i=0;i<count;i++)bytes[8+i]=i%10;
     files.set(base+file,gzipSync(bytes,{level:1}));
   }
-  await page.route("https://storage.googleapis.com/cvdf-datasets/mnist/*",async route=>{
+  await page.route("**/datasets/mnist/*",async route=>{
     const bytes=files.get(route.request().url());
     if(!bytes)return route.abort();
     await route.fulfill({status:200,contentType:"application/octet-stream",

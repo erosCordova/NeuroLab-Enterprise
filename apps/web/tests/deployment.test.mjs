@@ -42,3 +42,19 @@ test('CSP de observación protege orígenes sin interrumpir TensorFlow.js', () =
   assert.match(policy,/connect-src 'self'/);
   assert.ok(!headers['Content-Security-Policy']); // Aún no bloquear inferencia CNN sin ensayo CSP completo.
 });
+
+test('MNIST: cuatro rutas fijas por mismo origen, sin proxy arbitrario', () => {
+  const config=createDeploymentConfig('https://example.onrender.com');
+  const expected=[
+    'train-images-idx3-ubyte.gz', 'train-labels-idx1-ubyte.gz',
+    't10k-images-idx3-ubyte.gz', 't10k-labels-idx1-ubyte.gz',
+  ];
+  assert.equal(config.rewrites.length,5);
+  for(const name of expected){
+    assert.deepEqual(config.rewrites.find(rule=>rule.source==='/datasets/mnist/'+name),{
+      source:'/datasets/mnist/'+name,
+      destination:'https://storage.googleapis.com/cvdf-datasets/mnist/'+name,
+    });
+  }
+  assert.equal(config.rewrites.filter(rule=>rule.source.includes(':file')).length,0);
+});

@@ -5,6 +5,9 @@
  */
 export const MNIST_REPOSITORY="https://github.com/cvdfoundation/mnist";
 const GCS="https://storage.googleapis.com/cvdf-datasets/mnist/";
+// Ruta local: Vercel y Vite entregan el archivo público como mismo origen,
+// evitando depender de CORS del bucket externo.
+export const MNIST_PROXY_PATH="/datasets/mnist/";
 const SOURCES=[
   ["train-images-idx3-ubyte.gz",60000*784+16],
   ["train-labels-idx1-ubyte.gz",60000+8],
@@ -50,8 +53,14 @@ export function parseIdxLabels(raw:Uint8Array,count:number) {
 
 async function readGzip(url:string,expected:number,signal:AbortSignal|undefined,progress:(received:number)=>void) {
   if(typeof DecompressionStream==="undefined")throw new Error("Este navegador no permite descomprimir gzip mediante DecompressionStream.");
-  const response=await fetch(url,{method:"GET",mode:"cors",credentials:"omit",signal,cache:"force-cache"});
-  if(!response.ok || !response.body)throw new Error("No se pudo descargar MNIST ("+response.status+"). Revisa la conexión y el acceso CORS.");
+  let response:Response;
+  try {
+    response=await fetch(url,{method:"GET",mode:"same-origin",credentials:"omit",signal,cache:"force-cache"});
+  }catch(cause){
+    if(signal?.aborted)throw cause;
+    throw new Error("No se pudo conectar con la ruta de descarga MNIST de NeuroLab. Revisa tu conexión o vuelve a intentarlo.");
+  }
+  if(!response.ok || !response.body)throw new Error("No se pudo descargar MNIST ("+response.status+"). La ruta de descarga o el origen público no respondió correctamente.");
   const decoded=response.body.pipeThrough(new DecompressionStream("gzip"));
   const reader=decoded.getReader();
   const target=new Uint8Array(expected);
@@ -76,7 +85,7 @@ export async function importMnist(link:string,limit:MnistLimit,onProgress:(value
   const data:Uint8Array[]=[];
   for(let i=0;i<SOURCES.length;i++){
     const [file,expected]=SOURCES[i];
-    const raw=await readGzip(GCS+file,expected,signal,received=>onProgress({file,step:i+1,total:4,received,expected}));
+    const raw=await readGzip(MNIST_PROXY_PATH+file,expected,signal,received=>onProgress({file,step:i+1,total:4,received,expected}));
     data.push(raw);
   }
   const [trainRaw,trainLabelsRaw,testRaw,testLabelsRaw]=data;
