@@ -499,17 +499,17 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>
+           <DatasetLibraryPanel items={libraryItems} activeId={libraryActiveId} loading={libraryLoading}
+             onSelect={selectLibraryItem} onRename={renameLibraryItem} onDelete={deleteLibraryItem}/>
            <div className="nl-data-source-head"><span className="nl-data-source-kicker">NUEVO DATASET</span><h2>Añade tus datos</h2></div>
-           <TabularPanel key={"csv:"+projectId} dataset={tabular} report={tabularReports[projectId]}
+           <TabularPanel key={"csv:"+projectId} dataset={tabularActive?tabular:undefined} report={tabularReports[projectId]}
+             onImport={async next=>{applyLibraryContent(projectId,{kind:"tabular",dataset:next});await registerDataset({kind:"tabular",dataset:next});}}
              onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})}
-             onApply={next=>{
-             setTabularByProject(current=>({...current,[projectId]:next}));
-             setDatasetOrigin(current=>({...current,[projectId]:"tabular"}));
-           }} onRemove={()=>{
-             setTabularByProject(current=>{const copy={...current};delete copy[projectId];return copy;});
-             setDatasetOrigin(current=>({...current,[projectId]:"folder"}));
-           }}/>
-          <MNISTImportPanel key={projectId} current={mnist} active={mnistActive} onApply={loaded=>{setMnistByProject(current=>({...current,[projectId]:loaded}));setDatasetOrigin(current=>({...current,[projectId]:"mnist"}));setError("");setMessage("MNIST seleccionado para el entrenamiento real. Abre Entrenamientos para comenzar.");}} onRemove={()=>{setMnistByProject(current=>{const copy={...current};delete copy[projectId];return copy;});setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>
+             onApply={editCurrentTable} onRemove={detachLibraryDataset}/>
+          <MNISTImportPanel key={projectId} current={mnist} active={mnistActive} onApply={loaded=>{applyLibraryContent(projectId,{kind:"mnist",dataset:loaded});
+             const existing=libraryItems.find(item=>item.id===libraryActiveId&&item.kind==="mnist");
+             void registerDataset({kind:"mnist",dataset:loaded},existing?.id).catch(()=>{});
+           }} onRemove={detachLibraryDataset}/>
           <section className="panel"><h2>Cargar imágenes por clase</h2><p className="muted">Selecciona la carpeta principal que contiene una subcarpeta por clase.</p>
             <div className="soft">Ejemplo: una carpeta «animales» con las subcarpetas «gatos» y «perros», cada una con sus imágenes. Se admiten PNG, JPG y WebP; entre 2 y 20 clases y al menos tres imágenes por clase. Máximo: 500 imágenes y 50 MiB.</div>
             <label className="field"><span>Carpeta de imágenes</span><input type="file" aria-label="Carpeta de imágenes" multiple ref={node=>{if(node)node.webkitdirectory=true;}} onChange={event=>{const files=Array.from(event.target.files??[]);event.target.value="";if(files.length)void load(files);}} /></label>
@@ -519,10 +519,10 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
             <button className="primary" disabled={busy||!draft} onClick={applyDataset}>Enviar dataset al proyecto</button>
             <p className="caption">Se verifican los archivos y se separan sus índices por clase. El tamaño y los canales del diseñador son la configuración de entrada prevista; aún no se ejecuta un pipeline de entrenamiento o normalización.</p>
           </section>
-          {dataset&&!mnistActive&&<section className="panel recent"><h2>Dataset aplicado</h2><p>{dataset.name} · {dataset.images.length} imágenes · {dataset.classes.length} clases</p><details className="cnn-fingerprint"><summary>Identidad del dataset</summary><code>{dataset.fingerprint}</code><p>Identifica el contenido, las etiquetas y las particiones de esta configuración.</p></details><div className="metric-grid">{[["Entrenamiento",dataset.train.length],["Validación",dataset.validation.length],["Prueba",dataset.test.length]].map(([label,value])=><div key={String(label)}><small>{label}</small><strong>{value}</strong></div>)}</div><div className="table-scroll"><table><thead><tr><th>Clase</th><th>Imágenes</th><th>Etiqueta</th></tr></thead><tbody>{dataset.classes.map((label,index)=><tr key={label}><td>{label}</td><td>{dataset.images.filter(image=>image.label===label).length}</td><td>{index}</td></tr>)}</tbody></table></div></section>}
+          {dataset&&!mnistActive&&!tabularActive&&<section className="panel recent"><h2>Dataset aplicado</h2><p>{dataset.name} · {dataset.images.length} imágenes · {dataset.classes.length} clases</p><details className="cnn-fingerprint"><summary>Identidad del dataset</summary><code>{dataset.fingerprint}</code><p>Identifica el contenido, las etiquetas y las particiones de esta configuración.</p></details><div className="metric-grid">{[["Entrenamiento",dataset.train.length],["Validación",dataset.validation.length],["Prueba",dataset.test.length]].map(([label,value])=><div key={String(label)}><small>{label}</small><strong>{value}</strong></div>)}</div><div className="table-scroll"><table><thead><tr><th>Clase</th><th>Imágenes</th><th>Etiqueta</th></tr></thead><tbody>{dataset.classes.map((label,index)=><tr key={label}><td>{label}</td><td>{dataset.images.filter(image=>image.label===label).length}</td><td>{index}</td></tr>)}</tbody></table></div></section>}
         </>}
 
-        {page==="Datasets"&&dataset&&!mnistActive&&<><DatasetTransfer dataset={dataset} /><DatasetExplorer key={projectId} dataset={dataset} config={config} /></>}
+        {page==="Datasets"&&dataset&&!mnistActive&&!tabularActive&&<><DatasetTransfer dataset={dataset} /><DatasetExplorer key={projectId} dataset={dataset} config={config} /></>}
 
         {page==="Diseñador CNN"&&tabularActive&&<section className="panel"><h2>Configuración automática</h2>
             <p>Se ha detectado un dataset tabular. Se utilizará una red densa adecuada para sus columnas.</p>
@@ -560,9 +560,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
         </section>}
         {page==="Entrenamientos"&&tabularActive&&tabular&&<TabularPanel key={"train:"+projectId}
           dataset={tabular} report={tabularReports[projectId]}
-          onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})} onApply={next=>setTabularByProject(current=>({...current,[projectId]:next}))}
-          onRemove={()=>{setTabularByProject(current=>{const copy={...current};delete copy[projectId];return copy;});
-            setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>}
+          onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})} onApply={editCurrentTable}
+          onRemove={detachLibraryDataset}/>}
         {page==="Entrenamientos"&&!tabularActive&&<>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
             <a href="#cnn-real-training">1. Entrenar y reconocer</a>
