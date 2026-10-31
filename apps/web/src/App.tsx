@@ -258,6 +258,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
     ++libraryToken.current;
     if(scopeRef.current===JSON.stringify([owner,pid])){
       setLibraryActiveId(id);applyLibraryContent(pid,record.payload);
+      setTabularReports(current=>{const next={...current};delete next[pid];return next;});
       setDraft(null);setError("");setMessage("Dataset seleccionado.");
     }
   }
@@ -279,13 +280,17 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
     const state=await listLibrary(owner,pid);
     if(scopeRef.current===JSON.stringify([owner,pid])){
       setLibraryItems(state.items);
-      if(wasActive){setLibraryActiveId(null);clearLibrarySelection(pid);}
+      if(wasActive){
+        setLibraryActiveId(null);clearLibrarySelection(pid);
+        setTabularReports(current=>{const next={...current};delete next[pid];return next;});
+      }
       setError("");setMessage("Dataset eliminado de la biblioteca.");
     }
   }
   function detachLibraryDataset(){
     const pid=projectId,owner=storageOwner;
     clearLibrarySelection(pid);setLibraryActiveId(null);
+    setTabularReports(current=>{const next={...current};delete next[pid];return next;});
     ++libraryToken.current;
     void chooseLibraryEntry(owner,pid,null).catch(fail);
   }
@@ -502,7 +507,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
            <DatasetLibraryPanel items={libraryItems} activeId={libraryActiveId} loading={libraryLoading}
              onSelect={selectLibraryItem} onRename={renameLibraryItem} onDelete={deleteLibraryItem}/>
            <div className="nl-data-source-head"><span className="nl-data-source-kicker">NUEVO DATASET</span><h2>Añade tus datos</h2></div>
-           <TabularPanel key={"csv:"+projectId} dataset={tabularActive?tabular:undefined} report={tabularReports[projectId]}
+           <TabularPanel key={"csv:"+projectId+":"+libraryActiveId} dataset={tabularActive?tabular:undefined} report={tabularReports[projectId]}
              onImport={async next=>{applyLibraryContent(projectId,{kind:"tabular",dataset:next});await registerDataset({kind:"tabular",dataset:next});}}
              onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})}
              onApply={editCurrentTable} onRemove={detachLibraryDataset}/>

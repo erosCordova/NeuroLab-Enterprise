@@ -1132,7 +1132,7 @@ test("Biblioteca de imágenes: restaura archivos binarios sin volver a seleccion
   await navigate(page,"Datasets");
   await expect(library.getByText("1 guardados")).toBeVisible({timeout:15000});
   await expect(page.getByRole("heading",{name:"Dataset aplicado"})).toBeVisible({timeout:15000});
-  await expect(page.getByText(/200 imágenes · 10 clases/)).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Dataset aplicado"}).locator("..")).toContainText("200 imágenes · 10 clases");
   await navigate(page,"Entrenamientos");
   await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
 });
