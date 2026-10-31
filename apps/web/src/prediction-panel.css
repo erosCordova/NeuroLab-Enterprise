@@ -7,6 +7,8 @@
 .nl-prediction-eyebrow{font-size:12px;font-weight:750;letter-spacing:.35px;color:#527a7b}
 .nl-prediction-class{font-size:clamp(36px,5vw,62px);line-height:1.1;color:#117a73;font-weight:850;overflow-wrap:anywhere}
 .nl-prediction-class.digit{font-size:clamp(72px,10vw,128px);letter-spacing:-3px}
+.nl-prediction-class.uncertain{font-size:clamp(24px,3vw,35px);color:#a3682e}
+.nl-prediction-outcome [role="alert"]{max-width:38ch;line-height:1.55}
 .nl-prediction-confidence{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;color:#4b7376;font-size:12px}
 .nl-prediction-confidence strong{font-size:clamp(23px,3vw,35px);font-variant-numeric:tabular-nums;color:#087e72}
 .nl-prediction-track{height:9px;width:min(100%,320px);background:#dcebe7;border-radius:15px;overflow:hidden}

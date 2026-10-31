@@ -3,6 +3,7 @@ import type {Config,ImageDataset,Metric} from "./cnn";
 import {summary} from "./cnn.ts";
 import {captureNetworkTrace} from "./networkTelemetry.ts";
 import type {NetworkTrace} from "./networkTelemetry.ts";
+import {assertFashionMnistInput,isFashionMnistClassifier} from "./fashionDomain.ts";
 
 export type BrowserReport={
   training:"real";
@@ -235,6 +236,7 @@ export async function trainInBrowser(
 
 export async function predictInBrowser(modelRef:string,file:File,config:Config,classes:string[],autoInvertLightBackground=false) {
   if(!modelRef.startsWith("indexeddb://neurolab-cnn-"))throw new Error("Referencia de modelo inválida.");
+  if(isFashionMnistClassifier(classes))await assertFashionMnistInput(file);
   const model=await tf.loadLayersModel(modelRef);
   try {
     const mnistPhoto=autoInvertLightBackground&&config.channels===1&&config.size===28;

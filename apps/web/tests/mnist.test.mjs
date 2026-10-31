@@ -5,6 +5,7 @@ import {gzipSync} from "node:zlib";
 import {MNIST_REPOSITORY,FASHION_REPOSITORY,FASHION_LABELS_ES,isFashionDataset,classNamesForSource,validateIdxSourceUrl,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
 import {makeMnistBatches} from "../src/mnistTrain.ts";
 import {augmentMnistPixels,mnistInferenceViews} from "../src/mnistRobust.ts";
+import {fashionDomainIssue,isFashionMnistClassifier,PredictionDomainError} from "../src/fashionDomain.ts";
 test("MNIST: valida el repositorio y rechaza dominios arbitrarios",()=>{
   assert.equal(validateMnistUrl(MNIST_REPOSITORY),MNIST_REPOSITORY);
   assert.equal(validateMnistUrl("https://storage.googleapis.com/cvdf-datasets/mnist"),MNIST_REPOSITORY);
@@ -95,4 +96,28 @@ test("Fashion-MNIST: origen oficial, clases en español y aislamiento frente a d
   assert.equal(classNamesForSource(FASHION_REPOSITORY)[7],"Zapatilla");
   assert.equal(classNamesForSource(FASHION_REPOSITORY)[8],"Bolso");
   assert.throws(()=>validateIdxSourceUrl("https://untrusted.example.org/labels.gz"),/únicamente/);
+});
+
+test("Fashion-MNIST: no confunde fotografía de camiseta con muestra oficial",()=>{
+  assert.equal(isFashionMnistClassifier([...FASHION_LABELS_ES]),true);
+  assert.equal(isFashionMnistClassifier(Array.from({length:10},(_,i)=>String(i))),false);
+  assert.match(fashionDomainIssue(800,800),/28 × 28/);
+  const gray=new Uint8ClampedArray(28*28*4);
+  for(let i=0;i<gray.length;i+=4){gray[i]=gray[i+1]=gray[i+2]=0;gray[i+3]=255;}
+  for(let y=6;y<22;y++)for(let x=6;x<22;x++){
+    const offset=(y*28+x)*4;gray[offset]=gray[offset+1]=gray[offset+2]=190;
+  }
+  assert.equal(fashionDomainIssue(28,28,gray),null);
+  const colorful=new Uint8ClampedArray(gray);
+  for(let y=7;y<19;y++)for(let x=7;x<19;x++){
+    const offset=(y*28+x)*4;colorful[offset]=240;colorful[offset+1]=20;colorful[offset+2]=10;
+  }
+  assert.match(fashionDomainIssue(28,28,colorful),/colores/);
+  const white=new Uint8ClampedArray(gray);
+  for(let y=0;y<28;y++)for(let x=0;x<28;x++){
+    const corner=(x<5||x>=23)&&(y<5||y>=23);
+    if(corner){const i=(y*28+x)*4;white[i]=white[i+1]=white[i+2]=255;}
+  }
+  assert.match(fashionDomainIssue(28,28,white),/fondo/);
+  assert.equal(new PredictionDomainError("Foto no compatible").name,"PredictionDomainError");
 });

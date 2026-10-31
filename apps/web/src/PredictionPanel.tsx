@@ -16,6 +16,7 @@ export default function PredictionPanel({inputLabel,inputAriaLabel,disabled=fals
   const [predictions,setPredictions]=useState<Prediction[]>([]);
   const [predicting,setPredicting]=useState(false);
   const [error,setError]=useState("");
+  const [domainWarning,setDomainWarning]=useState("");
   const urlRef=useRef<string|null>(null);
   const requestRef=useRef(0);
 
@@ -23,7 +24,7 @@ export default function PredictionPanel({inputLabel,inputAriaLabel,disabled=fals
 
   async function onFile(file:File){
     const request=++requestRef.current;
-    setPredictions([]);setError("");setFileName(file.name);
+    setPredictions([]);setError("");setDomainWarning("");setFileName(file.name);
     if(urlRef.current)URL.revokeObjectURL(urlRef.current);
     urlRef.current=null;setPreview(null);
     if(!["image/png","image/jpeg","image/webp"].includes(file.type)){
@@ -43,7 +44,8 @@ export default function PredictionPanel({inputLabel,inputAriaLabel,disabled=fals
       setPredictions([...next].sort((a,b)=>b.probabilidad-a.probabilidad));
     }catch(cause){
       if(request===requestRef.current){
-        setError(cause instanceof Error?cause.message:"No se pudo reconocer la imagen.");
+        if(cause instanceof Error&&cause.name==="PredictionDomainError")setDomainWarning(cause.message);
+        else setError(cause instanceof Error?cause.message:"No se pudo reconocer la imagen.");
       }
     }finally{if(request===requestRef.current)setPredicting(false);}
   }
@@ -65,6 +67,7 @@ export default function PredictionPanel({inputLabel,inputAriaLabel,disabled=fals
       <div className="nl-prediction-outcome">
         <span className="nl-prediction-eyebrow">{digitMode?"Número detectado":"Clase detectada"}</span>
         {predicting?<p className="nl-prediction-wait" role="status">Analizando imagen…</p>:
+        domainWarning?<><strong className="nl-prediction-class uncertain">No concluyente</strong><p className="nl-prediction-wait" role="alert">{domainWarning}</p></>:
         top?<><strong className={"nl-prediction-class "+(digitMode?"digit":"")}>{top.clase}</strong>
           <div className="nl-prediction-confidence">
             <span>Confianza del modelo</span>
