@@ -1047,6 +1047,10 @@ test("CSV real: importar, inferir sigmoid, entrenar y evaluar",async({page})=>{
   await expect(box.getByText("Modelo entrenado y guardado en este navegador.")).toBeVisible({timeout:90000});
   await expect(box.getByText("Prueba independiente · Precisión")).toBeVisible();
   await expect(box.getByRole("button",{name:"Exportar informe JSON"})).toBeVisible();
+  await navigate(page,"Entrenamientos");
+  const trained=page.getByRole("region",{name:"Datos tabulares"});
+  await expect(trained.getByText("Prueba independiente · Precisión")).toBeVisible();
+  await expect(trained.getByRole("button",{name:"Exportar informe JSON"})).toBeVisible();
 });
 
 test("CSV URL pública: multiclase Softmax y configuración manual",async({page})=>{
