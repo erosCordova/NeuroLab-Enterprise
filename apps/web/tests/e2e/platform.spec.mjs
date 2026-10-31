@@ -216,3 +216,30 @@ test('Plataforma: Dashboard e informe CNN real exportan resultados sin pesos',as
  await page.getByRole('navigation').getByRole('button',{name:'Reportes',exact:true}).click();
  await expect(page.getByRole('region',{name:'Informe profesional de CNN reales'}).getByRole('table',{name:'Tabla del informe CNN real'}).locator('tbody tr')).toHaveCount(1);
 });
+
+
+test('Plataforma: eliminar proyecto es seguro, persiste y permite eliminar el último',async({page})=>{
+  await register(page);
+  await create(page,'MNIST temporal');
+  await projects(page);
+  await page.getByLabel('Nuevo proyecto CNN',{exact:true}).fill('Proyecto que conservar');
+  await page.getByRole('button',{name:'Crear proyecto',exact:true}).click();
+  const name='MNIST temporal';
+  await page.getByRole('button',{name:'Eliminar proyecto '+name}).click();
+  const dialog=page.getByRole('alertdialog',{name:'Confirmar eliminación de '+name});
+  await expect(dialog.getByRole('button',{name:'Eliminar definitivamente'})).toBeDisabled();
+  await dialog.getByRole('textbox',{name:'Escribe el nombre del proyecto para eliminarlo'}).fill(name);
+  await dialog.getByRole('button',{name:'Eliminar definitivamente'}).click();
+  await expect(page.getByRole('article',{name:'Proyecto '+name})).toHaveCount(0);
+  await expect(page.getByRole('article',{name:'Proyecto Proyecto que conservar'})).toBeVisible();
+  await page.reload();
+  await projects(page);
+  await expect(page.getByRole('article',{name:'Proyecto '+name})).toHaveCount(0);
+  await page.getByRole('button',{name:'Eliminar proyecto Proyecto que conservar'}).click();
+  const last=page.getByRole('alertdialog',{name:'Confirmar eliminación de Proyecto que conservar'});
+  await last.getByRole('textbox',{name:'Escribe el nombre del proyecto para eliminarlo'}).fill('Proyecto que conservar');
+  await last.getByRole('button',{name:'Eliminar definitivamente'}).click();
+  await expect(page.getByRole('heading',{name:'Tu primer proyecto CNN'})).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('heading',{name:'Tu primer proyecto CNN'})).toBeVisible();
+});
