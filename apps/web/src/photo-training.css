@@ -1,0 +1,10 @@
+.photo-training{margin-top:24px;border:1px solid #beddd6;background:linear-gradient(140deg,#ffffff,#f5fbf9)}
+.photo-training .eyebrow{color:#148075}
+.photo-training-controls{display:flex;align-items:end;gap:12px;flex-wrap:wrap;margin:18px 0}
+.photo-training-controls .field{min-width:180px;max-width:260px;flex:1}
+.photo-training-controls button{min-height:42px}
+.photo-training-charts{margin-top:18px}
+.photo-training-charts>div{border:1px solid #dce5ed;border-radius:12px;background:white;padding:12px}
+.photo-training-charts svg{display:block;width:100%;max-height:220px}
+.photo-training progress{width:100%;accent-color:#159a84}
+@media(max-width:760px){.photo-training-controls{display:grid;grid-template-columns:1fr}.photo-training-charts{grid-template-columns:1fr}}

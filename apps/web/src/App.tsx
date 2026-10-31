@@ -10,6 +10,7 @@ import type {MnistData} from "./mnistDataset";
 import RealCNNResults from "./RealCNNResults";
 import RealModelRegistry from "./RealModelRegistry";
 import BrowserCNNTrainer from "./BrowserCNNTrainer";
+import PhotoTrainingPanel from "./PhotoTrainingPanel";
 import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
 import RealEvaluationPanel from "./RealEvaluationPanel";
@@ -570,10 +571,12 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
         {page==="Entrenamientos"&&!tabularActive&&<>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
             <a href="#cnn-real-training">1. Entrenar y reconocer</a>
+            <a href="#photo-real-training">Fotos reales</a>
             {onPersistProject&&<a href="#cnn-real-results">2. Resultados guardados</a>}
             <a href="#cnn-simulations">Simulación didáctica</a>
           </nav>
           <div id="cnn-real-training"><BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/></div>
+          <div id="photo-real-training"><PhotoTrainingPanel owner={storageOwner} projectId={projectId} dataset={mnistActive?undefined:dataset}/></div>
           {onPersistProject&&<div id="cnn-real-results"><RealCNNResults key={projectId+":"+realRevision} projectId={projectId}/></div>}
           <div id="cnn-simulations" className="cnn-demo-divider"><strong>Simulación didáctica · no entrena una red neuronal real</strong><p>Esta cola genera métricas ilustrativas. Usa «Entrenar CNN con TensorFlow.js» arriba para un entrenamiento real.</p></div>
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
