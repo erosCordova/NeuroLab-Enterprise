@@ -53,7 +53,7 @@ export default function Platform(){
   if(!apiEnabled)return <App/>;
   if(loading)return <main className="platform-loading"><p role="status">Conectando con NeuroLab…</p></main>;
   if(user&&projects.length)return <><div className="account-strip"><span><strong>{user.display_name}</strong> · Mi espacio</span><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>{error&&<p role="alert">{error}</p>}
-    <App key={user.id} initialProjects={projects} onPersistProject={save} onDeleteProject={deleteProject}/></>;
+    <App key={user.id} storageOwner={user.id} initialProjects={projects} onPersistProject={save} onDeleteProject={deleteProject}/></>;
   if(user)return <main className="platform-onboarding"><div className="panel-head"><h1>Tu primer proyecto CNN</h1><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>
     <p className="muted">Crea un proyecto para empezar.</p>{error&&<p role="alert">{error}</p>}
     <ProjectsPanel projects={[]} activeId="" persistent onSave={save} onOpen={()=>{}}/></main>;
