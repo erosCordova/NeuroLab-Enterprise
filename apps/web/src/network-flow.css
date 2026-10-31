@@ -57,3 +57,12 @@
 @keyframes nl-real-flow{from{opacity:.35;transform:translateX(-2px)}to{opacity:1;transform:translateX(3px)}}
 @media(max-width:700px){.nl-neural-head{padding:15px}.nl-neural-status,.nl-neural-data-heading{padding:0 15px 12px}.nl-neural-status>span:last-child{margin-left:0}.nl-neural-window{margin:0 8px}.nl-layer-explanation{margin:12px 10px}.nl-neural-footer{padding:14px 15px}.nl-neural-progress{grid-template-columns:1fr auto}.nl-neural-progress progress{grid-column:1/-1;grid-row:2}}
 @media(prefers-reduced-motion:reduce){.nl-neural-window *{animation:none!important;transition:none!important}}
+
+.nl-epoch-review{display:inline-flex;gap:8px;align-items:center;margin-left:auto;color:#2c645f;font-size:11px;font-weight:700}
+.nl-epoch-review select{background:#fff;border:1px solid #bfddd6;border-radius:8px;padding:8px;min-height:34px;color:#195853}
+.nl-output-probabilities{flex-basis:100%;padding-top:10px;border-top:1px solid #cee6df}
+.nl-output-probabilities>strong{display:block;margin-bottom:9px;font-size:11px;color:#185b55}
+.nl-output-probabilities>div{display:flex;flex-wrap:wrap;gap:7px}
+.nl-output-probabilities span{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d1e7e0;border-radius:7px;padding:6px 9px;font-size:11px;color:#25645d;font-variant-numeric:tabular-nums}
+.nl-output-probabilities b{color:#084d46;font-size:12px}
+@media(max-width:700px){.nl-epoch-review{margin-left:0;flex-basis:100%}}
