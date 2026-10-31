@@ -86,7 +86,7 @@ export async function getLibraryEntry(owner:string,projectId:string,id:string):P
     return found;
   }finally{db.close();}
 }
-export async function saveLibraryEntry(owner:string,projectId:string,content:LibraryContent,id?:string):Promise<LibraryEntry>{
+export async function saveLibraryEntry(owner:string,projectId:string,content:LibraryContent,id?:string,activate=true):Promise<LibraryEntry>{
   if(!owner||!projectId)throw new Error("Selecciona una cuenta y un proyecto válidos.");
   const db=await openLibrary();
   try{
@@ -102,7 +102,7 @@ export async function saveLibraryEntry(owner:string,projectId:string,content:Lib
     const entry:StoredEntry={id:id??crypto.randomUUID(),owner,projectId,
       ...info,kind:content.kind,createdAt:previous?.createdAt??time,updatedAt:time,payload:content};
     store.put(entry);
-    tx.objectStore(CHOICES).put({key:key(owner,projectId),id:entry.id} satisfies Choice);
+    if(activate)tx.objectStore(CHOICES).put({key:key(owner,projectId),id:entry.id} satisfies Choice);
     await complete(tx);
     const {payload:_,...m}=entry;
     return m;
