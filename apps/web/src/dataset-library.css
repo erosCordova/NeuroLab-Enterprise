@@ -1,0 +1,19 @@
+.nl-library{border-color:#cde7e0;background:linear-gradient(160deg,#fff,#f9fcfb)}
+.nl-library .panel-head h2{font-size:18px}.nl-library-empty{border:1px dashed #bbdbd4;border-radius:12px;background:#f5fbf8;padding:23px;display:flex;align-items:center;gap:13px;color:#63827e;font-size:12px}
+.nl-library-empty>span{font-size:30px;color:#0ba596}.nl-library-empty p{margin:0}
+.nl-library-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+.nl-library-card{padding:16px;background:white;border:1px solid #deebe8;border-radius:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.nl-library-card.chosen{border-color:#29bda9;box-shadow:0 0 0 1px #52d0b84d;background:linear-gradient(155deg,#fff,#f0faf6)}
+.nl-library-summary{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nl-library-kind,.nl-library-active{font-size:10px;padding:5px 9px;background:#e5f6f3;color:#0d8e83;border-radius:30px;font-weight:750}
+.nl-library-kind.kind-mnist{color:#6855ba;background:#efebff}.nl-library-kind.kind-images{color:#367ca2;background:#e9f5fc}
+.nl-library-active{background:#d5f8e9;color:#06785d}
+.nl-library-card h3{font-size:15px;line-height:1.3;color:#164951;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin:0}
+.nl-library-card p{color:#71878b;font-size:11px;margin:0 0 5px}
+.nl-library-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto}
+.nl-library-actions button{min-height:32px;padding:7px 10px;background:#f1f6f5;border:1px solid #d7e8e2;border-radius:7px;color:#325f63;font-weight:700;font-size:10px}
+.nl-library-actions button.nl-library-open{color:#fff;background:#0b9f90;border-color:#0b9f90}
+.nl-library-actions button.nl-library-remove{color:#a44956;background:#fff7f7;border-color:#f1dce0}
+.nl-library-actions button:disabled{opacity:.55;cursor:default}
+.nl-library-edit{display:grid;gap:9px}.nl-library-edit input{min-width:0;width:100%;box-sizing:border-box}
+.nl-library-caption{font-size:11px;color:#809294;margin:14px 0 0;line-height:1.6}
