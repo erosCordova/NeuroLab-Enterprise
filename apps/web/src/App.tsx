@@ -20,7 +20,7 @@ import {saveProject} from "./projects";
 import type {Project,ProjectDraft} from "./projects";
 import AutoCNNPanel from "./AutoCNNPanel";
 import NetworkFlow from "./NetworkFlow";
-import {isFashionDataset} from "./mnistDataset";
+import {isFashionDataset,classNamesForSource} from "./mnistDataset";
 import DatasetTransfer from "./DatasetTransfer";
 import {recommendCNN} from "./adaptiveTraining";
 import {fingerprintDataset,validateCompletedJob} from "./integrity";
@@ -568,7 +568,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           </article>)}
           <button className="secondary" disabled={config.layers.length>=4} onClick={()=>updateConfig({...config,layers:[...config.layers,{id:crypto.randomUUID(),filters:32,kernel:3,pool:true,activation:"relu"}]})}>Añadir bloque Conv2D</button>
           </fieldset>
-          <NetworkFlow config={config} classCount={activeClasses??2} working={false} realMetrics={[]} realEpochs={1} realComplete={false} classNames={mnistActive?Array.from({length:10},(_,i)=>String(i)):dataset?.classes} />
+          <NetworkFlow config={config} classCount={activeClasses??2} working={false} realMetrics={[]} realEpochs={1} realComplete={false} classNames={mnistActive&&mnist?classNamesForSource(mnist.source):dataset?.classes} />
           {architectureError&&<p className="error">{architectureError}</p>}
           </section>
           <section className="panel properties"><h2>Resumen CNN</h2><dl><dt>Dataset</dt><dd>{activeDatasetName}</dd><dt>Clases</dt><dd>{activeClasses??"—"}</dd><dt>Parámetros</dt><dd>{info?.total.toLocaleString("es-PE")??"Pendiente"}</dd><dt>Salida</dt><dd>{info?.activation??"Pendiente"}</dd><dt>Pérdida prevista</dt><dd>{info?.loss??"Pendiente"}</dd></dl><button className="primary full" onClick={saveVersion}>Guardar versión CNN</button><button className="secondary full cnn-spaced" onClick={()=>navigate("Entrenamientos")}>Continuar al entrenamiento →</button>
