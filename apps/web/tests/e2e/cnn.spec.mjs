@@ -875,6 +875,9 @@ test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar"
   await expect(graph.getByText(/Imagen de validación/)).toBeVisible();
   await graph.getByRole("button",{name:"Examinar capa CONV2D 1"}).click();
   await expect(graph.getByText(/Cada uno de los/)).toBeVisible();
+  await trainer.getByRole("button",{name:"Inspeccionar modelo guardado"}).click();
+  await expect(trainer.getByText(/Se muestra el estado final del modelo/)).toBeVisible({timeout:30000});
+  await expect(graph.getByText("Medición real · época 1")).toBeVisible();
 
   // Respaldo portable de un solo archivo; restauración en un navegador limpio.
   const downloadEvent=page.waitForEvent("download");
