@@ -870,6 +870,11 @@ test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar"
   await expect(trainer.getByRole("img",{name:"Precisión real medida en cada época"})).toBeVisible();
   await expect(trainer.getByRole("img",{name:"Pérdida real medida en cada época"})).toBeVisible();
   await expect(trainer.getByRole("button",{name:"Exportar informe JSON de entrenamiento real"})).toBeVisible();
+  const graph=trainer.getByRole("region",{name:"Visualización animada de la arquitectura CNN"});
+  await expect(graph.getByText("Medición real · época 1")).toBeVisible();
+  await expect(graph.getByText(/Imagen de validación/)).toBeVisible();
+  await graph.getByRole("button",{name:"Examinar capa CONV2D 1"}).click();
+  await expect(graph.getByText(/Cada uno de los/)).toBeVisible();
 
   // Respaldo portable de un solo archivo; restauración en un navegador limpio.
   const downloadEvent=page.waitForEvent("download");
@@ -934,7 +939,7 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
   await navigate(page,"Entrenamientos");
   const visual=page.getByRole("region",{name:"Visualización animada de la arquitectura CNN"});
   await expect(visual).toBeVisible();
-  await expect(visual.getByText("Red neuronal en movimiento")).toBeVisible();
+  await expect(visual.getByText("¿Qué está aprendiendo la CNN?")).toBeVisible();
   await expect(visual.getByText("CONV2D 1")).toBeVisible();
   await expect(visual.getByText("MAXPOOL 1")).toBeVisible();
   await expect(visual.getByText("FLATTEN")).toBeVisible();
@@ -946,8 +951,9 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
   await visual.getByRole("button",{name:"Pausar animación"}).click();
   await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","paused");
   await visual.getByRole("button",{name:"Reanudar animación"}).click();
-  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","running");
-  await expect(visual.getByText(/no son activaciones, pesos ni gradientes medidos/)).toBeVisible();
+  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","paused");
+  await expect(visual.getByText("Sin mediciones todavía")).toBeVisible();
+  await expect(visual.getByText(/no son pesos ni gradientes/)).toBeVisible();
 });
 
 
