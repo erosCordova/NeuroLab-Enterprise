@@ -18,7 +18,7 @@ export default function DatasetLibraryPanel({items,activeId,loading,onSelect,onR
   }
   return <section className="panel nl-library" aria-label="Biblioteca de datasets">
     <div className="panel-head"><h2>Mis datasets</h2>
-      <span className="badge">{items.length} guardados</span></div>
+      <span className="badge">{items.length} guardado{items.length===1?"":"s"}</span></div>
     {loading?<p role="status">Cargando datasets…</p>:
       items.length===0?<div className="nl-library-empty">
         <span aria-hidden="true">▤</span><p>Aún no tienes datasets guardados en este proyecto.</p>

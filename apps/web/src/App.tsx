@@ -228,7 +228,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
       const state=await listLibrary(owner,pid);
       if(scope===scopeRef.current&&token===libraryToken.current){
         setLibraryItems(state.items);setLibraryActiveId(entry.id);setLibraryLoading(false);
-        setMessage("Dataset guardado en tu biblioteca.");
+        if(content.kind!=="images")setMessage("Dataset guardado en tu biblioteca.");
       }
     }catch(cause){
       if(scope===scopeRef.current){
