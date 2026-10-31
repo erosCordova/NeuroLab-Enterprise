@@ -151,3 +151,13 @@ textarea:focus-visible{outline:3px solid #8b83ed;outline-offset:3px}
 .cnn-demo-divider strong{font-size:13px}
 .cnn-demo-divider p{font-size:12px;line-height:1.7;margin:6px 0 0}
 @media(max-width:800px){.nav-group-label{display:none}.cnn-training-tabs a{flex:1;text-align:center}}
+
+.nl-data-source-head{margin:5px 0 16px;padding:16px 21px;border:1px solid #d6e9e4;border-radius:12px;background:linear-gradient(110deg,#f0fbf7,#f5faff)}
+.nl-data-source-head h2{font-size:20px;letter-spacing:-.4px;margin:4px 0;color:#154751}
+.nl-data-source-kicker{font-size:9px;font-weight:800;letter-spacing:1.6px;color:#078c7b}
+.cnn-quick-actions{background:linear-gradient(115deg,#f7fcfb,#f2f8ff)}
+.stats .stat:nth-child(2){background:linear-gradient(140deg,#fff,#ecfaf5)}
+.stats .stat:nth-child(3){background:linear-gradient(140deg,#fff,#f7f2ff)}
+.stats .stat:nth-child(4){background:linear-gradient(140deg,#fff,#fff8ee)}
+.brand .nl-brand{white-space:nowrap}
+.brand .nl-brand img{border-radius:10px}

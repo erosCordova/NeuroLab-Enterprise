@@ -85,20 +85,48 @@ export function profileTable(dataset:TabularDataset):TabularPlan{
     loss:dataset.task==="regression"?"meanSquaredError":dataset.task==="binary"?"binaryCrossentropy":"categoricalCrossentropy",
     classes,numeric,categorical,validRows:valid.length};
 }
-export async function fetchPublicTable(url:string,signal:AbortSignal):Promise<TabularDataset>{
+export function canonicalTableUrl(url:string):URL{
   let parsed:URL;
   try{parsed=new URL(url);}catch{throw new Error("Introduce una URL válida.");}
   if(parsed.protocol!=="https:"||parsed.username||parsed.password)throw new Error("Usa un enlace público HTTPS sin credenciales.");
+  // Enlaces públicos de GitHub a CSV/TSV se sirven desde la URL de contenido crudo.
+  if(parsed.hostname==="github.com"){
+    const match=parsed.pathname.match(/^\/([^/]+)\/([^/]+)\/blob\/([^/]+)\/(.+)$/);
+    if(!match)throw new Error("En GitHub, copia el enlace al archivo CSV, no al repositorio completo.");
+    parsed=new URL("https://raw.githubusercontent.com/"+match.slice(1).map(encodeURI).join("/"));
+  }
   if(/^(localhost|127\.|10\.|192\.168\.|169\.254\.|0\.|::1|172\.(1[6-9]|2[0-9]|3[01])\.)/i.test(parsed.hostname)||
      !parsed.hostname.includes("."))throw new Error("Solo se admiten enlaces públicos.");
+  return parsed;
+}
+export async function fetchPublicTable(url:string,signal:AbortSignal):Promise<TabularDataset>{
+  const parsed=canonicalTableUrl(url);
   let response:Response;
   try{response=await fetch(parsed.href,{mode:"cors",credentials:"omit",signal});}
   catch(cause){if(signal.aborted)throw cause;throw new Error("No se pudo importar la URL. El servidor debe permitir descargas desde otras páginas (CORS).");}
   if(!response.ok)throw new Error("La descarga devolvió HTTP "+response.status+".");
   const size=Number(response.headers.get("content-length")||0);
   if(size>12*1024*1024)throw new Error("El archivo supera 12 MB.");
-  const bytes=await response.arrayBuffer();
-  if(bytes.byteLength>12*1024*1024)throw new Error("El archivo supera 12 MB.");
+  const limit=12*1024*1024;
+  const parts:Uint8Array[]=[],reader=response.body?.getReader();
+  let total=0;
+  if(reader){
+    try{
+      for(;;){
+        const {done,value}=await reader.read();
+        if(done)break;
+        total+=value.byteLength;
+        if(total>limit)throw new Error("El archivo supera 12 MB.");
+        parts.push(value);
+      }
+    }catch(cause){await reader.cancel().catch(()=>{});throw cause;}
+  }else{
+    const all=new Uint8Array(await response.arrayBuffer());
+    if(all.byteLength>limit)throw new Error("El archivo supera 12 MB.");
+    parts.push(all);total=all.byteLength;
+  }
+  const bytes=new Uint8Array(total);let offset=0;
+  for(const part of parts){bytes.set(part,offset);offset+=part.byteLength;}
   const content=new TextDecoder("utf-8",{fatal:true}).decode(bytes);
   const name=parsed.pathname.split("/").pop()||"Dataset web";
   return parseTable(content,name,parsed.origin);

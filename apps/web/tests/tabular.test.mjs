@@ -1,6 +1,6 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
-import {parseTable,inferTask,profileTable} from "../src/tabular.ts";
+import {parseTable,inferTask,profileTable,canonicalTableUrl} from "../src/tabular.ts";
 
 function csv(targetName,values,delimiter=","){
   const lines=["edad"+delimiter+"region"+delimiter+targetName];
@@ -44,4 +44,12 @@ test("Requiere tarea manual compatible con sus etiquetas",()=>{
   const d=parseTable(csv("churn",Array.from({length:70},(_,i)=>i%2)),"churn.csv");
   assert.throws(()=>profileTable({...d,task:"multiclass",automatic:false}),/3 y 20/);
   assert.equal(inferTask(d,"churn"),"binary");
+});
+
+test("URLs GitHub: convierte enlaces de archivo y rechaza repositorios completos",()=>{
+  assert.equal(canonicalTableUrl("https://github.com/org/repo/blob/main/data/iris.csv").href,
+    "https://raw.githubusercontent.com/org/repo/main/data/iris.csv");
+  assert.throws(()=>canonicalTableUrl("https://github.com/org/repo"),/enlace al archivo/);
+  assert.throws(()=>canonicalTableUrl("http://example.org/a.csv"),/HTTPS/);
+  assert.throws(()=>canonicalTableUrl("https://localhost/a.csv"),/públicos/);
 });

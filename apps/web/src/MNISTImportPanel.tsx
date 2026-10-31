@@ -29,7 +29,7 @@ export default function MNISTImportPanel({current,onApply,onRemove,active}:Props
   const size=current?partitionMnist(current):null;
   return <section className="panel recent mnist-panel" aria-label="Importar MNIST desde enlace">
     <div className="panel-head"><div><div className="eyebrow">IMPORTACIÓN ONLINE · IDX / GZIP</div><h2>Importar MNIST desde repositorio</h2><p className="muted">Obtén los dígitos reales 0–9 sin subir carpetas ni archivos manualmente.</p></div><span className="badge">60 000 + 10 000</span></div>
-    <p className="soft">Se leen cuatro archivos IDX comprimidos desde el espejo público de Google. Las imágenes se conservan en RAM como píxeles de 8 bits (~55 MiB), no como 70 000 tensores. Las descargas requieren conexión, CORS y un navegador con DecompressionStream. No se envían las imágenes a Render ni Neon.</p>
+    <p className="soft">Selecciona cuántas imágenes usar. Puedes empezar con un conjunto pequeño y ampliar el entrenamiento después.</p>
     <label className="field"><span>Enlace del repositorio MNIST</span><input aria-label="Enlace del repositorio MNIST" type="url" value={url} disabled={busy} onChange={e=>setUrl(e.target.value)}/></label>
     <label className="field"><span>Ejemplos originales utilizados (incluye 10% validación)</span><select aria-label="Cantidad MNIST" value={count} disabled={busy} onChange={e=>setCount(Number(e.target.value) as MnistLimit)}>
       <option value={1000}>1 000 · prueba de recursos</option><option value={10000}>10 000 · entrenamiento intermedio</option><option value={60000}>60 000 · conjunto completo</option>
