@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {defaultConfig} from "../src/cnn.ts";
-import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth,graphEnergyRoutes} from "../src/networkGraph.ts";
+import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph} from "../src/networkGraph.ts";
 
 test("Grafo neuronal reproduce el flujo de conv, pooling, dense y salida real",()=>{
   const config=defaultConfig();
@@ -43,4 +43,11 @@ test("Las rutas se adaptan también a capas manuales y conjuntos binarios",()=>{
   const stages=graphStages(config,2);
   assert.equal(graphEnergyRoutes(stages).length,4*(stages.length-1));
   assert.ok(graphEnergyRoutes(stages).every(route=>!route.path.includes("NaN")));
+});
+
+test("La animación solo se activa al iniciar Entrenar CNN y se detiene al finalizar o cancelar",()=>{
+  assert.equal(shouldAnimateGraph(false,true),false,"Antes de pulsar Entrenar CNN");
+  assert.equal(shouldAnimateGraph(true,true),true,"Entrenamiento iniciado aun sin traza");
+  assert.equal(shouldAnimateGraph(true,false),false,"Pausa manual durante entrenamiento");
+  assert.equal(shouldAnimateGraph(false,false),false,"Finalización o cancelación");
 });

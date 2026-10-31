@@ -94,6 +94,10 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     const abort=new AbortController();
     controller.current=abort;
     try{
+      // Dar dos fotogramas al navegador antes de la carga pesada de TensorFlow:
+      // garantiza que el estado "Entrenando" y las partículas SVG puedan pintarse.
+      await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
+      if(abort.signal.aborted)return;
       const onEpoch=(epoch:number,total:number,metric:Metric)=>{
         if(abort.signal.aborted)return;
         setMetrics(current=>[...current,metric]);
@@ -108,6 +112,8 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
           snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}});
       if(abort.signal.aborted)return;
       setReport(result);
+      // Termina la animación al acabar el entrenamiento, no al finalizar el guardado remoto.
+      setWorking(false);
       setStage("Modelo CNN guardado en este navegador.");
       setMessage("Pesos guardados en IndexedDB. Puedes utilizarlos aquí para realizar predicciones sin reentrenar.");
       if(connected&&!abort.signal.aborted)await saveHistory(result);

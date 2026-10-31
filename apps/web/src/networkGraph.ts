@@ -55,3 +55,8 @@ export function graphEnergyRoutes(stages:readonly GraphStage[]):GraphEnergyRoute
   }
   return routes;
 }
+
+/** La animación visible depende exclusivamente de una ejecución de entrenamiento activa. */
+export function shouldAnimateGraph(working:boolean,motion:boolean):boolean{
+  return working&&motion;
+}

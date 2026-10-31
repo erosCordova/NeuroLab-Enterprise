@@ -1,7 +1,7 @@
-import {useId,useMemo,useState} from "react";
+import {useEffect,useId,useMemo,useState} from "react";
 import type {Config,Metric} from "./cnn";
 import type {NetworkTrace} from "./networkTelemetry";
-import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphEnergyRoutes} from "./networkGraph";
+import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph} from "./networkGraph";
 import "./network-flow.css";
 
 type Props={
@@ -15,6 +15,8 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
   history=[],classNames,batchState}:Props){
   const [view,setView]=useState<"2d"|"3d">("3d");
   const [motion,setMotion]=useState(true);
+  // Cada ejecución nueva empieza animada; Pausar solo afecta a la ejecución actual.
+  useEffect(()=>{if(working)setMotion(true);},[working]);
   const [selectedKey,setSelectedKey]=useState("output");
   const [epochView,setEpochView]=useState("latest");
   const gradientId=useId().replace(/:/g,"-");
@@ -26,8 +28,8 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
   const epochs=Math.max(1,realEpochs),done=Math.min(epochs,realMetrics.length);
   const latest=epochView==="latest"?realMetrics.at(-1):realMetrics.find(m=>String(m.epoch)===epochView)??realMetrics.at(-1);
   const labels=classNames?.length===classCount?classNames:Array.from({length:classCount},(_,i)=>String(i));
-  // La animación ilustrativa no depende de que la primera época haya terminado.
-  const running=motion;
+  // El botón Entrenar CNN inicia el flujo; no depende de una primera época medida.
+  const running=shouldAnimateGraph(working,motion);
   const routes=useMemo(()=>graphEnergyRoutes(stages),[stages]);
   const width=graphCanvasWidth(stages.length);
   const counts=stages.map(visibleNodeCount);
@@ -58,14 +60,14 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
           <button type="button" className={view==="3d"?"selected":""} aria-pressed={view==="3d"} onClick={()=>setView("3d")}>3D</button>
           <button type="button" className={view==="2d"?"selected":""} aria-pressed={view==="2d"} onClick={()=>setView("2d")}>2D</button>
         </div>
-        <button type="button" className="nl-motion-toggle" aria-pressed={motion} aria-label={motion?"Pausar animación del flujo neuronal":"Reanudar animación del flujo neuronal"} onClick={()=>setMotion(v=>!v)}>{motion?"Pausar animación":"Reanudar animación"}</button>
+        {working&&<button type="button" className="nl-motion-toggle" aria-pressed={running} aria-label={running?"Pausar animación del flujo neuronal":"Reanudar animación del flujo neuronal"} onClick={()=>setMotion(v=>!v)}>{running?"Pausar animación":"Reanudar animación"}</button>}
       </div>
     </div>
     <div className="nl-neural-data-heading">
       {visible?<><span className="nl-epoch-pill">Época {visible.epoch}</span>
         <span>Original: <strong>{visible.sampleLabel}</strong></span><span aria-hidden="true">→</span>
         <span>Predicción: <strong>{visible.predictedLabel}</strong> <small>{percent(visible.confidence)}</small></span></>:
-        <span className="nl-empty-pill">{working?"Entrenamiento iniciado · esperando primeras métricas":"Vista de arquitectura · aún sin mediciones"} · Flujo {motion?"ilustrativo animado":"en pausa"}</span>}
+        <span className="nl-empty-pill">{working?"Entrenando · esperando primeras métricas":"Vista de arquitectura · aún sin mediciones"}{working?" · "+(running?"Flujo luminoso activo":"Animación pausada"):" · Animación al iniciar entrenamiento"}</span>}
     </div>
     {stages.length?<div className="nl-neural-window" data-view={view} data-motion={running?"running":"paused"} data-training={working?"true":"false"}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Diagrama desplazable de neuronas y conexiones">
@@ -91,7 +93,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 strokeWidth={selectedLink?1.15:.75}
                 strokeOpacity={measured.size?Math.min(.5,.085+power*.28):.16}/>;
             })))}
-          {/* Pulsos visibles desde el primer render: flujo conceptual, no métricas inventadas. */}
+          {/* Pulsos exclusivos del entrenamiento activo: ilustrativos hasta que existan mediciones. */}
           {running&&<g className="nl-energy-streams" aria-hidden="true">
             {routes.map(route=><circle key={route.key} className="nl-energy-particle" r={working?4.4:3.5}
               fill={route.column%2?"#9df4ff":"#6bffe0"}>
@@ -149,7 +151,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
         <span>Validación <strong>{percent(latest.valAccuracy)}</strong></span>
         <span>Pérdida <strong>{latest.valLoss.toFixed(3)}</strong></span></div>}
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
-      <p className="nl-neural-disclaimer">{visible?"Brillo de neuronas: resumen de activaciones medidas.":"El flujo luminoso es ilustrativo, no son mediciones hasta completar una época."} Las conexiones representan la arquitectura simplificada, no pesos individuales.</p>
+      <p className="nl-neural-disclaimer">{visible?"Brillo de neuronas: resumen de activaciones medidas.":working?"Flujo ilustrativo durante el entrenamiento; todavía sin activaciones medidas.":"El grafo permanece estático hasta que pulses Entrenar CNN real."} Las conexiones representan la arquitectura simplificada, no pesos individuales.</p>
     </div>
   </section>;
 }
