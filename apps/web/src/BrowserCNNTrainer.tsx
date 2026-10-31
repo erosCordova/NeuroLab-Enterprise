@@ -5,6 +5,7 @@ import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
 import CNNBackupActions from "./CNNBackupActions";
 import NetworkFlow from "./NetworkFlow";
+import type {NetworkTrace} from "./networkTelemetry";
 import type {MnistData} from "./mnistDataset";
 import "./browser-cnn.css";
 
@@ -43,6 +44,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [working,setWorking]=useState(false);
   const [stage,setStage]=useState("");
   const [metrics,setMetrics]=useState<Metric[]>([]);
+  const [networkTrace,setNetworkTrace]=useState<NetworkTrace|null>(null);
   const [report,setReport]=useState<BrowserReport|null>(null);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
@@ -81,7 +83,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
 
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setBatchState("");setTensorBytes(0);setWorking(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setBatchState("");setTensorBytes(0);setWorking(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
@@ -93,9 +95,11 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       };
       const result=mnist
         ? await (await import("./mnistTrain")).trainMnistInBrowser(projectId,mnist,config,Number(epochs),Number(batch),onEpoch,
-          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);},abort.signal)
+          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);},abort.signal,
+          snapshot=>{if(!abort.signal.aborted)setNetworkTrace(snapshot);})
         : await (await import("./browserCNN")).trainInBrowser(projectId,dataset!,config,Number(epochs),Number(batch),
-          ({epoch,epochs:total,metric})=>onEpoch(epoch,total,metric),abort.signal);
+          ({epoch,epochs:total,metric})=>onEpoch(epoch,total,metric),abort.signal,
+          snapshot=>{if(!abort.signal.aborted)setNetworkTrace(snapshot);});
       if(abort.signal.aborted)return;
       setReport(result);
       setStage("Modelo CNN guardado en este navegador.");
@@ -160,7 +164,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       <span className="badge">REAL · NAVEGADOR</span>
     </div>
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
-    <NetworkFlow config={demoJob?.config??config} classCount={demoJob?.dataset.classes.length??(mnist?10:dataset?.classes.length)??2} working={working} realMetrics={metrics} realEpochs={Number(epochs)} realComplete={Boolean(report)} demoJob={demoJob} demoPaused={demoPaused}/>
+    <NetworkFlow config={config} classCount={mnist?10:dataset?.classes.length??report?.classes.length??2} working={working} realMetrics={metrics} realEpochs={report?.requested_epochs??Number(epochs)} realComplete={Boolean(report)} trace={networkTrace} batchState={batchState}/>
     {!dataset&&!mnist?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
       {mnist?<p><strong>MNIST · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
       {mnist&&<p className="mnist-usage">El entrenamiento MNIST usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}
@@ -199,7 +203,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     </>}
     {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setReport(restored);setNetworkTrace(null);setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
