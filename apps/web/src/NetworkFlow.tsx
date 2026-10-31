@@ -6,7 +6,7 @@ import "./network-flow.css";
 
 type Props={
   config:Config;classCount:number;working:boolean;realMetrics:Metric[];
-  realEpochs:number;realComplete:boolean;trace?:NetworkTrace|null;batchState?:string;
+  realEpochs:number;realComplete:boolean;trace?:NetworkTrace|null;history?:NetworkTrace[];classNames?:string[];batchState?:string;
 };
 type Stage={key:string;label:string;shape:string;units:number;mode:LayerActivity["mode"];description:string};
 function architecture(config:Config,classCount:number):Stage[]{
@@ -37,17 +37,22 @@ function architecture(config:Config,classCount:number):Stage[]{
   return stages;
 }
 const percentage=(v:number)=>Math.round(Math.max(0,Math.min(1,v))*100)+"%";
-export default function NetworkFlow({config,classCount,working,realMetrics,realEpochs,realComplete,trace,batchState}:Props){
+export default function NetworkFlow({config,classCount,working,realMetrics,realEpochs,realComplete,trace,history=[],classNames,batchState}:Props){
   const [view,setView]=useState<"2d"|"3d">("3d");
   const [motion,setMotion]=useState(true);
   const [selectedKey,setSelectedKey]=useState("output");
+  const [epochView,setEpochView]=useState("latest");
   const stages=useMemo(()=>{try{return architecture(config,classCount);}catch{return [];}}
     ,[config,classCount]);
-  const measured=new Map(trace?.layers.map(layer=>[layer.key,layer])??[]);
+  const visible=epochView==="latest"?trace:history.find(snapshot=>String(snapshot.epoch)===epochView)??trace;
+  const labels=classNames?.length===classCount?classNames:Array.from({length:classCount},(_,i)=>String(i));
+  const measured=new Map(visible?.layers.map(layer=>[layer.key,layer])??[]);
   const selected=stages.find(stage=>stage.key===selectedKey)??stages.at(-1);
   const inspected=selected?measured.get(selected.key):undefined;
   const epochs=Math.max(1,realEpochs),done=Math.min(epochs,realMetrics.length);
-  const latest=realMetrics.at(-1),animated=working&&Boolean(trace)&&motion;
+  const latest=epochView==="latest"?realMetrics.at(-1):
+    realMetrics.find(metric=>String(metric.epoch)===epochView)??realMetrics.at(-1);
+  const animated=working&&Boolean(trace)&&motion;
   return <section className="nl-neural-panel" aria-label="Visualización animada de la arquitectura CNN">
     <div className="nl-neural-head">
       <div><p className="nl-neural-kicker">EXPLORADOR DE CAPAS · TENSORFLOW.JS</p>
@@ -61,15 +66,21 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
     </div>
     <div className="nl-neural-status" role="status">
       <span className={working?"nl-neural-live":"nl-neural-idle"}/>
-      <strong>{working?(trace?"Activaciones reales · época "+trace.epoch:"Entrenando; esperando primera medición")
+      <strong>{working?(visible?"Activaciones reales · época "+visible.epoch:"Entrenando; esperando primera medición")
         :realComplete?"Entrenamiento real completado":"Sin entrenamiento activo"}</strong>
       <span>Épocas confirmadas: {done} / {epochs}</span>
     </div>
     <div className="nl-neural-data-heading">
-      {trace?<><span className="nl-measured-tag">Medición real · época {trace.epoch}</span>
-        <span>Imagen de validación — valor correcto: <strong>{trace.sampleLabel}</strong>. Predicción: <strong>{trace.predictedLabel}</strong> ({percentage(trace.confidence)}).</span></>
+      {visible?<><span className="nl-measured-tag">Medición real · época {visible.epoch}</span>
+        <span>Imagen de validación — valor correcto: <strong>{visible.sampleLabel}</strong>. Predicción: <strong>{visible.predictedLabel}</strong> ({percentage(visible.confidence)}).</span></>
         :<><span className="nl-waiting-tag">Sin mediciones todavía</span>
           <span>Las capas muestran su estructura; sus valores se activarán después de la primera época real.</span></>}
+      {history.length>1&&<label className="nl-epoch-review">Revisar época:
+        <select aria-label="Revisar medición de época" value={epochView} onChange={e=>setEpochView(e.target.value)}>
+          <option value="latest">Más reciente</option>
+          {history.map(snapshot=><option key={snapshot.epoch} value={snapshot.epoch}>Época {snapshot.epoch}</option>)}
+        </select>
+      </label>}
     </div>
     {stages.length?<div className="nl-neural-window" data-view={view} data-motion={animated?"running":"paused"}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Desplaza horizontalmente para explorar las capas">
@@ -86,8 +97,8 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 onClick={()=>setSelectedKey(stage.key)}>
                 <span className="nl-stage-top">{stage.label}<small>{actual?"MEDIDA":"CAPA"}</small></span>
                 <span className="nl-stage-shape">{stage.shape}</span>
-                {stage.key==="input"&&trace?<svg className="nl-input-map" viewBox="0 0 14 14" role="img" aria-label="Píxeles medidos del ejemplo de validación">
-                  {trace.pixels.map((v,i)=>{const c=Math.round(255*v);return <rect key={i} x={i%14} y={Math.floor(i/14)} width="1" height="1" fill={"rgb("+c+","+c+","+c+")"}/>;})}
+                {stage.key==="input"&&visible?<svg className="nl-input-map" viewBox="0 0 14 14" role="img" aria-label="Píxeles medidos del ejemplo de validación">
+                  {visible.pixels.map((v,i)=>{const c=Math.round(255*v);return <rect key={i} x={i%14} y={Math.floor(i/14)} width="1" height="1" fill={"rgb("+c+","+c+","+c+")"}/>;})}
                 </svg>:<div className="nl-layer-bars" aria-hidden="true">
                   {Array.from({length:count},(_,i)=>{
                     const v=values[i]??0;
@@ -105,7 +116,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
     </div>:<p className="nl-neural-error">Revisa los parámetros de la CNN para visualizar su arquitectura.</p>}
     {selected&&<div className="nl-layer-explanation" aria-live="polite">
       <div><strong>{selected.label}: qué hace</strong><p>{selected.description}</p>
-        {inspected?<p className="nl-measure-note">Los valores provienen del modelo TensorFlow.js en la época {trace?.epoch}. No son valores simulados.</p>
+        {inspected?<p className="nl-measure-note">Los valores provienen del modelo TensorFlow.js en la época {visible?.epoch}. No son valores simulados.</p>
           :<p className="nl-measure-note">Al finalizar cada época aparecerán las activaciones calculadas sobre el mismo ejemplo de validación.</p>}
       </div>
       <div className="nl-layer-facts">
@@ -113,6 +124,10 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
         <span>{selected.mode==="groups"?"Valores":"Canales / unidades"}: <strong>{selected.units.toLocaleString("es-PE")}</strong></span>
         {inspected&&<span>Magnitud media: <strong>{inspected.magnitude.toFixed(4)}</strong></span>}
       </div>
+      {selected.key==="output"&&inspected&&<div className="nl-output-probabilities">
+        <strong>Probabilidades de cada clase</strong>
+        <div>{inspected.preview.map((v,i)=><span key={i}><b>{labels[i]??i}</b> {percentage(v)}</span>)}</div>
+      </div>}
     </div>}
     <div className="nl-neural-footer">
       <div className="nl-neural-progress"><span>Progreso real</span><progress max={epochs} value={done} aria-label="Progreso de épocas registrado"/><strong>{done} / {epochs}</strong></div>
