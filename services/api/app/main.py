@@ -151,12 +151,22 @@ def create_app():
         if write and (origin is not None and origin not in origins or fetch_site == 'cross-site'):
             rejection = JSONResponse(status_code=403, content={'detail':'Origen no permitido.'})
         elif write and path.startswith('/api/v1/'):
-            # El único POST sin JSON válido es cerrar sesión (sin cuerpo).
-            if path != '/api/v1/auth/logout' and (
+            # Cerrar sesión y DELETE de proyecto no tienen cuerpo JSON.
+            bodyless = path == '/api/v1/auth/logout' or (
+                request.method == 'DELETE' and re.fullmatch(
+                    r'/api/v1/projects/[0-9a-fA-F-]{36}', path
+                ) is not None
+            )
+            if bodyless and (
+                request.headers.get('transfer-encoding') or
+                int(request.headers.get('content-length') or '0') != 0
+            ):
+                rejection = JSONResponse(status_code=415, content={'detail':'Esta operación no admite contenido.'})
+            elif not bodyless and (
                 request.headers.get('content-type','').split(';')[0].strip().lower() != 'application/json'
             ):
                 rejection = JSONResponse(status_code=415, content={'detail':'Usa JSON para enviar datos.'})
-            elif path != '/api/v1/auth/logout':
+            elif not bodyless:
                 # Comprueba también transferencias fragmentadas sin Content-Length.
                 # Starlette conserva _body para que FastAPI pueda leerlo después.
                 chunks = []
