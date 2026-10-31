@@ -1,9 +1,10 @@
 import {useEffect,useRef,useState} from "react";
 import {api} from "./api";
-import type {Config,ImageDataset,Metric} from "./cnn";
+import type {Config,ImageDataset,Metric,Job} from "./cnn";
 import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
 import CNNBackupActions from "./CNNBackupActions";
+import NetworkFlow from "./NetworkFlow";
 import "./browser-cnn.css";
 
 type Props={
@@ -12,6 +13,8 @@ type Props={
   config:Config;
   connected:boolean;
   onSaved:()=>void;
+  demoJob?:Job;
+  demoPaused?:boolean;
 };
 
 function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
@@ -32,7 +35,7 @@ function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
   </svg>;
 }
 
-export default function BrowserCNNTrainer({projectId,dataset,config,connected,onSaved}:Props) {
+export default function BrowserCNNTrainer({projectId,dataset,config,connected,onSaved,demoJob,demoPaused}:Props) {
   const [epochs,setEpochs]=useState("12");
   const [batch,setBatch]=useState("16");
   const [working,setWorking]=useState(false);
@@ -121,6 +124,7 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
       <span className="badge">REAL · NAVEGADOR</span>
     </div>
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
+    <NetworkFlow config={demoJob?.config??config} classCount={demoJob?.dataset.classes.length??dataset?.classes.length??2} working={working} realMetrics={metrics} realEpochs={Number(epochs)} realComplete={Boolean(report)} demoJob={demoJob} demoPaused={demoPaused}/>
     {!dataset?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
       <p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>
       {reason&&<p className="error" role="alert">{reason}</p>}

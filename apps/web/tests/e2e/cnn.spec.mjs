@@ -928,3 +928,24 @@ test("Accesibilidad: salto al contenido, navegación y menú adaptable al móvil
   await expect(page.getByRole("heading",{name:"Entrenamientos",level:1,exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
 });
+
+
+test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla animación",async({page})=>{
+  await navigate(page,"Entrenamientos");
+  const visual=page.getByRole("region",{name:"Visualización animada de la arquitectura CNN"});
+  await expect(visual).toBeVisible();
+  await expect(visual.getByText("Red neuronal en movimiento")).toBeVisible();
+  await expect(visual.getByText("CONV2D 1")).toBeVisible();
+  await expect(visual.getByText("MAXPOOL 1")).toBeVisible();
+  await expect(visual.getByText("FLATTEN")).toBeVisible();
+  await expect(visual.getByText("DENSE",{exact:true})).toBeVisible();
+  await expect(visual.getByText("SALIDA")).toBeVisible();
+  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","3d");
+  await visual.getByRole("button",{name:"Vista 2D"}).click();
+  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","2d");
+  await visual.getByRole("button",{name:"Pausar animación"}).click();
+  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","paused");
+  await visual.getByRole("button",{name:"Reanudar animación"}).click();
+  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","running");
+  await expect(visual.getByText(/no son activaciones, pesos ni gradientes medidos/)).toBeVisible();
+});
