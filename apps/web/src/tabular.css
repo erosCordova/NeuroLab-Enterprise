@@ -1,0 +1,31 @@
+.nl-tabular-panel{border-color:#c9eae3}
+.nl-tabular-choice{display:flex;gap:8px;border-bottom:1px solid #dbece9;margin:15px 0 18px}
+.nl-tabular-choice button{border:0;background:transparent;padding:13px 16px;color:#526e77;font-size:12px;cursor:pointer;border-bottom:2px solid transparent}
+.nl-tabular-choice button.active{color:#048e84;font-weight:750;border-bottom-color:#02baaa}
+.nl-upload-box{display:grid;gap:8px;padding:25px;border:1px dashed #6bd7c8;background:#f3fcfa;border-radius:12px;font-size:12px;font-weight:700;color:#216d68}
+.nl-upload-box input{background:#fff}
+.nl-url-input{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.nl-url-input .field{flex:1;min-width:230px;margin:0}
+.nl-url-input button{min-height:41px}
+.nl-tabular-data{margin-top:20px;display:grid;gap:14px}
+.nl-dataset-summary{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.nl-dataset-summary>.field,.nl-dataset-summary .field{margin:0}
+.nl-dataset-summary strong{color:#286c68;font-size:11px}
+.nl-danger{border:1px solid #eed4d8;background:#fff7f7;color:#a13f4b;border-radius:8px;padding:11px 14px;cursor:pointer;font-size:11px}
+.nl-tabular-preview{border:1px solid #d9e9e8;border-radius:10px}
+.nl-tabular-preview th{background:#eef9f7}
+.nl-tabular-settings{display:flex;align-items:end;gap:15px;flex-wrap:wrap}
+.nl-tabular-settings .field{flex:1;min-width:150px;margin:0}
+.nl-tabular-settings .primary{min-height:42px}
+.nl-tabular-plan{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.nl-tabular-plan>div{padding:13px;border-radius:10px;background:#f3f9f7;border:1px solid #ddede8;display:grid;gap:8px}
+.nl-tabular-plan small,.nl-tabular-result small{font-size:10px;color:#618082}
+.nl-tabular-plan strong{font-size:12px;overflow-wrap:anywhere}
+.nl-tabular-train{border-top:1px solid #dceae8;padding-top:18px}
+.nl-tabular-train h3{font-size:16px;margin-bottom:16px}
+.nl-training-status,.nl-tabular-result{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#e9f8f4;border:1px solid #cfebe0;border-radius:10px;padding:14px;margin-top:15px;font-size:12px}
+.nl-tabular-result{background:#fff}
+.nl-tabular-result>div{display:grid;gap:8px;flex:1;min-width:130px}
+.nl-tabular-result strong{font-size:20px;color:#058d81}
+@media(max-width:850px){.nl-tabular-plan{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:450px){.nl-tabular-plan{grid-template-columns:1fr}.nl-tabular-settings .field{flex-basis:100%}}
