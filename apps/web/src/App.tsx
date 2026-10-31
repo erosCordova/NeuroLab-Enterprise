@@ -1,4 +1,6 @@
 import TrainingHistory from "./TrainingHistory";
+import TabularPanel from "./TabularPanel";
+import type {TabularDataset} from "./tabular";
 import BrandLogo from "./BrandLogo";
 import MNISTImportPanel from "./MNISTImportPanel";
 import type {MnistData} from "./mnistDataset";
@@ -34,11 +36,11 @@ const pages: Page[] = ["Dashboard","Proyectos","Diseñador CNN","Datasets","Entr
 
 
 const pageDescriptions:Record<Page,string>={
-  Dashboard:"Consulta indicadores CNN reales y el estado de tus proyectos.",
-  Proyectos:"Organiza tus iniciativas de clasificación de imágenes.",
+  Dashboard:"Consulta tus proyectos, datasets y modelos.",
+  Proyectos:"Organiza y administra tus proyectos de inteligencia artificial.",
   "Diseñador CNN":"Construye una arquitectura CNN válida para entrenar o simular.",
-  Datasets:"Carga, valida y explora las imágenes que utilizará tu proyecto.",
-  Entrenamientos:"Entrena CNN reales en tu navegador o revisa las simulaciones didácticas.",
+  Datasets:"Añade datos desde tu equipo o un enlace y prepara tu modelo.",
+  Entrenamientos:"Entrena, evalúa y compara modelos.",
   Evaluación:"Compara métricas de CNN reales y revisa simulaciones por separado.",
   Modelos:"Conserva versiones y revisa las fichas de cada experimento.",
   Fundamentos:"Comprende cada operación de una red convolucional.",
@@ -96,8 +98,9 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   const [configs,setConfigs]=useState<Record<string,Config>>({});
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
+  const [tabularByProject,setTabularByProject]=useState<Record<string,TabularDataset>>({});
   const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
-  const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist">>({});
+  const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular">>({});
   const [versions,setVersions]=useState<Version[]>([]);
   const [jobs,setJobs]=useState<Job[]>([]);
   const [records,setRecords]=useState<RecordModel[]>([]);
@@ -127,8 +130,10 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   const project=projects.find(item=>item.id===projectId)!;
   const dataset=datasets[projectId];
   const mnist=mnistByProject[projectId];
+  const tabular=tabularByProject[projectId];
+  const tabularActive=datasetOrigin[projectId]==="tabular"&&Boolean(tabular);
   const mnistActive=datasetOrigin[projectId]==="mnist"&&Boolean(mnist);
-  const activeClasses=mnistActive?10:dataset?.classes.length;
+  const activeClasses=tabularActive?undefined:mnistActive?10:dataset?.classes.length;
   const automatic=(cnnModes[projectId]??"automatic")==="automatic";
   const proposal=dataset?recommendCNN(dataset,defaultConfig()):null;
   const config=automatic
@@ -198,6 +203,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
     setConfigs(current=>{const next={...current};delete next[id];return next;});
     setCnnModes(current=>{const next={...current};delete next[id];return next;});
     setDatasets(current=>{const next={...current};delete next[id];return next;});
+    setTabularByProject(current=>{const next={...current};delete next[id];return next;});
     setMnistByProject(current=>{const next={...current};delete next[id];return next;});
     setDatasetOrigin(current=>{const next={...current};delete next[id];return next;});
     setVersions(current=>current.filter(v=>v.projectId!==id));
@@ -352,12 +358,12 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
 
         {page==="Dashboard"&&<>
           {onPersistProject&&<ProjectCNNReport projectId={projectId} projectName={project.name} mode="dashboard"/>}
-          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",new Set([...Object.keys(datasets),...Object.keys(mnistByProject)]).size],["Simulaciones pendientes",pending],["Fichas simuladas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
+          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",new Set([...Object.keys(datasets),...Object.keys(mnistByProject),...Object.keys(tabularByProject)]).size],["Simulaciones pendientes",pending],["Fichas simuladas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
           <section className="panel cnn-quick-actions" aria-label="Accesos rápidos del laboratorio">
             <div><div className="eyebrow">CONTINÚA TU EXPERIMENTO</div><h2>¿Qué quieres hacer ahora?</h2>
               <p className="muted">Accede directamente a las herramientas de tu proyecto, sin salir del laboratorio.</p></div>
             <div className="cnn-quick-buttons">
-              <button className="primary" onClick={()=>navigate("Datasets")}>Cargar imágenes</button>
+              <button className="primary" onClick={()=>navigate("Datasets")}>Añadir dataset</button>
               <button className="secondary" onClick={()=>navigate("Entrenamientos")}>Abrir entrenamiento real</button>
               <button className="secondary" onClick={()=>navigate("Evaluación")}>Evaluar resultados CNN</button>
             </div>
@@ -376,6 +382,14 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
           onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>
+           <div className="nl-data-source-head"><span className="nl-data-source-kicker">NUEVO DATASET</span><h2>Añade tus datos</h2></div>
+           <TabularPanel key={"csv:"+projectId} dataset={tabular} onApply={next=>{
+             setTabularByProject(current=>({...current,[projectId]:next}));
+             setDatasetOrigin(current=>({...current,[projectId]:"tabular"}));
+           }} onRemove={()=>{
+             setTabularByProject(current=>{const copy={...current};delete copy[projectId];return copy;});
+             setDatasetOrigin(current=>({...current,[projectId]:"folder"}));
+           }}/>
           <MNISTImportPanel key={projectId} current={mnist} active={mnistActive} onApply={loaded=>{setMnistByProject(current=>({...current,[projectId]:loaded}));setDatasetOrigin(current=>({...current,[projectId]:"mnist"}));setError("");setMessage("MNIST seleccionado para el entrenamiento real. Abre Entrenamientos para comenzar.");}} onRemove={()=>{setMnistByProject(current=>{const copy={...current};delete copy[projectId];return copy;});setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>
           <section className="panel"><h2>Cargar imágenes por clase</h2><p className="muted">Selecciona la carpeta principal que contiene una subcarpeta por clase.</p>
             <div className="soft">Ejemplo: una carpeta «animales» con las subcarpetas «gatos» y «perros», cada una con sus imágenes. Se admiten PNG, JPG y WebP; entre 2 y 20 clases y al menos tres imágenes por clase. Máximo: 500 imágenes y 50 MiB.</div>
@@ -391,7 +405,11 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
 
         {page==="Datasets"&&dataset&&!mnistActive&&<><DatasetTransfer dataset={dataset} /><DatasetExplorer key={projectId} dataset={dataset} config={config} /></>}
 
-        {page==="Diseñador CNN"&&<div className="designer">
+        {page==="Diseñador CNN"&&tabularActive&&<section className="panel"><h2>Configuración automática</h2>
+            <p>Se ha detectado un dataset tabular. Se utilizará una red densa adecuada para sus columnas.</p>
+            <button className="primary" onClick={()=>navigate("Entrenamientos")}>Abrir entrenamiento tabular</button>
+          </section>}
+        {page==="Diseñador CNN"&&!tabularActive&&<div className="designer">
           <section className="panel"><h2>Constructor convolucional</h2>{dataset&&<AutoCNNPanel dataset={dataset} config={config} automatic={automatic} onModeChange={changeCNNMode} onChange={updateConfig} onApply={(next,count)=>{updateConfig(next);setEpochs(String(count));}} />}<fieldset disabled={automatic} className="cnn-mode-fields">
             <legend>Arquitectura CNN · {automatic?"calculada automáticamente":"edición manual"}</legend>
             {automatic&&<p className="caption">Para modificar estos valores, selecciona Manual.</p>}
@@ -418,7 +436,14 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
           </section>
         </div>}
 
-        {page==="Entrenamientos"&&<>
+        {tabularActive&&page==="Evaluación"&&<section className="panel"><h2>Resultados tabulares</h2>
+          <button className="primary" onClick={()=>navigate("Entrenamientos")}>Ver entrenamiento tabular</button>
+        </section>}
+        {page==="Entrenamientos"&&tabularActive&&tabular&&<TabularPanel key={"train:"+projectId}
+          dataset={tabular} onApply={next=>setTabularByProject(current=>({...current,[projectId]:next}))}
+          onRemove={()=>{setTabularByProject(current=>{const copy={...current};delete copy[projectId];return copy;});
+            setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>}
+        {page==="Entrenamientos"&&!tabularActive&&<>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
             <a href="#cnn-real-training">1. Entrenar y reconocer</a>
             {onPersistProject&&<a href="#cnn-real-results">2. Resultados guardados</a>}
