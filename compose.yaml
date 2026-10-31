@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: neurolab
+      POSTGRES_USER: neurolab
+      POSTGRES_PASSWORD: ${NEUROLAB_DB_PASSWORD:?Define NEUROLAB_DB_PASSWORD en .env}
+    volumes:
+      - neurolab_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurolab -d neurolab"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+  api:
+    build: ./services/api
+    environment:
+      DATABASE_URL: postgresql://neurolab:${NEUROLAB_DB_PASSWORD}@db:5432/neurolab
+      APP_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      COOKIE_SECURE: 'false'
+    ports:
+      - '127.0.0.1:8011:8000'
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["sh", "-c", "python -m app.migrate && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+volumes:
+  neurolab_postgres:

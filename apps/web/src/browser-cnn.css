@@ -1,0 +1,14 @@
+.browser-cnn{border:1px solid #bbd7f6;background:linear-gradient(145deg,#ffffff,#f4f9ff)}
+.browser-cnn .panel-head{align-items:center}
+.browser-cnn .eyebrow{color:#2366ae}
+.browser-cnn .cnn-three{margin:16px 0}
+.browser-cnn .cnn-three button{align-self:end;min-height:40px}
+.browser-cnn .cnn-two-charts>div{border:1px solid #dce5f0;border-radius:12px;background:#fff;padding:14px;min-width:0}
+.browser-cnn .cnn-two-charts svg{display:block;width:100%;height:auto;max-height:230px}
+.browser-cnn-summary{margin-top:20px;padding:16px;border-radius:12px;border:1px solid #cae6d9;background:#f7fcf9}
+.browser-cnn .soft{line-height:1.7}
+.browser-cnn progress{display:block;width:100%;height:11px;accent-color:#318b79}
+@media(max-width:760px){
+  .browser-cnn .cnn-three{grid-template-columns:minmax(0,1fr)}
+  .browser-cnn .cnn-two-charts{grid-template-columns:minmax(0,1fr)}
+}

@@ -1,0 +1,114 @@
+name: Validar API y PostgreSQL
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  postgres-api:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: neurolab_test
+          POSTGRES_PASSWORD: ephemeral_ci_password
+          POSTGRES_DB: neurolab_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U neurolab_test -d neurolab_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    defaults:
+      run:
+        working-directory: services/api
+    env:
+      TEST_DATABASE_URL: postgresql://neurolab_test:ephemeral_ci_password@localhost:5432/neurolab_test
+      COOKIE_SECURE: 'false'
+      NEUROLAB_RATE_LIMIT_SECRET: 'clave-efimera-solo-para-ci-neurolab-1234567890123456'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            services/api/requirements.txt
+            services/api/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q --tb=short --ignore=tests/test_real_cnn.py
+
+      - name: Rehearse production baseline migration 001 to 005 (isolated database)
+        run: PYTHONPATH=. python tests/rehearse_upgrade.py
+
+      - name: Rehearse PostgreSQL 16 custom backup and verified restore (CI only)
+        run: NEUROLAB_CI_BACKUP_REHEARSAL=1 PYTHONPATH=.:tests python tests/rehearse_backup_restore.py
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run test:platform
+        working-directory: apps/web
+
+      - name: Build Render backend image
+        run: docker build -t neurolab-api-ci services/api
+        working-directory: .
+      - name: Verify minimal production dependencies
+        run: >-
+          docker run --rm --entrypoint python neurolab-api-ci
+          -c "import importlib.util; assert importlib.util.find_spec('pytest') is None; assert importlib.util.find_spec('httpx') is None; print('NEUROLAB_RUNTIME_MINIMO=OK')"
+        working-directory: .
+      - name: Check Render production preflight inside Docker without touching Neon
+        run: >-
+          docker run --rm --entrypoint python
+          -e RENDER=true
+          -e DATABASE_URL="$TEST_DATABASE_URL"
+          -e DATABASE_URL_UNPOOLED="$TEST_DATABASE_URL"
+          -e NEUROLAB_RATE_LIMIT_SECRET="$NEUROLAB_RATE_LIMIT_SECRET"
+          -e COOKIE_SECURE=true
+          -e APP_ORIGINS=https://neurolab-enterprise-xi.vercel.app
+          neurolab-api-ci
+          -c "from app.release_readiness import validate_render_config; result=validate_render_config(); assert result['production'] and result['valid']; print('RENDER_PREFLIGHT=APROBADO')"
+      - name: Start production image on isolated CI PostgreSQL
+        run: >-
+          docker run -d --name neurolab-api-ci --network host
+          -e DATABASE_URL="$TEST_DATABASE_URL"
+          -e DATABASE_URL_UNPOOLED="$TEST_DATABASE_URL"
+          -e PORT=4190 -e COOKIE_SECURE=false
+          -e RENDER_GIT_COMMIT="$GITHUB_SHA"
+          -e APP_ORIGINS=http://127.0.0.1:4189
+          -e NEUROLAB_RATE_LIMIT_SECRET="$NEUROLAB_RATE_LIMIT_SECRET"
+          neurolab-api-ci
+      - name: Wait for database readiness
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4190/api/v1/ready
+      - name: Build Vercel frontend in connected mode
+        run: VITE_RELEASE_SHA="$GITHUB_SHA" VITE_USE_API=true VITE_API_BASE_URL=/api/v1 npm run build
+        working-directory: apps/web
+      - name: Start isolated static frontend and API reverse proxy
+        run: >-
+          docker run -d --name neurolab-frontend-ci --network host
+          -v "$GITHUB_WORKSPACE/apps/web/dist:/usr/share/nginx/html:ro"
+          -v "$GITHUB_WORKSPACE/apps/web/tests/fixtures/frontend-proxy.conf:/etc/nginx/nginx.conf:ro"
+          nginx:alpine
+      - name: Wait for frontend API proxy
+        run: curl --fail --retry 20 --retry-delay 2 --retry-connrefused http://127.0.0.1:4189/api/v1/ready
+      - name: Run authenticated-free, read-only release smoke against isolated frontend
+        run: NEUROLAB_CI_SMOKE=1 node release-smoke.mjs http://127.0.0.1:4189
+        working-directory: apps/web
+      - name: Verify production bundle, login and project persistence
+        run: npx playwright test --config playwright.hosted.config.mjs
+        working-directory: apps/web
+      - name: Inspect failed image
+        if: failure()
+        run: docker logs neurolab-api-ci
+      - name: Stop isolated CI image
+        if: always()
+        run: docker rm -f neurolab-api-ci neurolab-frontend-ci || true

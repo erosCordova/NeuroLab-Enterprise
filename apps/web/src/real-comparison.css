@@ -1,0 +1,16 @@
+.real-eval{background:linear-gradient(150deg,#fff 0%,#f4f9ff 100%);border:1px solid #c8dcef}
+.real-eval .eyebrow{color:#265fa8}
+.real-eval-filters{display:grid;grid-template-columns:1fr 2fr;gap:16px;margin:17px 0}
+.real-eval table{width:100%}
+.real-eval table th,.real-eval table td{font-size:13px}
+.real-eval-comparison,.real-eval-epochs{background:#fff;border:1px solid #e1e8f2;padding:17px;border-radius:14px;margin-top:18px}
+.real-eval-comparison .panel-head,.real-eval-epochs .panel-head{align-items:center;gap:12px}
+.real-eval-comparison h3,.real-eval-epochs h3{margin:0;font-size:16px}
+.real-eval-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:13px;margin-top:15px}
+.real-eval-card{padding:16px;border:1px solid #dce7f4;border-radius:12px;background:#f9fbff}
+.real-eval-card h4{margin:0 0 12px}
+.real-eval-card dl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;font-size:12px;margin:0}
+.real-eval-card dt{color:#5b6c83}
+.real-eval-card dd{margin:0;font-weight:600;text-align:right}
+.real-eval-highlight{color:#315b76;line-height:1.6}
+@media(max-width:750px){.real-eval-filters{grid-template-columns:1fr}.real-eval-comparison .panel-head{display:block}.real-eval .actions{flex-wrap:wrap}}

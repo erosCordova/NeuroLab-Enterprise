@@ -30,11 +30,29 @@ Abrir Git Bash en:
 Ejecutar npm run dev.
 Abrir la dirección Local que indique Vite y mantener la terminal abierta.
 
-También puede utilizarse INICIAR_NEUROLAB.cmd, situado en la carpeta
-principal del proyecto.
+La vista previa privada permite recorrer el mismo frontend sin iniciar Vite.
+La autorización de acceso de esa vista no añade autenticación a la aplicación.
 
 Cambiar entre pantallas conserva la sesión.
 Recargar la página elimina los datos y cambios en memoria.
+
+## 1.1. Organizar proyectos CNN
+
+Proyectos permite crear y editar nombre, descripción, estado y hasta seis
+etiquetas. Los nombres son únicos sin distinguir mayúsculas, espacios repetidos
+ni formas Unicode equivalentes. Las etiquetas se separan por comas.
+
+La búsqueda incluye nombre, descripción y etiquetas y se puede combinar con el
+filtro de estado. Limpiar filtros permite recuperar la lista completa.
+
+Editar conserva el identificador del proyecto: sus imágenes, configuración,
+versiones y ejecuciones permanecen asociadas. Los nombres guardados dentro de
+las ejecuciones anteriores conservan el contexto que tenían al crearse.
+
+Estados: Activo, En preparación y Archivado. Archivar bloquea nuevas simulaciones,
+pero no elimina datos ni cancela las ejecuciones existentes. Para crear nuevas
+simulaciones, cambia el estado a Activo o En preparación. Los estados y cambios
+son locales a la sesión; recargar sigue eliminando los datos en memoria.
 
 ## 2. Cargar imágenes
 
@@ -54,12 +72,15 @@ Los archivos se decodifican y verifican realmente.
 Los archivos con otras extensiones no se incluyen.
 
 Seleccionar porcentajes y semilla.
-Pulsar Validar y aplicar dataset.
+Pulsar Enviar dataset al proyecto. La carga permanece en el navegador;
+no se envían imágenes a un servidor de entrenamiento.
 
 Las particiones son estratificadas por clase.
 El redondeo puede modificar los porcentajes efectivos.
 Cada índice de imagen pertenece a una única partición.
-Todavía no se detectan imágenes visualmente duplicadas.
+Se bloquean archivos con bytes idénticos, incluso si tienen nombres diferentes,
+y archivos idénticos asignados a clases distintas. Esto no detecta similitud
+visual entre imágenes recodificadas.
 
 ## 3. Muestra MNIST
 
@@ -77,8 +98,9 @@ Con entrenamiento 70%, validación 15% y semilla 42:
 Esta muestra procede del conjunto de entrenamiento original de MNIST.
 La partición de prueba local no es el conjunto de test oficial de MNIST.
 
-La ruta de la carpeta preparada se encuentra en:
-runtime/ultimo_dataset.txt
+Si preparaste la muestra con el script local, su ruta puede estar en
+runtime/ultimo_dataset.txt. Ese archivo y las imágenes no se incluyen en GitHub.
+Las pruebas automatizadas generan PNG sintéticos propios; no son MNIST.
 
 ## 4. Explorar el dataset
 
@@ -98,21 +120,46 @@ La tabla de distribución corresponde al dataset completo.
 
 El inventario contiene metadatos y asignaciones, no los píxeles.
 
+## 4.1. Exportar el dataset completo
+
+En Datasets, Exportar dataset completo permite elegir una carpeta de destino
+y autorizar escritura en un navegador compatible (por ejemplo, Chrome o Edge).
+Se crea una subcarpeta nueva con las imágenes originales organizadas por clase,
+un manifiesto dataset.neurolab.json con hashes y particiones y un LEEME.txt.
+No se necesita ZIP. El inventario JSON por separado solo contiene metadatos.
+
+El importador de carpetas vuelve a calcular las particiones con los porcentajes
+y la semilla del formulario: no restaura automáticamente el manifiesto exportado.
+Si falla una escritura puede quedar una carpeta parcial; consulta el aviso.
+
 ## 5. Diseñar la CNN
 
-Configuración inicial recomendada para la muestra MNIST:
-- Entrada de 28 × 28.
-- Un canal de escala de grises.
-- Primer bloque Conv2D: 16 filtros y kernel 3 × 3.
-- Segundo bloque Conv2D: 32 filtros y kernel 3 × 3.
-- ReLU y MaxPooling 2 × 2 en ambos bloques.
-- Flatten.
-- Dense de 64 unidades.
+En cada proyecto, Automático es el modo predeterminado.
+Al aplicar un dataset, calcula una propuesta usando la cantidad de imágenes de
+entrenamiento. Muestra las clases y el mínimo de ejemplos de entrenamiento por
+clase como contexto. No consulta el conjunto de prueba para elegir la red.
+Es una heurística inicial, no una arquitectura óptima demostrada.
 
-Con diez clases:
-- Salida de diez unidades softmax.
-- Pérdida prevista sparse_categorical_crossentropy.
-- Total estimado: 105866 parámetros.
+Con la muestra de 200 imágenes, 140 de ellas para entrenamiento:
+- Entrada de 28 × 28, un canal.
+- Conv2D de 8 filtros y Conv2D de 16 filtros, kernel 3 × 3.
+- ReLU y MaxPooling 2 × 2 en ambos bloques.
+- Flatten y Dense de 32 unidades.
+- Dropout 0.35 y L2 0.001.
+- Máximo de 60 épocas, parada temprana activa y paciencia de 5 épocas.
+- Mejora mínima de pérdida de validación: 0.01.
+- Con diez clases: softmax, sparse_categorical_crossentropy y 26698 parámetros.
+
+En Automático los controles de arquitectura, regularización y épocas están
+bloqueados. Cambiar el dataset recalcula la propuesta.
+
+Para editar, selecciona Manual en Modo de configuración:
+- El primer cambio copia la propuesta activa como punto de partida.
+- Puedes editar capas, filtros, entrada, activaciones y regularización.
+- Puedes cambiar las épocas desde Entrenamientos.
+- Usar propuesta en modo manual reemplaza los ajustes manuales por la propuesta.
+- Alternar Automático/Manual conserva los ajustes manuales anteriores por proyecto,
+  incluyendo sus épocas. Todo se conserva solo mientras la página siga abierta.
 
 Con dos clases:
 - Salida de una unidad sigmoid.
@@ -159,12 +206,13 @@ No procesa automáticamente todo el dataset para entrenar.
 Requiere un dataset aplicado y una configuración válida.
 
 Configurar:
-- Épocas: entero entre 1 y 100.
+- Épocas: calculadas en Automático; editables de 1 a 100 en Manual.
 - Batch size: entero entre 1 y 256.
 
 Añadir a la cola.
 
-La ejecución conserva configuración y metadatos del dataset.
+La ejecución conserva el modo, la configuración y los metadatos del dataset.
+Cambiar el diseñador después no modifica ejecuciones ya creadas.
 Se procesa un trabajo a la vez.
 
 Estados:
@@ -178,13 +226,61 @@ Se muestran exactamente dos gráficos:
 1. Precisión de entrenamiento y validación.
 2. Pérdida de entrenamiento y validación.
 
+La parada temprana detiene la simulación cuando la pérdida de validación deja
+de mejorar más que el mínimo configurado durante la paciencia indicada.
+La época de referencia es la de una mejora significativa; no implica restaurar
+pesos ni necesariamente identifica el mínimo numérico absoluto.
+Se muestra el número de épocas ejecutadas frente al máximo configurado.
+Dropout y L2 se conservan como configuración para un futuro entrenamiento real;
+no modifican las curvas actuales.
+
 Las curvas son simuladas y se generan con fórmulas ilustrativas.
 No demuestran el efecto de filtros, imágenes ni batch size.
 No se presentan resultados reales del conjunto de prueba.
 
+## 7.1. Historial y repetición de simulaciones
+
+Debajo de la cola está Historial de entrenamientos. Puedes buscar por ID, nombre
+de proyecto o dataset y combinar la búsqueda con un estado. El CSV exporta solo
+las filas que coinciden con los filtros y conserva la huella del dataset.
+
+Cada nueva ejecución registra creación, inicio y finalización. El CSV conserva
+fechas ISO; la pantalla usa el formato local del navegador. La duración se muestra
+al terminar y cuenta el tiempo desde que empieza a ejecutar, incluyendo pausas.
+Una cancelación antes del inicio no tiene duración de ejecución. Las ejecuciones
+anteriores sin fechas se muestran con un guion, sin inventar datos.
+
+Ver selecciona la ejecución en el panel de detalle. Repetir está disponible solo
+para trabajos completados o cancelados y crea un ID nuevo, desde la primera época.
+Conserva modo, arquitectura, dataset, épocas, batch y referencia de versión de origen.
+No cambia el trabajo anterior ni usa cambios posteriores del diseñador.
+No se reanudan ni restauran pesos: el entrenamiento sigue siendo simulado.
+
+La nueva ejecución conserva el ID de origen y respeta los límites de Administración.
+Los proyectos archivados no admiten repeticiones hasta que se reactiven.
+Recargar elimina el historial, igual que el resto de la sesión sin base de datos.
+
 ## 8. Evaluación y modelos
 
-Evaluación presenta resultados de simulaciones completadas.
+Evaluación presenta resultados de simulaciones completadas del proyecto activo.
+Los trabajos cancelados o en curso no se presentan como resultados finales.
+
+Marca entre una y tres ejecuciones para compararlas lado a lado. Se conservan
+la huella del dataset y sus particiones, el modo, la configuración CNN, el número
+de parámetros, las épocas ejecutadas y máximas, Dropout, L2 y métricas finales.
+La cuarta selección queda bloqueada hasta desmarcar una de las anteriores.
+Si las huellas difieren, se advierte que no son directamente comparables.
+La comparación no identifica ganadores ni prueba precisión predictiva real.
+
+Exportar comparación JSON conserva las configuraciones y los metadatos.
+Exportar comparación CSV genera un resumen. Ambos identifican la simulación;
+no incluyen imágenes, predicciones ni pesos. El CSV expresa precisión entre 0 y 1.
+
+Inspeccionar muestra el detalle por época, con páginas de diez registros y
+exportación CSV de todo el historial de esa ejecución. El mínimo numérico de
+pérdida observado puede diferir de la referencia usada por la parada temprana.
+La diferencia de precisión se muestra en puntos porcentuales y no constituye
+un diagnóstico de sobreajuste sobre estas curvas ilustrativas.
 
 En Modelos se puede registrar una ficha de cada ejecución completada.
 Una ejecución no puede registrarse dos veces.
@@ -233,13 +329,19 @@ Desde apps/web:
 - npm run test:e2e
 - npm run build
 
-Informes:
+Antes de la primera prueba de navegador: npx playwright install chromium.
+Por defecto se generan 200 PNG sintéticos temporales de diez clases. Sirven para
+validar la interfaz y los archivos, no para evaluar un modelo entrenado.
+No se necesita runtime/ultimo_dataset.txt. Para un dataset externo compatible,
+consulta NEUROLAB_E2E_DATASET en el README principal.
+
+Informes locales:
 - runtime/cnn-e2e.json
 - runtime/cnn-e2e-report/index.html
-- runtime/VALIDACION_FRONTEND_CNN.json
 
-El archivo de validación final se crea únicamente si todas las
-comprobaciones del bloque de cierre terminan correctamente.
+Consulta GitHub Actions para el resultado de cada commit. Una evidencia JSON
+antigua no certifica cambios posteriores. El estado de las fases se registra en
+docs/ESTADO_FASES.md.
 
 ## 12. Pendientes fuera del alcance actual
 

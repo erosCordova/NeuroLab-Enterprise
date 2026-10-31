@@ -1,10 +1,20 @@
 import { test, expect } from "@playwright/test";
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { createImageFixture } from "../fixtures/images.mjs";
 
-const datasetDirectory = fs.readFileSync(
-  path.resolve("../../runtime/ultimo_dataset.txt"), "utf8"
-).trim();
+const externalDataset = process.env.NEUROLAB_E2E_DATASET;
+const datasetDirectory = externalDataset
+  ? path.resolve(externalDataset)
+  : fs.mkdtempSync(path.join(os.tmpdir(), "neurolab-cnn-e2e-"));
+
+test.beforeAll(() => {
+  if (!externalDataset) createImageFixture(datasetDirectory);
+});
+test.afterAll(() => {
+  if (!externalDataset) fs.rmSync(datasetDirectory, {recursive:true,force:true});
+});
 
 async function navigate(page, name) {
   await page.getByRole("navigation").getByRole("button", {
@@ -16,7 +26,7 @@ async function navigate(page, name) {
   })).toBeVisible();
 }
 
-async function applyMNIST(page) {
+async function applyDataset(page) {
   await navigate(page, "Datasets");
 
   await page.getByLabel("Carpeta de imágenes", {
@@ -38,8 +48,10 @@ async function applyMNIST(page) {
 }
 
 async function createJob(page, epochs = "3") {
+  await navigate(page, "Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN", {exact:true}).selectOption("manual");
   await navigate(page, "Entrenamientos");
-  await page.getByLabel(/^Épocas/).fill(epochs);
+  await page.getByLabel("Épocas",{exact:true}).fill(epochs);
   await page.getByRole("button", {
     name: "Añadir a la cola", exact: true,
   }).click();
@@ -68,8 +80,8 @@ test("Los diez módulos corresponden exclusivamente a CNN", async ({ page }) => 
   )).toHaveCount(0);
 });
 
-test("MNIST: decodifica 200 imágenes y aplica las diez clases", async ({ page }) => {
-  await applyMNIST(page);
+test("Dataset de prueba: decodifica 200 imágenes y aplica las diez clases", async ({ page }) => {
+  await applyDataset(page);
 
   const applied = page.getByRole("heading", {
     name: "Dataset aplicado", exact: true,
@@ -98,7 +110,7 @@ test("MNIST: decodifica 200 imágenes y aplica las diez clases", async ({ page }
 });
 
 test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Diseñador CNN");
 
   await page.getByRole("button", {
@@ -197,13 +209,13 @@ test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", asy
   expect(exported.record.job.dataset.classes.length).toBe(10);
 
   await navigate(page, "Evaluación");
-  await expect(page.locator("tbody tr")).toHaveCount(1);
+  await expect(page.locator(".evaluation-summary tbody tr")).toHaveCount(1);
 
   await navigate(page, "Reportes");
 
   const csvEvent = page.waitForEvent("download");
   await page.getByRole("button", {
-    name: "Exportar CSV", exact: true,
+    name: "Exportar CSV simulado", exact: true,
   }).click();
 
   const csvDownload = await csvEvent;
@@ -221,7 +233,7 @@ test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", asy
 });
 
 test("La pausa y cancelación conservan los estados terminales", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await createJob(page, "100");
 
   await page.getByRole("button", {
@@ -263,7 +275,7 @@ test("La pausa y cancelación conservan los estados terminales", async ({ page }
 });
 
 test("Los límites de Administración controlan la cola CNN", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Administración");
 
   await page.getByLabel(/^Máximo de pendientes/).fill("1");
@@ -321,7 +333,7 @@ test("El diseñador CNN funciona en pantalla pequeña y con teclado", async ({ p
     name: "Proyectos", level: 1, exact: true,
   })).toBeVisible();
 
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page, "Diseñador CNN");
 
   await expect(page.getByRole("button", {
@@ -358,7 +370,7 @@ test("El diseñador CNN funciona en pantalla pequeña y con teclado", async ({ p
 });
 
 test("Explorador CNN: filtros, paginación, ampliación y exportación", async ({ page }) => {
-  await applyMNIST(page);
+  await applyDataset(page);
 
   const explorer=page.getByRole("region",{
     name:"Explorador de imágenes",exact:true
@@ -446,8 +458,8 @@ test("Explorador CNN: filtros, paginación, ampliación y exportación", async (
   )).toBe(true);
 });
 
-test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor",async({page})=>{
-  await applyMNIST(page);
+test("Preprocesamiento CNN: píxeles de imagen, normalización y exportación de tensor",async({page})=>{
+  await applyDataset(page);
 
   const explorer=page.getByRole("region",{
     name:"Explorador de imágenes",exact:true
@@ -484,6 +496,7 @@ test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor
   await page.keyboard.press("Escape");
   await navigate(page,"Diseñador CNN");
 
+  await page.getByLabel("Modo de configuración CNN", {exact:true}).selectOption("manual");
   await page.getByLabel(/^Tamaño de entrada/).selectOption("32");
   await page.getByLabel(/^Canales/).selectOption("3");
 
@@ -517,7 +530,7 @@ test("Preprocesamiento CNN: imagen real, normalización y exportación de tensor
 });
 
 test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
 
   async function inventory(){
     const event=page.waitForEvent("download");
@@ -534,7 +547,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
   expect(first.fingerprint).toMatch(/^[a-f0-9]{64}$/);
   expect(first.files.every(image=>/^[a-f0-9]{64}$/.test(image.checksum))).toBe(true);
 
-  await applyMNIST(page);
+  await applyDataset(page);
   const second=await inventory();
   expect(second.fingerprint).toBe(first.fingerprint);
 
@@ -563,7 +576,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
     exact:true
   }).setInputFiles(duplicateRoot);
 
-  await expect(page.getByRole("alert")).toContainText("Archivo idéntico repetido");
+  await expect(page.getByRole("alert").filter({hasText:"Archivo idéntico repetido"})).toBeVisible();
 
   const applied=page.getByRole("heading",{
     name:"Dataset aplicado",exact:true
@@ -573,7 +586,7 @@ test("Integridad CNN: huella reproducible y rechazo de archivos duplicados",asyn
 });
 
 test("CNN automática: propone capas y configuración de regularización",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
   await navigate(page,"Diseñador CNN");
 
   const panel=page.getByRole("region",{
@@ -589,7 +602,7 @@ test("CNN automática: propone capas y configuración de regularización",async(
 });
 
 test("Exportación CNN: entrega imágenes originales y manifiesto al destino elegido",async({page})=>{
-  await applyMNIST(page);
+  await applyDataset(page);
 
   await page.evaluate(()=>{
     window.__cnnExport=[];
@@ -654,4 +667,264 @@ test("Exportación CNN: entrega imágenes originales y manifiesto al destino ele
     expect(written.bytes).toBe(image.bytes);
     expect(written.checksum).toBe(image.checksum);
   }
+});
+
+
+test("Modos CNN: automático predeterminado y ajustes manuales conservados", async ({page}) => {
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  const mode=page.getByLabel("Modo de configuración CNN",{exact:true});
+  const filters=page.getByLabel(/^Filtros · 1 a 128/).first();
+  await expect(mode).toHaveValue("automatic");
+  await expect(filters).toBeDisabled();
+  await expect(page.getByLabel("Dropout",{exact:true})).toBeDisabled();
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByLabel("Épocas",{exact:true})).toHaveValue("60");
+  await expect(page.getByLabel("Épocas",{exact:true})).toBeDisabled();
+
+  await navigate(page,"Diseñador CNN");
+  await mode.selectOption("manual");
+  await expect(filters).toBeEnabled();
+  await filters.fill("24");
+  await page.getByLabel("Dropout",{exact:true}).fill("0.2");
+  await navigate(page,"Entrenamientos");
+  await page.getByLabel("Épocas",{exact:true}).fill("7");
+
+  await navigate(page,"Diseñador CNN");
+  await mode.selectOption("automatic");
+  await expect(filters).toHaveValue("8");
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await expect(mode).toHaveValue("automatic");
+  await mode.selectOption("manual");
+  await expect(filters).toHaveValue("24");
+  await expect(page.getByLabel("Dropout",{exact:true})).toHaveValue("0.2");
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByLabel("Épocas",{exact:true})).toHaveValue("7");
+});
+
+test("Modos CNN: cada proyecto conserva su selección y sus ajustes", async ({page}) => {
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Proyectos");
+  await page.getByLabel("Nuevo proyecto CNN",{exact:true}).fill("Segundo proyecto CNN");
+  await page.getByRole("button",{name:"Crear proyecto",exact:true}).click();
+  await page.getByLabel("Proyecto activo",{exact:true}).selectOption({label:"Segundo proyecto CNN"});
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await expect(page.getByLabel("Modo de configuración CNN",{exact:true})).toHaveValue("automatic");
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("8");
+  await page.getByLabel("Proyecto activo",{exact:true}).selectOption("CNN-001");
+  await expect(page.getByLabel("Modo de configuración CNN",{exact:true})).toHaveValue("manual");
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("24");
+});
+
+
+test("Proyectos CNN: editar, filtrar, evitar duplicados y conservar arquitectura",async({page})=>{
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  const editor=page.getByRole("region",{name:"Editor del proyecto",exact:true});
+  await editor.getByLabel("Nombre del proyecto",{exact:true}).fill("Dígitos manuscritos");
+  await editor.getByLabel("Descripción del problema",{exact:true}).fill("Clasificar los números del cero al nueve.");
+  await editor.getByLabel("Etiquetas del proyecto",{exact:true}).fill("MNIST, dígitos");
+  await editor.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await expect(page.getByLabel("Proyecto activo",{exact:true})).toHaveValue("CNN-001");
+  await page.getByLabel("Buscar proyectos",{exact:true}).fill("MNIST");
+  await expect(page.getByRole("article",{name:"Proyecto Dígitos manuscritos",exact:true})).toBeVisible();
+  await page.getByLabel("Filtrar proyectos por estado",{exact:true}).selectOption("Archivado");
+  await expect(page.getByRole("heading",{name:"No hay proyectos que coincidan",exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Limpiar filtros de proyectos",exact:true}).click();
+  await editor.getByLabel("Nuevo proyecto CNN",{exact:true}).fill("dígitos manuscritos");
+  await editor.getByRole("button",{name:"Crear proyecto",exact:true}).click();
+  await expect(editor.getByRole("alert")).toContainText("Ya existe un proyecto");
+  await page.getByRole("article",{name:"Proyecto Dígitos manuscritos",exact:true}).getByRole("button",{name:"Abrir proyecto →",exact:true}).click();
+  await expect(page.getByLabel(/^Filtros · 1 a 128/).first()).toHaveValue("24");
+  await navigate(page,"Datasets");
+  await expect(page.getByRole("heading",{name:"Dataset aplicado",exact:true}).locator("..")).toContainText("200 imágenes");
+});
+
+test("Proyectos CNN: archivar impide nuevas simulaciones y permite reactivar",async({page})=>{
+  await applyDataset(page);
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Archivado");
+  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await navigate(page,"Entrenamientos");
+  await page.getByRole("button",{name:"Añadir a la cola",exact:true}).click();
+  await expect(page.getByRole("alert")).toContainText("El proyecto está archivado");
+  await expect(page.locator(".queue-item")).toHaveCount(0);
+  await navigate(page,"Proyectos");
+  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
+  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Activo");
+  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
+  await createJob(page,"3");
+  await expect(page.locator(".queue-item")).toHaveCount(1);
+  await page.setViewportSize({width:390,height:844});
+  await navigate(page,"Proyectos");
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});
+
+
+test("Evaluación CNN: comparación hasta tres ejecuciones y exportaciones trazables",async({page})=>{
+  await applyDataset(page);
+  for(let i=0;i<4;i++)await createJob(page,"2");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible({timeout:25000});
+  await navigate(page,"Evaluación");
+  const results=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true});
+  await expect(results.locator("tbody tr")).toHaveCount(4);
+  const checks=results.getByRole("checkbox");
+  for(let i=0;i<3;i++)await checks.nth(i).check();
+  await expect(checks.nth(3)).toBeDisabled();
+  const comparison=page.getByRole("region",{name:"Comparación de ejecuciones",exact:true});
+  await expect(comparison.getByRole("article")).toHaveCount(3);
+  await expect(comparison.getByRole("status")).toContainText("misma huella");
+  const event=page.waitForEvent("download");
+  await comparison.getByRole("button",{name:"Exportar comparación JSON",exact:true}).click();
+  const report=JSON.parse(fs.readFileSync(await(await event).path(),"utf8"));
+  expect(report.simulated).toBe(true);expect(report.sameDataset).toBe(true);
+  expect(report.rows).toHaveLength(3);expect(report.rows.every(row=>row.epochsExecuted===2)).toBe(true);
+  const csvEvent=page.waitForEvent("download");
+  await comparison.getByRole("button",{name:"Exportar comparación CSV",exact:true}).click();
+  expect(fs.readFileSync(await(await csvEvent).path(),"utf8")).toContain("CNN_SIMULADA");
+  await results.getByRole("button",{name:/^Inspeccionar ejecución/}).first().click();
+  await expect(page.locator(".epoch-table tbody tr")).toHaveCount(2);
+  const metrics=page.getByRole("region",{name:"Métricas por época",exact:true});
+  const metricEvent=page.waitForEvent("download");
+  await metrics.getByRole("button",{name:"Exportar métricas por época CSV",exact:true}).click();
+  expect(fs.readFileSync(await(await metricEvent).path(),"utf8").split("\r\n")).toHaveLength(3);
+  await comparison.getByRole("button",{name:"Limpiar comparación",exact:true}).click();
+  await expect(comparison.getByRole("article")).toHaveCount(0);
+  await expect(checks.nth(3)).toBeEnabled();
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+});
+
+test("Evaluación CNN: advierte si cambian las particiones del dataset",async({page})=>{
+  await applyDataset(page);await createJob(page,"1");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await navigate(page,"Datasets");
+  await page.getByLabel(/^Semilla/).fill("43");
+  await page.getByRole("button",{name:"Enviar dataset al proyecto",exact:true}).click();
+  await expect(page.getByRole("status").filter({hasText:"Dataset de imágenes validado y aplicado."})).toBeVisible();
+  await createJob(page,"1");
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await navigate(page,"Evaluación");
+  const checks=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true}).getByRole("checkbox");
+  await checks.nth(0).check();await checks.nth(1).check();
+  await expect(page.getByRole("region",{name:"Comparación de ejecuciones",exact:true}).getByRole("status")).toContainText("no son directamente comparables");
+});
+
+
+test("Historial CNN: repetir una cancelación conserva la configuración de origen",async({page})=>{
+  await applyDataset(page);await createJob(page,"2");
+  await page.getByRole("button",{name:"Cancelar simulación",exact:true}).click();
+  const history=page.getByRole("region",{name:"Historial de entrenamientos",exact:true});
+  const sourceId=(await page.locator(".queue-item small").first().innerText()).trim();
+  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Cancelado");
+  await expect(history.locator("tbody tr")).toHaveCount(1);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
+  await navigate(page,"Entrenamientos");
+  await history.getByRole("button",{name:`Repetir ejecución ${sourceId}`,exact:true}).click();
+  await expect(page.locator(".queue-item")).toHaveCount(2);
+  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
+  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Completado");
+  await expect(history.locator("tbody tr")).toHaveCount(1);
+  await expect(history.locator("tbody")).toContainText(`Origen: ${sourceId}`);
+  const event=page.waitForEvent("download");
+  await history.getByRole("button",{name:"Exportar historial CSV",exact:true}).click();
+  const csv=fs.readFileSync(await(await event).path(),"utf8");
+  expect(csv).toContain(sourceId);expect(csv).toContain("CNN_SIMULADA");
+  await navigate(page,"Modelos");
+  await page.getByRole("button",{name:"Registrar ficha",exact:true}).click();
+  const modelEvent=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Exportar ficha JSON",exact:true}).click();
+  const result=JSON.parse(fs.readFileSync(await(await modelEvent).path(),"utf8"));
+  expect(result.record.job.config.layers[0].filters).toBe(8);
+  expect(result.record.job.repeatedFrom).toBe(sourceId);
+  expect(result.record.job.startedAt).toBeTruthy();expect(result.record.job.endedAt).toBeTruthy();
+});
+
+
+test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar",async({page,browser})=>{
+  test.setTimeout(120000);
+  await applyDataset(page);
+  await navigate(page,"Diseñador CNN");
+  await page.getByLabel("Modo de configuración CNN",{exact:true}).selectOption("manual");
+  await page.getByRole("button",{name:"Eliminar bloque"}).last().click();
+  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("2");
+  await page.getByRole("spinbutton",{name:"Unidades Dense"}).fill("8");
+  await navigate(page,"Entrenamientos");
+  const trainer=page.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+  await expect(trainer.getByRole("button",{name:"Entrenar CNN real"})).toBeVisible();
+  await trainer.getByLabel("Épocas de entrenamiento real").fill("1");
+  await trainer.getByLabel("Batch del entrenamiento real").fill("8");
+  await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
+  await expect(trainer.getByText(/Pesos guardados en IndexedDB/)).toBeVisible({timeout:100000});
+  await expect(trainer.getByRole("img",{name:"Precisión real medida en cada época"})).toBeVisible();
+  await expect(trainer.getByRole("img",{name:"Pérdida real medida en cada época"})).toBeVisible();
+  await expect(trainer.getByRole("button",{name:"Exportar informe JSON de entrenamiento real"})).toBeVisible();
+
+  // Respaldo portable de un solo archivo; restauración en un navegador limpio.
+  const downloadEvent=page.waitForEvent("download");
+  await trainer.getByRole("button",{name:"Descargar respaldo CNN"}).click();
+  const download=await downloadEvent;
+  expect(download.suggestedFilename()).toMatch(/\.ncnn$/);
+  const backupPath=await download.path();
+  const backup=fs.readFileSync(backupPath);
+  expect(backup.subarray(0,8).toString("utf8")).toBe("NLCNN001");
+  expect(backup.byteLength).toBeGreaterThan(1000);
+
+  const isolated=await browser.newContext();
+  try{
+    const other=await isolated.newPage();
+    await other.goto("/");
+    await navigate(other,"Entrenamientos");
+    const restored=other.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+    await restored.getByLabel("Restaurar modelo CNN desde respaldo").setInputFiles(backupPath);
+    await expect(restored.getByText(/Modelo CNN restaurado con integridad verificada/)).toBeVisible({timeout:30000});
+    await restored.getByLabel("Imagen para predecir con modelo respaldado")
+      .setInputFiles(path.join(datasetDirectory,"0",fs.readdirSync(path.join(datasetDirectory,"0"))[0]));
+    await expect(restored.getByRole("table")).toBeVisible({timeout:30000});
+    await expect(restored.getByRole("table").locator("tbody tr")).toHaveCount(10);
+    // Reimportar no debe sobrescribir sin autorización los pesos guardados.
+    await restored.getByLabel("Restaurar modelo CNN desde respaldo").setInputFiles(backupPath);
+    await expect(restored.getByRole("alert")).toContainText("ya existe en este navegador");
+  }finally{await isolated.close();}
+});
+
+
+test("Accesibilidad: salto al contenido, navegación y menú adaptable al móvil",async({page})=>{
+  const skip=page.getByRole("link",{name:"Saltar al contenido principal"});
+  await expect(skip).toBeAttached();
+  await page.keyboard.press("Tab");
+  await expect(skip).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("#neurolab-main-content")).toBeFocused();
+
+  await page.setViewportSize({width:390,height:844});
+  const menu=page.getByRole("button",{name:"Ocultar menú"});
+  await expect(menu).toBeVisible();
+  await expect(menu).toHaveAttribute("aria-expanded","true");
+  await menu.click();
+  const nav=page.getByRole("navigation",{name:"Navegación principal",includeHidden:true});
+  await expect(nav).toBeHidden();
+  await page.getByRole("button",{name:"Mostrar menú"}).click();
+  await expect(nav).toBeVisible();
+  await nav.getByRole("button",{name:"Reportes",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Reportes",level:1,exact:true})).toBeFocused();
+  await expect(nav.getByRole("button",{name:"Reportes",exact:true})).toHaveAttribute("aria-current","page");
+  expect(await page.title()).toBe("Reportes | NeuroLab Enterprise");
+  await nav.getByRole("button",{name:"Dashboard",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Dashboard",level:1,exact:true})).toBeFocused();
+  await expect(page.getByRole("region",{name:"Accesos rápidos del laboratorio"})).toBeVisible();
+  await page.getByRole("button",{name:"Abrir entrenamiento real",exact:true}).click();
+  await expect(page.getByRole("heading",{name:"Entrenamientos",level:1,exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
 });

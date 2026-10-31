@@ -59,6 +59,10 @@ export type Metric = {
 };
 
 export type Job = {
+  createdAt?: string;
+  startedAt?: string;
+  endedAt?: string;
+  repeatedFrom?: string;
   configurationMode?: "automatic" | "manual";
   id: string;
   projectId: string;
@@ -253,7 +257,14 @@ export function terminal(status: Job["status"]) {
 }
 
 export function advanceJobs(jobs: Job[]): Job[] {
-  return advanceWithControls(jobs);
+  const now=new Date().toISOString();
+  return advanceWithControls(jobs).map((next,index)=>{
+    if(next===jobs[index])return next;
+    return {...next,
+      startedAt:next.startedAt??(next.status==="Ejecutando"?now:undefined),
+      endedAt:next.endedAt??(terminal(next.status)?now:undefined),
+    };
+  });
 }
 
 export function csvCell(value: string | number) {

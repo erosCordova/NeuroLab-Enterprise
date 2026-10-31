@@ -27,3 +27,15 @@ service-account*.json
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Python backend
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+
+# CNN real: evitar versionar pesos y artefactos de entrenamiento
+*.keras
+*.h5
+resultados/
+modelos-entrenados/
