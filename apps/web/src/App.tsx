@@ -1,4 +1,5 @@
 import TrainingHistory from "./TrainingHistory";
+import BrandLogo from "./BrandLogo";
 import MNISTImportPanel from "./MNISTImportPanel";
 import type {MnistData} from "./mnistDataset";
 import RealCNNResults from "./RealCNNResults";
@@ -326,12 +327,12 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
     <a className="cnn-skip-link" href="#neurolab-main-content">Saltar al contenido principal</a>
     <aside className="sidebar">
       <div className="cnn-brand-row">
-        <div className="brand"><span className="brand-icon" aria-hidden="true">N</span><div>NeuroLab<strong>Enterprise</strong><small>LABORATORIO CNN</small></div></div>
+        <div className="brand"><BrandLogo inverse/></div>
         <button className="cnn-mobile-menu" type="button" aria-expanded={mobileMenuOpen} aria-controls="neurolab-main-nav" onClick={()=>setMobileMenuOpen(open=>!open)}>
           {mobileMenuOpen?"Ocultar menú":"Mostrar menú"}
         </button>
       </div>
-      <div className="workspace"><span>CNN</span><div><strong>Visión computacional</strong><small>Clasificación de imágenes</small></div></div>
+      <div className="workspace"><span>IA</span><div><strong>Mis proyectos</strong><small>Entrenamiento y modelos</small></div></div>
       <p className="nav-label">ESPACIO DE TRABAJO</p>
       <nav id="neurolab-main-nav" className="cnn-main-nav" data-collapsed={mobileMenuOpen?undefined:"true"} aria-label="Navegación principal">
       {pages.map((item,index)=><div key={item}>
@@ -339,15 +340,13 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
         <button type="button" className={page===item?"nav-item active":"nav-item"} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>
       </div>)}
     </nav>
-      <div className="sidebar-foot">Exclusivamente CNN<small>{onPersistProject?"Proyectos y métricas en PostgreSQL":"Datos de esta sesión en memoria"}</small></div>
+      <div className="sidebar-foot">NeuroLab Enterprise</div>
     </aside>
     <main id="neurolab-main-content" tabIndex={-1}>
-      <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · REAL + DEMO</span></header>
+      <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">Mi laboratorio</span></header>
       <div className="content">
         <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1 ref={pageHeading} tabIndex={-1}>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
-        <details className="cnn-storage-info"><summary>¿Qué se guarda en el servidor y qué queda en mi navegador?</summary>
-          <p>Los pesos de los modelos se conservan en este navegador (IndexedDB). {onPersistProject?"Los proyectos y reportes se guardan en PostgreSQL. Las imágenes y configuraciones de arquitectura todavía no se sincronizan.":"Los proyectos y métricas de esta sesión no se sincronizan con PostgreSQL."} Las simulaciones solo son didácticas.</p>
-        </details>
+        
         <label className="field cnn-project no-print"><span>Proyecto activo</span><select aria-label="Proyecto activo" value={projectId} onChange={event=>changeProject(event.target.value)}>{projects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         {error&&<p className="error" role="alert">{error}</p>}{message&&<p className="feedback" role="status">{message}</p>}
 

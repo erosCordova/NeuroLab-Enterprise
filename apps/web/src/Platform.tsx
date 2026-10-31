@@ -1,5 +1,7 @@
 import {useEffect,useState} from "react";
 import App from "./App";
+import BrandLogo from "./BrandLogo";
+import Landing from "./Landing";
 import ProjectsPanel from "./ProjectsPanel";
 import {api,apiEnabled,persistProject,deleteStoredProject} from "./api";
 import type {Account,StoredProject} from "./api";
@@ -50,13 +52,13 @@ export default function Platform(){
   }
   if(!apiEnabled)return <App/>;
   if(loading)return <main className="platform-loading"><p role="status">Conectando con NeuroLab…</p></main>;
-  if(user&&projects.length)return <><div className="account-strip"><span><strong>{user.display_name}</strong> · Proyectos en PostgreSQL</span><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>{error&&<p role="alert">{error}</p>}
+  if(user&&projects.length)return <><div className="account-strip"><span><strong>{user.display_name}</strong> · Mi espacio</span><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>{error&&<p role="alert">{error}</p>}
     <App key={user.id} initialProjects={projects} onPersistProject={save} onDeleteProject={deleteProject}/></>;
   if(user)return <main className="platform-onboarding"><div className="panel-head"><h1>Tu primer proyecto CNN</h1><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>
-    <p className="muted">Los proyectos se guardarán en tu cuenta de PostgreSQL.</p>{error&&<p role="alert">{error}</p>}
+    <p className="muted">Crea un proyecto para empezar.</p>{error&&<p role="alert">{error}</p>}
     <ProjectsPanel projects={[]} activeId="" persistent onSave={save} onOpen={()=>{}}/></main>;
-  return <main className="platform-auth"><section className="platform-story"><div className="eyebrow">NEUROLAB ENTERPRISE</div><h1>Tu laboratorio de visión artificial.</h1><p>Organiza tus proyectos CNN, entrena imágenes y recupera los informes asociados a tu cuenta.</p><div className="platform-note">Proyectos e informes de entrenamientos persistentes en PostgreSQL. Los pesos CNN se conservan únicamente en el navegador que los entrenó.</div></section>
-    <section className="panel platform-form" aria-label="Acceso a NeuroLab"><span className="badge">PLATAFORMA CNN</span><h2>{register?"Crear cuenta":"Iniciar sesión"}</h2>
+  return <Landing>
+    <section className="panel platform-form" aria-label="Acceso a NeuroLab"><BrandLogo compact/><h2>{register?"Crear cuenta":"Iniciar sesión"}</h2>
       <p className="muted">{register?"Empieza con una cuenta personal.":"Continúa con tus proyectos guardados."}</p>
       <form onSubmit={async event=>{
         event.preventDefault();setBusy(true);setError("");
@@ -78,5 +80,5 @@ export default function Platform(){
         </fieldset>
       </form>
       <button className="text-button" disabled={busy} onClick={()=>void load()}>Reintentar conexión</button>
-    </section></main>;
+    </section></Landing>;
 }
