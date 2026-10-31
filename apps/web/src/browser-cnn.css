@@ -12,3 +12,9 @@
   .browser-cnn .cnn-three{grid-template-columns:minmax(0,1fr)}
   .browser-cnn .cnn-two-charts{grid-template-columns:minmax(0,1fr)}
 }
+
+.photo-official-check{border:1px solid #d6e9e5;border-radius:12px;padding:14px;margin:16px 0;background:#fbfefd}
+.photo-official-result{display:flex;gap:16px;align-items:center;margin-top:12px}
+.photo-official-result img{image-rendering:pixelated;object-fit:contain;border-radius:9px;background:#eef4f5;border:1px solid #dbe7e9;min-width:84px}
+.photo-official-result p{margin:5px 0;font-size:13px}
+@media(max-width:600px){.photo-official-result{align-items:flex-start}}

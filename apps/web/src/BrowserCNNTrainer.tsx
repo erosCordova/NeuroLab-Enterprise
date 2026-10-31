@@ -58,6 +58,9 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [tensorBytes,setTensorBytes]=useState(0);
   const [savingHistory,setSavingHistory]=useState(false);
   const [historySaved,setHistorySaved]=useState(false);
+  const [officialBusy,setOfficialBusy]=useState(false);
+  const [officialError,setOfficialError]=useState("");
+  const [official,setOfficial]=useState<{preview:string;expected:string;predicted:string;confidence:number;correct:boolean}|null>(null);
   const controller=useRef<AbortController|null>(null);
 
   useEffect(()=>()=>controller.current?.abort(),[]);
@@ -138,6 +141,44 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 
+  async function checkOfficialTest(){
+    if(!mnist||!report)return;
+    setOfficial(null);setOfficialError("");setOfficialBusy(true);
+    let classifier:import("@tensorflow/tfjs").LayersModel|undefined;
+    let input:import("@tensorflow/tfjs").Tensor4D|undefined;
+    let output:import("@tensorflow/tfjs").Tensor|undefined;
+    try{
+      const {mnistFingerprint}=await import("./mnistDataset");
+      if(report.dataset_fingerprint!==await mnistFingerprint(mnist.source,mnist.limit)||
+         report.classes.some((name,i)=>name!==classNamesForSource(mnist.source)[i])){
+        throw new Error("El modelo y el dataset actual no coinciden. Vuelve a conectar el origen del entrenamiento para realizar esta prueba.");
+      }
+      const tf=await import("@tensorflow/tfjs");
+      const values=new Float32Array(784);
+      const canvas=document.createElement("canvas");canvas.width=28;canvas.height=28;
+      const context=canvas.getContext("2d");
+      if(!context)throw new Error("No se pudo preparar el ejemplo de prueba.");
+      const image=context.createImageData(28,28);
+      for(let pixel=0;pixel<784;pixel++){
+        const value=mnist.testPixels[pixel];
+        values[pixel]=value/255;
+        const pos=pixel*4;
+        image.data[pos]=image.data[pos+1]=image.data[pos+2]=value;
+        image.data[pos+3]=255;
+      }
+      context.putImageData(image,0,0);
+      const expected=report.classes[mnist.testLabels[0]];
+      classifier=await tf.loadLayersModel(report.model_ref);
+      input=tf.tensor4d(values,[1,28,28,1]);
+      output=classifier.predict(input) as import("@tensorflow/tfjs").Tensor;
+      const scores=await output.data();
+      if(scores.length!==report.classes.length)throw new Error("El resultado no corresponde a las categorías del modelo.");
+      const best=Array.from(scores).reduce((selected,value,index,all)=>value>all[selected]?index:selected,0);
+      const predicted=report.classes[best];
+      setOfficial({preview:canvas.toDataURL("image/png"),expected,predicted,confidence:scores[best],correct:predicted===expected});
+    }catch(cause){setOfficialError(cause instanceof Error?cause.message:"No se pudo ejecutar la prueba oficial.");}
+    finally{output?.dispose();input?.dispose();classifier?.dispose();setOfficialBusy(false);}
+  }
   async function inspectSavedModel(){
     if(!report)return;
     setInspecting(true);setInspectError("");setInspectMessage("");
@@ -246,6 +287,21 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       <h3>Reconocer una imagen con los pesos guardados</h3>
       {mnist&&<><p className="caption">{isFashionDataset(mnist.source)?"Fashion-MNIST utiliza imágenes oficiales en escala de grises de 28×28.":"MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro."}</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>{isFashionDataset(mnist.source)?"Descargar prenda oficial de prueba (PNG)":"Descargar dígito oficial de prueba (PNG)"}</button></>}
       <p className="caption">El modelo no se reentrena: se recupera de IndexedDB y se aplica a una imagen nueva.</p>
+      {mnist&&<section className="photo-official-check" aria-label="Verificación automática con imagen de prueba oficial">
+        <button className="secondary" type="button" disabled={officialBusy||working} onClick={()=>void checkOfficialTest()}>
+          {officialBusy?"Comprobando muestra oficial…":"Comprobar ahora con una imagen oficial"}
+        </button>
+        <p className="caption">Prueba sin descargar ni subir archivos: compara la predicción con la etiqueta real de la primera imagen del conjunto oficial de prueba.</p>
+        {officialError&&<p role="alert" className="error">{officialError}</p>}
+        {official&&<div className="photo-official-result">
+          <img src={official.preview} width="84" height="84" alt="Imagen del conjunto oficial de prueba"/>
+          <div><strong>{official.correct?"Clasificación correcta":"Clasificación incorrecta"}</strong>
+            <p>Etiqueta real: <strong>{official.expected}</strong></p>
+            <p>Predicción: <strong>{official.predicted}</strong> · confianza {(official.confidence*100).toFixed(2)}%</p>
+            <p className="caption">Este resultado es de una sola imagen; consulta también la precisión de prueba del conjunto completo.</p>
+          </div>
+        </div>}
+      </section>}
       <PredictionPanel key={report.model_ref} inputLabel="Imagen para clasificar"
         inputAriaLabel="Imagen para predecir con modelo respaldado"
         disabled={working} digitMode={report.classes.length===10&&report.classes.every((name,index)=>name===String(index))}
