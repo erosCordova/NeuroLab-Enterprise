@@ -1090,3 +1090,49 @@ test("CSV regresión: recomienda salida lineal y evalúa MAE",async({page})=>{
   await expect(box.getByText("Modelo entrenado y guardado en este navegador.")).toBeVisible({timeout:90000});
   await expect(box.getByText("Prueba independiente · MAE")).toBeVisible();
 });
+
+
+test("Biblioteca de datasets: guardar varios CSV, seleccionar, renombrar, recargar y eliminar",async({page})=>{
+  await navigate(page,"Datasets");
+  const library=page.getByRole("region",{name:"Biblioteca de datasets"});
+  const uploader=page.getByRole("region",{name:"Datos tabulares"}).getByLabel("Archivo CSV o TSV");
+  const make=(name,kind)=>({
+    name,mimeType:"text/csv",
+    buffer:Buffer.from(["edad,categoria,clase",...Array.from({length:50},(_,i)=>
+      [20+i,kind+i%2,i%2].join(","))].join("\n"))
+  });
+  await uploader.setInputFiles(make("primero.csv","N"));
+  await expect(library.getByText("1 guardados")).toBeVisible({timeout:15000});
+  await uploader.setInputFiles(make("segundo.csv","S"));
+  await expect(library.getByText("2 guardados")).toBeVisible({timeout:15000});
+  await expect(library.getByRole("article",{name:"Dataset primero"})).toBeVisible();
+  await expect(library.getByRole("article",{name:"Dataset segundo"})).toBeVisible();
+  await library.getByRole("button",{name:"Renombrar dataset segundo"}).click();
+  await library.getByLabel("Nuevo nombre de segundo").fill("segundo corregido");
+  await library.getByRole("button",{name:"Guardar"}).click();
+  await expect(library.getByRole("article",{name:"Dataset segundo corregido"})).toBeVisible();
+  await library.getByRole("article",{name:"Dataset primero"}).getByRole("button",{name:"Usar dataset"}).click();
+  await expect(library.getByRole("article",{name:"Dataset primero"}).getByText("Activo")).toBeVisible();
+  await page.reload();
+  await navigate(page,"Datasets");
+  await expect(library.getByText("2 guardados")).toBeVisible({timeout:15000});
+  await expect(library.getByRole("article",{name:"Dataset primero"}).getByText("Activo")).toBeVisible();
+  await expect(page.getByLabel("Nombre del dataset tabular")).toHaveValue("primero");
+  page.once("dialog",dialog=>dialog.accept());
+  await library.getByRole("button",{name:"Eliminar dataset segundo corregido"}).click();
+  await expect(library.getByText("1 guardados")).toBeVisible();
+  await expect(library.getByRole("article",{name:"Dataset primero"})).toBeVisible();
+});
+
+test("Biblioteca de imágenes: restaura archivos binarios sin volver a seleccionarlos",async({page})=>{
+  await applyDataset(page);
+  const library=page.getByRole("region",{name:"Biblioteca de datasets"});
+  await expect(library.getByText("1 guardados")).toBeVisible({timeout:20000});
+  await page.reload();
+  await navigate(page,"Datasets");
+  await expect(library.getByText("1 guardados")).toBeVisible({timeout:15000});
+  await expect(page.getByRole("heading",{name:"Dataset aplicado"})).toBeVisible({timeout:15000});
+  await expect(page.getByText(/200 imágenes · 10 clases/)).toBeVisible();
+  await navigate(page,"Entrenamientos");
+  await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
+});
