@@ -45,6 +45,9 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [stage,setStage]=useState("");
   const [metrics,setMetrics]=useState<Metric[]>([]);
   const [networkTrace,setNetworkTrace]=useState<NetworkTrace|null>(null);
+  const [inspecting,setInspecting]=useState(false);
+  const [inspectError,setInspectError]=useState("");
+  const [inspectMessage,setInspectMessage]=useState("");
   const [report,setReport]=useState<BrowserReport|null>(null);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
@@ -83,7 +86,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
 
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setBatchState("");setTensorBytes(0);setWorking(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
@@ -147,6 +150,42 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     a.click();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
   }
 
+  async function inspectSavedModel(){
+    if(!report)return;
+    setInspecting(true);setInspectError("");setInspectMessage("");
+    let model:import("@tensorflow/tfjs").LayersModel|undefined;
+    let sample:import("@tensorflow/tfjs").Tensor4D|undefined;
+    try{
+      const tf=await import("@tensorflow/tfjs");
+      const {captureNetworkTrace}=await import("./networkTelemetry");
+      const {partitionMnist,mnistFingerprint}=await import("./mnistDataset");
+      const {pixelsOfImage}=await import("./browserCNN");
+      let values:Float32Array,label:string;
+      const digits=report.classes.length===10&&report.classes.every((item,index)=>item===String(index));
+      if(mnist&&digits&&await mnistFingerprint(mnist.source,mnist.limit)===report.dataset_fingerprint){
+        const index=partitionMnist(mnist).validation[0];
+        values=new Float32Array(28*28);
+        for(let p=0;p<784;p++)values[p]=mnist.trainPixels[index*784+p]/255;
+        label=String(mnist.trainLabels[index]);
+      }else if(dataset&&dataset.fingerprint===report.dataset_fingerprint){
+        const index=dataset.validation[0];
+        values=await pixelsOfImage(dataset.images[index].file,report.config);
+        label=dataset.images[index].label;
+      }else{
+        throw new Error("Vuelve a conectar el mismo dataset con el que entrenaste este modelo. No necesitas volver a entrenar.");
+      }
+      model=await tf.loadLayersModel(report.model_ref);
+      sample=tf.tensor4d(values,[1,report.config.size,report.config.size,report.config.channels]);
+      setNetworkTrace(captureNetworkTrace(model,sample,report.config,report.classes,report.completed_epochs,label));
+      setInspectMessage("Activaciones reales obtenidas de los pesos guardados. Se muestra el estado final del modelo, no un historial de épocas anteriores.");
+    }catch(cause){
+      setInspectError(cause instanceof Error?cause.message:"No se pudo inspeccionar el modelo guardado.");
+    }finally{
+      sample?.dispose();
+      model?.dispose();
+      setInspecting(false);
+    }
+  }
   function exportReport(){
     if(!report)return;
     const blob=new Blob([JSON.stringify(report,null,2)],{type:"application/json"});
@@ -198,12 +237,17 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
         {connected&&!historySaved&&<button className="primary cnn-spaced" type="button" disabled={savingHistory||working} onClick={()=>void saveHistory(report)}>
           {savingHistory?"Guardando historial…":"Reintentar guardar historial en PostgreSQL"}
         </button>}
+        <button type="button" className="primary cnn-spaced" disabled={working||inspecting} onClick={()=>void inspectSavedModel()}>
+          {inspecting?"Inspeccionando capas…":"Inspeccionar modelo guardado"}
+        </button>
+        {inspectMessage&&<p className="feedback" role="status">{inspectMessage}</p>}
+        {inspectError&&<p className="error" role="alert">{inspectError}</p>}
         <button className="secondary cnn-spaced" onClick={exportReport}>Exportar informe JSON de entrenamiento real</button>
       </div>}
     </>}
     {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setNetworkTrace(null);setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setReport(restored);setNetworkTrace(null);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
