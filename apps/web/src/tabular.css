@@ -29,3 +29,8 @@
 .nl-tabular-result strong{font-size:20px;color:#058d81}
 @media(max-width:850px){.nl-tabular-plan{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:450px){.nl-tabular-plan{grid-template-columns:1fr}.nl-tabular-settings .field{flex-basis:100%}}
+
+.nl-tabular-manual{border:1px solid #e0e7f5;background:linear-gradient(125deg,#f9fbff,#f9fcfa);border-radius:10px;padding:14px;display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:13px}
+.nl-tabular-manual .field{margin:0}
+@media(max-width:800px){.nl-tabular-manual{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:460px){.nl-tabular-manual{grid-template-columns:1fr}}

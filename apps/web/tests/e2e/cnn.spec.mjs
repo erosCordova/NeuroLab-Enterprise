@@ -1068,6 +1068,9 @@ test("CSV URL pública: multiclase Softmax y configuración manual",async({page}
   await expect(box.getByText("softmax",{exact:true})).toBeVisible();
   await box.getByLabel("Modo de configuración tabular").selectOption("manual");
   await expect(box.getByLabel("Tipo de problema")).toBeVisible();
+  await expect(box.getByLabel("Neuronas capa 1")).toBeVisible();
+  await box.getByLabel("Neuronas capa 1").fill("24");
+  await expect(box.getByLabel("Neuronas capa 1")).toHaveValue("24");
   await box.getByLabel("Tipo de problema").selectOption("regression");
   await expect(box.getByText(/Regresión requiere una variable objetivo numérica/)).toBeVisible();
 });
