@@ -38,7 +38,7 @@ function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
   </svg>;
 }
 
-export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connected,onSaved,demoJob,demoPaused}:Props) {
+export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connected,onSaved}:Props) {
   const [epochs,setEpochs]=useState("12");
   const [batch,setBatch]=useState("16");
   const [working,setWorking]=useState(false);
