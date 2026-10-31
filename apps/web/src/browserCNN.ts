@@ -237,11 +237,12 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
   if(!modelRef.startsWith("indexeddb://neurolab-cnn-"))throw new Error("Referencia de modelo inválida.");
   const model=await tf.loadLayersModel(modelRef);
   try {
-    const pixels=autoInvertLightBackground&&config.channels===1&&config.size===28
-      ?await (await import("./mnistPreprocess")).preprocessMnistPhoto(file)
-      :await pixelsOfImage(file,config);
     const mnistPhoto=autoInvertLightBackground&&config.channels===1&&config.size===28;
-    const views=mnistPhoto
+    const prepared=mnistPhoto
+      ?await (await import("./mnistPreprocess")).preprocessMnistPhotoWithMeta(file):null;
+    const pixels=prepared?.pixels??await pixelsOfImage(file,config);
+    // Las muestras oficiales MNIST de 28x28 no necesitan ensamble de traslaciones.
+    const views=prepared&&!prepared.was28
       ?(await import("./mnistRobust")).mnistInferenceViews(pixels):[pixels];
     const flattened=new Float32Array(views.length*pixels.length);
     views.forEach((view,index)=>flattened.set(view,index*pixels.length));

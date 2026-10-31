@@ -165,7 +165,7 @@ export function normalizeMnistPixels(gray:Float32Array,width:number,height:numbe
   return shifted;
 }
 
-export async function preprocessMnistPhoto(file:File):Promise<Float32Array>{
+export async function preprocessMnistPhotoWithMeta(file:File):Promise<{pixels:Float32Array;was28:boolean}>{
   const bitmap=await createImageBitmap(file);
   try{
     const ratio=Math.min(1,256/Math.max(bitmap.width,bitmap.height));
@@ -183,6 +183,9 @@ export async function preprocessMnistPhoto(file:File):Promise<Float32Array>{
     for(let i=0;i<grayscale.length;i++){
       const p=i*4;grayscale[i]=clamp((rgba[p]*.299+rgba[p+1]*.587+rgba[p+2]*.114)/255);
     }
-    return normalizeMnistPixels(grayscale,width,height);
+    return {pixels:normalizeMnistPixels(grayscale,width,height),was28:bitmap.width===28&&bitmap.height===28};
   }finally{bitmap.close();}
+}
+export async function preprocessMnistPhoto(file:File):Promise<Float32Array>{
+  return (await preprocessMnistPhotoWithMeta(file)).pixels;
 }
