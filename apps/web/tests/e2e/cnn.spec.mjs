@@ -980,7 +980,7 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
   await expect(page.getByText(/MNIST cargado · activo para entrenamiento/)).toBeVisible({timeout:30000});
   await expect(page.getByText("900",{exact:true})).toBeVisible();
   await expect(page.getByText("100",{exact:true})).toBeVisible();
-  await expect(page.getByText("10.000",{exact:true})).toBeVisible();
+  await expect(page.getByText("1,000",{exact:true})).toBeVisible();
   await page.getByRole("button",{name:"Usar cantidad seleccionada"}).click();
   await navigate(page,"Entrenamientos");
   await expect(page.getByText(/MNIST · origen público/)).toBeVisible();

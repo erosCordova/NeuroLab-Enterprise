@@ -126,7 +126,7 @@ export function partitionMnist(data:MnistData,seed=42) {
   const ordered=selectMnistIndices(data.trainLabels,data.limit,seed);
   const valSize=Math.max(10,Math.round(data.limit*.1));
   return {train:ordered.slice(valSize),validation:ordered.slice(0,valSize),
-    test:Array.from({length:data.testLabels.length},(_,index)=>index)};
+    test:Array.from({length:Math.min(data.testLabels.length,data.limit)},(_,index)=>index)};
 }
 export async function mnistFingerprint(source:string,limit:MnistLimit,seed=42) {
   const bytes=new TextEncoder().encode("mnist-cvdf-idx-v1:"+source+":"+limit+":"+seed);

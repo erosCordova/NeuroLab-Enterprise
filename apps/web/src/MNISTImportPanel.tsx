@@ -45,7 +45,7 @@ export default function MNISTImportPanel({current,onApply,onRemove,active}:Props
     {current&&size&&<div className="mnist-ready">
       <strong>MNIST cargado {active?"· activo para entrenamiento":"· no seleccionado como origen activo"}</strong>
       <div className="metric-grid"><div><small>Entrenamiento</small><strong>{size.train.length.toLocaleString("es-PE")}</strong></div><div><small>Validación</small><strong>{size.validation.length.toLocaleString("es-PE")}</strong></div><div><small>Prueba independiente</small><strong>{size.test.length.toLocaleString("es-PE")}</strong></div><div><small>Clases</small><strong>10</strong></div></div>
-      <p className="caption">La selección es equilibrada y reproducible (semilla 42). La prueba oficial nunca participa en el entrenamiento ni en la selección del modelo.</p>
+      <p className="caption">La selección es equilibrada y reproducible (semilla 42). La prueba oficial nunca participa en el entrenamiento ni en la selección del modelo. En la prueba rápida se evalúan 1 000 imágenes del conjunto oficial; al entrenar con 10 000 o 60 000 ejemplos se evalúa el conjunto oficial completo.</p>
     </div>}
   </section>;
 }
