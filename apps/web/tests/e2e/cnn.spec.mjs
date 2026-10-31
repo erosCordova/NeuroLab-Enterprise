@@ -945,7 +945,7 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
   await expect(visual.getByText("¿Qué está aprendiendo la CNN?")).toBeVisible();
   await expect(visual.getByText("CONV2D 1")).toBeVisible();
   await expect(visual.getByText("MAXPOOL 1")).toBeVisible();
-  await expect(visual.getByText("FLATTEN")).toBeVisible();
+  await expect(visual.getByRole("button",{name:"Examinar capa FLATTEN"})).toBeVisible();
   await expect(visual.getByText("DENSE",{exact:true})).toBeVisible();
   await expect(visual.getByText("SALIDA",{exact:true})).toBeVisible();
   await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","3d");
@@ -995,7 +995,7 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
   await navigate(page,"Entrenamientos");
   await expect(page.getByText(/MNIST · origen público/)).toBeVisible();
   await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
-  await expect(page.locator(".nl-neural-stage").filter({hasText:"SALIDA"})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Examinar capa SALIDA"})).toBeVisible();
   await page.getByLabel("Épocas de entrenamiento real").fill("1");
   await page.getByLabel("Batch del entrenamiento real").fill("64");
   await page.getByRole("button",{name:"Entrenar CNN real"}).click();
