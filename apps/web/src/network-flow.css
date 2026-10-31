@@ -1,68 +1,64 @@
-/* Explorador de capas CNN: mediciones reales, no grafo denso inventado. */
-.nl-neural-panel{margin:22px 0;border:1px solid #c5e7df;border-radius:16px;background:#f8fcfa;overflow:hidden;box-shadow:0 5px 20px #163b410a;min-width:0}
-.nl-neural-head{display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;padding:20px 21px 12px}
-.nl-neural-kicker{font-size:10px;font-weight:750;color:#0d9185;letter-spacing:1.6px;margin:0 0 7px}
-.nl-neural-head h3{font-size:20px;line-height:1.3;color:#143e43;margin:0 0 6px}
-.nl-neural-head p:not(.nl-neural-kicker){font-size:12px;color:#53777e;margin:0;line-height:1.7}
-.nl-neural-controls{display:flex;gap:7px;flex-wrap:wrap}
-.nl-neural-controls button{background:white;color:#20645f;border:1px solid #c1dfd8;border-radius:9px;padding:10px 12px;font-size:11px;font-weight:700;min-height:40px}
-.nl-neural-controls button.selected{background:#07988c;color:#fff;border-color:#07988c}
-.nl-neural-controls .nl-motion-toggle{background:#e6f8f2}
-.nl-neural-status,.nl-neural-data-heading{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:0 21px 12px;color:#53777b;font-size:11px}
-.nl-neural-status strong{color:#185255}
-.nl-neural-status>span:last-child{margin-left:auto}
-.nl-neural-live,.nl-neural-idle{width:9px;height:9px;background:#11bcab;border-radius:50%;box-shadow:0 0 0 4px #11bcab22}
-.nl-neural-idle{background:#afbec0;box-shadow:none}
-.nl-measured-tag,.nl-waiting-tag{display:inline-flex;font-size:10px;padding:5px 9px;border-radius:7px;background:#dff7ed;color:#067765;font-weight:750}
-.nl-waiting-tag{background:#e7eff1;color:#466772}
-.nl-neural-data-heading strong{color:#205158}
-.nl-neural-window{margin:0 15px;background:radial-gradient(ellipse at top,#143e49,#081d29 72%);border:1px solid #163e47;border-radius:14px;overflow:hidden;perspective:1000px}
-.nl-neural-scroll{overflow-x:auto;max-width:100%;scrollbar-color:#34616c #0a2630;scrollbar-width:thin;padding:27px 16px 34px}
-.nl-neural-scroll:focus-visible{outline:3px solid #2de6c9;outline-offset:-4px}
-.nl-layer-track{display:flex;align-items:stretch;width:max-content;min-width:100%;justify-content:flex-start;transform-origin:center;transition:transform .35s}
+.nl-neural-panel{margin:18px 0;border:1px solid #c9e5dc;border-radius:16px;background:#f8fcfa;overflow:hidden;box-shadow:0 6px 22px #173e4508;min-width:0}
+.nl-neural-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 18px 12px}
+.nl-heading{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.nl-heading h3{font-size:18px;line-height:1.3;color:#153d42;margin:0}
+.nl-status-pill{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;border-radius:20px;padding:6px 10px;background:#eef4f3;color:#507070}
+.nl-status-pill:before{content:"";width:7px;height:7px;border-radius:50%;background:#9aaead}
+.nl-status-pill.live{color:#057b6f;background:#daf8ed}
+.nl-status-pill.live:before{background:#0cb8a4;box-shadow:0 0 0 3px #0cb8a422}
+.nl-status-pill.done{color:#087c69;background:#e4f7ef}
+.nl-status-pill.done:before{background:#0caa7c}
+.nl-neural-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.nl-neural-controls select,.nl-neural-controls button{height:36px;font-size:11px;font-weight:700;border-radius:8px;border:1px solid #bedbd4;background:#fff;color:#195e56;padding:0 12px;cursor:pointer}
+.nl-neural-controls select{max-width:150px}
+.nl-view-toggle{display:flex;gap:3px;padding:3px;border:1px solid #cae0da;border-radius:10px;background:#e8f4ef}
+.nl-view-toggle button{height:28px;min-width:42px;padding:0 9px;border:none;border-radius:7px;background:transparent}
+.nl-view-toggle button.selected{color:#fff;background:#069a8c;box-shadow:0 2px 7px #0d82792a}
+.nl-motion-toggle{font-size:17px!important;min-width:40px}
+.nl-neural-data-heading{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:0 18px 12px;font-size:12px;color:#426b6c}
+.nl-epoch-pill,.nl-empty-pill{border-radius:7px;padding:6px 9px;font-weight:700;background:#e3f6f0;color:#0b7b6d;font-size:10px}
+.nl-empty-pill{background:#edf2f1;color:#657e81}
+.nl-sample-label strong{color:#124e4c;font-size:14px}
+.nl-sample-label small{color:#0a8a7c;font-weight:700}
+.nl-sample-arrow{color:#15a996;font-weight:800}
+.nl-neural-window{margin:0 14px;background:radial-gradient(ellipse at top,#15404b,#0a1d29 75%);border:1px solid #1a4650;border-radius:13px;overflow:hidden;perspective:1000px}
+.nl-neural-scroll{overflow-x:auto;scrollbar-width:thin;scrollbar-color:#376a6c #0a2531;padding:24px 16px;max-width:100%}
+.nl-neural-scroll:focus-visible{outline:3px solid #2bd8c0;outline-offset:-3px}
+.nl-layer-track{display:flex;align-items:stretch;width:max-content;min-width:100%;transform-origin:center;transition:transform .3s}
 .nl-neural-window[data-view="3d"] .nl-layer-track{transform:rotateX(4deg) skewY(-1deg)}
 .nl-track-group{display:flex;align-items:center}
-.nl-flow-arrow{width:47px;display:flex;justify-content:center;align-items:center;color:#36d5be;font-size:26px;font-weight:350}
-.nl-flow-arrow span{display:block;text-shadow:0 0 10px #20d3bb44}
-.nl-stage-card{width:153px;height:233px;flex:none;display:flex;flex-direction:column;align-items:stretch;text-align:left;padding:15px 12px 12px;border:1px solid #285562;border-radius:13px;background:linear-gradient(155deg,#133948,#0b2634);color:#e9fafb;cursor:pointer;box-shadow:0 5px 13px #0004;transition:border-color .2s,background .2s,transform .2s}
-.nl-stage-card:hover,.nl-stage-card.current{border-color:#4de3ce;transform:translateY(-3px);background:linear-gradient(145deg,#174b51,#0d2c37)}
-.nl-stage-card:focus-visible{outline:3px solid #5df6d9;outline-offset:2px}
-.nl-stage-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:3px;color:#d4f6f4;font-size:11px;font-weight:800;letter-spacing:.4px}
-.nl-stage-top small{font-size:8px;color:#a0c8d0;font-weight:700;letter-spacing:.6px}
-.nl-stage-card.measured .nl-stage-top small{color:#69ead6}
-.nl-stage-shape{color:#a9c7cd;font-size:10px;margin:8px 0 11px;min-height:15px}
-.nl-layer-bars{height:104px;display:flex;align-items:flex-end;gap:3px;padding:8px 4px;border-bottom:1px solid #47777c55;background:repeating-linear-gradient(to top,transparent 0,transparent 25px,#ffffff0b 26px);margin-bottom:11px}
-.nl-layer-bar{display:block;flex:1;min-width:3px;max-width:12px;border-radius:5px 5px 1px 1px;background:linear-gradient(to top,#12a9a0,#4af5d8);transition:height .4s ease;box-shadow:0 0 8px #3ee8d433}
-.nl-stage-card:not(.measured) .nl-layer-bar{background:#426c78;box-shadow:none}
-.nl-track-group:nth-child(2n) .nl-layer-bar{background:linear-gradient(to top,#8b6ecc,#bb9efe)}
-.nl-input-map{width:92px;height:104px;image-rendering:pixelated;align-self:center;border:1px solid #366770;border-radius:4px;background:#081923;margin:0 0 11px}
-.nl-stage-bottom{font-size:9px;color:#a5c4c8;margin-top:auto}
-.nl-stage-mag{font-size:9px;color:#56dbc8;margin-top:6px}
-.nl-layer-explanation{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;flex-wrap:wrap;margin:14px 20px 0;padding:15px 17px;background:#eaf8f3;border-radius:11px;border:1px solid #d4eae2}
-.nl-layer-explanation strong{font-size:13px;color:#175457}
-.nl-layer-explanation p{font-size:11px;max-width:520px;line-height:1.65;color:#4b6c71;margin:7px 0 0}
-.nl-layer-explanation .nl-measure-note{font-size:10px;color:#356c6c}
-.nl-layer-facts{display:grid;gap:5px;font-size:11px;color:#52797c}
-.nl-layer-facts strong{font-variant-numeric:tabular-nums}
-.nl-neural-footer{padding:16px 20px 19px;display:grid;gap:11px}
-.nl-neural-progress{display:grid;grid-template-columns:auto minmax(80px,1fr) auto;align-items:center;gap:12px;color:#436d72;font-size:11px}
-.nl-neural-progress progress{height:9px;margin:0}
-.nl-neural-progress strong{font-variant-numeric:tabular-nums;color:#0d8b7d}
-.nl-neural-batch{font-size:11px;color:#376e6d;margin:0}
-.nl-neural-metrics{display:flex;flex-wrap:wrap;gap:15px;color:#456c71;font-size:11px}
-.nl-neural-metrics strong{color:#175a58}
-.nl-neural-disclaimer{font-size:10px;line-height:1.75;color:#557579;margin:0}
-.nl-neural-error{color:#96504b;padding:15px}
-.nl-neural-window[data-motion="running"] .nl-flow-arrow span{animation:nl-real-flow .85s ease-in-out infinite alternate}
-@keyframes nl-real-flow{from{opacity:.35;transform:translateX(-2px)}to{opacity:1;transform:translateX(3px)}}
-@media(max-width:700px){.nl-neural-head{padding:15px}.nl-neural-status,.nl-neural-data-heading{padding:0 15px 12px}.nl-neural-status>span:last-child{margin-left:0}.nl-neural-window{margin:0 8px}.nl-layer-explanation{margin:12px 10px}.nl-neural-footer{padding:14px 15px}.nl-neural-progress{grid-template-columns:1fr auto}.nl-neural-progress progress{grid-column:1/-1;grid-row:2}}
+.nl-flow-arrow{font-size:24px;color:#34cfb8;width:38px;text-align:center;text-shadow:0 0 10px #20d5ba66}
+.nl-stage-card{width:136px;height:158px;flex:none;display:flex;flex-direction:column;padding:13px 11px 10px;text-align:left;border:1px solid #335e66;border-radius:11px;background:linear-gradient(155deg,#143b48,#0b2836);color:#edfafa;cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.nl-stage-card:hover,.nl-stage-card.current{border-color:#48d9bd;background:linear-gradient(155deg,#18494e,#0c3238);transform:translateY(-2px)}
+.nl-stage-card:focus-visible{outline:3px solid #64f1d7;outline-offset:2px}
+.nl-stage-top{font-size:11px;font-weight:800;letter-spacing:.3px;display:flex;align-items:center;justify-content:space-between;gap:4px}
+.nl-stage-top i{display:block;width:6px;height:6px;border-radius:50%;background:#62818a;flex:none}
+.nl-stage-card.measured .nl-stage-top i{background:#3de4bd;box-shadow:0 0 7px #3de4bd66}
+.nl-stage-shape{color:#a3c3ca;font-size:10px;line-height:1.35;margin:7px 0 8px}
+.nl-layer-bars{height:76px;display:flex;align-items:flex-end;justify-content:center;gap:3px;border-bottom:1px solid #49778077;background:repeating-linear-gradient(to top,transparent 0,transparent 24px,#ffffff0c 25px)}
+.nl-layer-bar{display:block;flex:1;max-width:11px;min-width:3px;border-radius:4px 4px 0 0;background:linear-gradient(to top,#078f8a,#39e5c8);box-shadow:0 0 8px #26dec233;transition:height .35s}
+.nl-stage-card:not(.measured) .nl-layer-bar{background:#37616d;box-shadow:none}
+.nl-track-group:nth-child(2n) .nl-layer-bar{background:linear-gradient(to top,#8265c0,#bc9ff0)}
+.nl-input-map{height:76px;width:78px;align-self:center;image-rendering:pixelated;background:#071923;border:1px solid #285460;border-radius:4px}
+.nl-layer-details{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;margin:12px 17px 0;padding:10px 14px;background:#edf8f4;border:1px solid #d8eae4;border-radius:9px;font-size:11px;color:#4e7375}
+.nl-layer-details strong.nl-selected-name{font-size:12px;color:#16534d}
+.nl-detail-value{font-weight:750;color:#087969;font-variant-numeric:tabular-nums}
+.nl-output-probabilities{flex-basis:100%;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:7px;padding-top:7px;border-top:1px solid #cfe6df}
+.nl-prob{display:flex;align-items:center;gap:5px;font-size:10px;color:#315b5b}
+.nl-prob>span{min-width:20px;font-weight:800;color:#134e4a;overflow:hidden;text-overflow:ellipsis}
+.nl-prob strong{width:45px;text-align:right;color:#177c70;font-variant-numeric:tabular-nums}
+.nl-prob-track{height:6px;flex:1;background:#d5e8e3;border-radius:8px;overflow:hidden}
+.nl-prob-track span{display:block;height:100%;border-radius:8px;background:linear-gradient(90deg,#0da58d,#48dac0)}
+.nl-neural-footer{padding:13px 18px 16px;display:grid;gap:10px}
+.nl-neural-progress{display:grid;grid-template-columns:auto minmax(80px,1fr) auto;gap:11px;align-items:center;font-size:11px;color:#4c6f70}
+.nl-neural-progress progress{height:9px}
+.nl-neural-progress strong{color:#087c70;font-variant-numeric:tabular-nums}
+.nl-neural-metrics{display:flex;gap:10px;flex-wrap:wrap}
+.nl-neural-metrics>span{background:#f0f8f5;border:1px solid #d4e8e0;border-radius:8px;padding:7px 10px;font-size:11px;color:#527473}
+.nl-neural-metrics strong{color:#125b54;margin-left:4px;font-variant-numeric:tabular-nums}
+.nl-neural-batch{font-size:11px;color:#3a7670}
+.nl-neural-error{padding:14px 18px;color:#ab4545}
+.nl-neural-window[data-motion="running"] .nl-flow-arrow{animation:nl-flow .9s ease-in-out infinite alternate}
+@keyframes nl-flow{from{opacity:.4;transform:translateX(-2px)}to{opacity:1;transform:translateX(3px)}}
+@media(max-width:650px){.nl-neural-head{padding:14px}.nl-neural-data-heading{padding:0 14px 10px}.nl-neural-window{margin:0 7px}.nl-layer-details{margin:10px 9px 0}.nl-neural-footer{padding:12px}.nl-neural-progress{grid-template-columns:1fr auto}.nl-neural-progress progress{grid-column:1/-1;grid-row:2}}
 @media(prefers-reduced-motion:reduce){.nl-neural-window *{animation:none!important;transition:none!important}}
-
-.nl-epoch-review{display:inline-flex;gap:8px;align-items:center;margin-left:auto;color:#2c645f;font-size:11px;font-weight:700}
-.nl-epoch-review select{background:#fff;border:1px solid #bfddd6;border-radius:8px;padding:8px;min-height:34px;color:#195853}
-.nl-output-probabilities{flex-basis:100%;padding-top:10px;border-top:1px solid #cee6df}
-.nl-output-probabilities>strong{display:block;margin-bottom:9px;font-size:11px;color:#185b55}
-.nl-output-probabilities>div{display:flex;flex-wrap:wrap;gap:7px}
-.nl-output-probabilities span{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1px solid #d1e7e0;border-radius:7px;padding:6px 9px;font-size:11px;color:#25645d;font-variant-numeric:tabular-nums}
-.nl-output-probabilities b{color:#084d46;font-size:12px}
-@media(max-width:700px){.nl-epoch-review{margin-left:0;flex-basis:100%}}

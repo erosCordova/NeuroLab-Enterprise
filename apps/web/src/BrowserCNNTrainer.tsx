@@ -179,7 +179,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       sample=tf.tensor4d(values,[1,report.config.size,report.config.size,report.config.channels]);
       const snapshot=captureNetworkTrace(model,sample,report.config,report.classes,report.completed_epochs,label);
       setNetworkTrace(snapshot);setNetworkHistory([snapshot]);
-      setInspectMessage("Activaciones reales obtenidas de los pesos guardados. Se muestra el estado final del modelo, no un historial de épocas anteriores.");
+      setInspectMessage("Modelo inspeccionado.");
     }catch(cause){
       setInspectError(cause instanceof Error?cause.message:"No se pudo inspeccionar el modelo guardado.");
     }finally{
