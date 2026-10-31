@@ -115,7 +115,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
     {selected&&<div className="nl-layer-details" aria-live="polite">
       <strong className="nl-selected-name">{selected.label}</strong>
       <span>{active?.shape??selected.shape}</span>
-      {active&&selected.mode!=="input"&&<span className="nl-detail-value">{active.magnitude.toFixed(3)}</span>}
+      {active&&selected.mode!=="pixels"&&<span className="nl-detail-value">{active.magnitude.toFixed(3)}</span>}
       {selected.key==="output"&&active&&<div className="nl-output-probabilities" aria-label="Probabilidades por clase">
         {active.preview.map((v,i)=><div key={i} className="nl-prob">
           <span>{labels[i]??i}</span><div className="nl-prob-track"><span style={{width:percent(v)}}/></div>
