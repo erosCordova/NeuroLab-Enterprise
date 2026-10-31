@@ -1,5 +1,8 @@
 import TrainingHistory from "./TrainingHistory";
 import TabularPanel from "./TabularPanel";
+import DatasetLibraryPanel from "./DatasetLibraryPanel";
+import {listLibrary,getLibraryEntry,saveLibraryEntry,chooseLibraryEntry,renameLibraryEntry,deleteLibraryEntry,clearProjectLibrary} from "./datasetLibrary";
+import type {LibraryEntry,LibraryContent} from "./datasetLibrary";
 import type {TabularDataset} from "./tabular";
 import BrandLogo from "./BrandLogo";
 import MNISTImportPanel from "./MNISTImportPanel";
@@ -88,7 +91,7 @@ function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
   </div>;
 }
 
-export default function App({initialProjects,onPersistProject,onDeleteProject}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>;onDeleteProject?:(id:string)=>Promise<void>}={}) {
+export default function App({initialProjects,onPersistProject,onDeleteProject,storageOwner="invitado"}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>;onDeleteProject?:(id:string)=>Promise<void>;storageOwner?:string}={}) {
   const [page,setPage]=useState<Page>("Dashboard");
   const [mobileMenuOpen,setMobileMenuOpen]=useState(true);
   const pageHeading=useRef<HTMLHeadingElement>(null);
@@ -99,6 +102,12 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
   const [tabularByProject,setTabularByProject]=useState<Record<string,TabularDataset>>({});
+  const [libraryItems,setLibraryItems]=useState<LibraryEntry[]>([]);
+  const [libraryActiveId,setLibraryActiveId]=useState<string|null>(null);
+  const [libraryLoading,setLibraryLoading]=useState(true);
+  const scopeRef=useRef("");
+  const libraryToken=useRef(0);
+  const editWrites=useRef<Promise<void>>(Promise.resolve());
   const [tabularReports,setTabularReports]=useState<Record<string,import("./tabularTrain").TabularResult>>({});
   const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
   const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular">>({});
@@ -129,7 +138,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   const request=useRef(0);
 
   const project=projects.find(item=>item.id===projectId)!;
-  const dataset=datasets[projectId];
+  scopeRef.current=JSON.stringify([storageOwner,projectId]);
+  const dataset=datasetOrigin[projectId]==="folder"?datasets[projectId]:undefined;
   const mnist=mnistByProject[projectId];
   const tabular=tabularByProject[projectId];
   const tabularActive=datasetOrigin[projectId]==="tabular"&&Boolean(tabular);
@@ -177,6 +187,108 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
     architectureError=cause instanceof Error?cause.message:"Configuración inválida.";
   }
 
+  function applyLibraryContent(pid:string,content:LibraryContent){
+    if(content.kind==="tabular"){
+      setTabularByProject(current=>({...current,[pid]:content.dataset}));
+      setDatasetOrigin(current=>({...current,[pid]:"tabular"}));
+    }else if(content.kind==="images"){
+      setDatasets(current=>({...current,[pid]:content.dataset}));
+      setDatasetOrigin(current=>({...current,[pid]:"folder"}));
+    }else{
+      setMnistByProject(current=>({...current,[pid]:content.dataset}));
+      setDatasetOrigin(current=>({...current,[pid]:"mnist"}));
+    }
+  }
+  function clearLibrarySelection(pid:string){
+    setDatasetOrigin(current=>({...current,[pid]:"none"}));
+    setTabularByProject(current=>{const next={...current};delete next[pid];return next;});
+    setDatasets(current=>{const next={...current};delete next[pid];return next;});
+    setMnistByProject(current=>{const next={...current};delete next[pid];return next;});
+  }
+  async function hydrateLibrary(owner:string,pid:string){
+    const scope=JSON.stringify([owner,pid]),token=++libraryToken.current;
+    setLibraryLoading(true);
+    try{
+      const state=await listLibrary(owner,pid);
+      const record=state.activeId?await getLibraryEntry(owner,pid,state.activeId):null;
+      if(scope!==scopeRef.current||token!==libraryToken.current)return;
+      setLibraryItems(state.items);setLibraryActiveId(state.activeId);
+      if(record)applyLibraryContent(pid,record.payload);
+      else clearLibrarySelection(pid);
+    }catch(cause){
+      if(scope===scopeRef.current&&token===libraryToken.current)
+        setError(cause instanceof Error?cause.message:"No se pudo abrir tu biblioteca.");
+    }finally{if(scope===scopeRef.current&&token===libraryToken.current)setLibraryLoading(false);}
+  }
+  useEffect(()=>{void hydrateLibrary(storageOwner,projectId);},[storageOwner,projectId]);
+  async function registerDataset(content:LibraryContent,id?:string){
+    const pid=projectId,owner=storageOwner,scope=JSON.stringify([owner,pid]),token=++libraryToken.current;
+    try{
+      const entry=await saveLibraryEntry(owner,pid,content,id);
+      const state=await listLibrary(owner,pid);
+      if(scope===scopeRef.current&&token===libraryToken.current){
+        setLibraryItems(state.items);setLibraryActiveId(entry.id);setLibraryLoading(false);
+        setMessage("Dataset guardado en tu biblioteca.");
+      }
+    }catch(cause){
+      if(scope===scopeRef.current){
+        setLibraryLoading(false);
+        const msg=cause instanceof Error?cause.message:"Error al guardar.";
+        setError(msg+" El dataset permanece disponible solo mientras esta pestaña esté abierta.");
+      }
+      throw cause;
+    }
+  }
+  function editCurrentTable(next:TabularDataset){
+    const pid=projectId,owner=storageOwner,scope=JSON.stringify([owner,pid]);
+    setTabularByProject(current=>({...current,[pid]:next}));
+    setDatasetOrigin(current=>({...current,[pid]:"tabular"}));
+    const id=libraryActiveId;
+    if(!id||!libraryItems.some(item=>item.id===id&&item.kind==="tabular"))return;
+    editWrites.current=editWrites.current.then(async()=>{
+      const entry=await saveLibraryEntry(owner,pid,{kind:"tabular",dataset:next},id,false);
+      if(scope===scopeRef.current)setLibraryItems(current=>current.map(item=>item.id===entry.id?entry:item));
+    }).catch(cause=>{if(scope===scopeRef.current)
+      setError(cause instanceof Error?cause.message:"No se pudo conservar el cambio.");});
+  }
+  async function selectLibraryItem(id:string){
+    const owner=storageOwner,pid=projectId;
+    const record=await getLibraryEntry(owner,pid,id);
+    await chooseLibraryEntry(owner,pid,id);
+    ++libraryToken.current;
+    if(scopeRef.current===JSON.stringify([owner,pid])){
+      setLibraryActiveId(id);applyLibraryContent(pid,record.payload);
+      setDraft(null);setError("");setMessage("Dataset seleccionado.");
+    }
+  }
+  async function renameLibraryItem(id:string,name:string){
+    const owner=storageOwner,pid=projectId;
+    await renameLibraryEntry(owner,pid,id,name);
+    const state=await listLibrary(owner,pid);
+    if(scopeRef.current===JSON.stringify([owner,pid])){
+      setLibraryItems(state.items);
+      if(id===libraryActiveId){
+        const record=await getLibraryEntry(owner,pid,id);
+        applyLibraryContent(pid,record.payload);
+      }
+    }
+  }
+  async function deleteLibraryItem(id:string){
+    const owner=storageOwner,pid=projectId;
+    const wasActive=await deleteLibraryEntry(owner,pid,id);
+    const state=await listLibrary(owner,pid);
+    if(scopeRef.current===JSON.stringify([owner,pid])){
+      setLibraryItems(state.items);
+      if(wasActive){setLibraryActiveId(null);clearLibrarySelection(pid);}
+      setError("");setMessage("Dataset eliminado de la biblioteca.");
+    }
+  }
+  function detachLibraryDataset(){
+    const pid=projectId,owner=storageOwner;
+    clearLibrarySelection(pid);setLibraryActiveId(null);
+    ++libraryToken.current;
+    void chooseLibraryEntry(owner,pid,null).catch(fail);
+  }
   useEffect(()=>{
     if(paused)return;
     const timer=window.setInterval(()=>setJobs(current=>advanceJobs(current)),700);
@@ -198,6 +310,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   }
   async function deleteProject(id:string){
     if(onDeleteProject)await onDeleteProject(id);
+    try{await clearProjectLibrary(storageOwner,id);}
+    catch(cause){setError(cause instanceof Error?cause.message:"No se pudo limpiar la biblioteca local.");}
     const remaining=projects.filter(p=>p.id!==id);
     setProjects(remaining);
     request.current++;
@@ -258,6 +372,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
       // En Automático la configuración se deriva del dataset aplicado.
       // En Manual se conservan los ajustes del proyecto.
       setMessage("Dataset de imágenes validado y aplicado.");
+      await registerDataset({kind:"images",dataset:prepared});
     } catch(cause){fail(cause);}
   }
 
