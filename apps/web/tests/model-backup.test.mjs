@@ -61,3 +61,35 @@ test("el respaldo rechaza informes incongruentes, arquitectura ajena y pesos gig
   assert.throws(()=>validatePortableIdentity(project,{...valid,parameters:1}),/inconsistentes/);
   assert.throws(()=>validateBackupHeader({format:"neurolab-portable-cnn",version:1,project_id:project},project),/no es un respaldo/);
 });
+
+
+test("MNIST grande: respaldo portátil de pesos y métricas válido, con verificación SHA-256",async()=>{
+  const digits=Array.from({length:10},(_,i)=>String(i));
+  const scenarios=[
+    {train:900,validation:100,test:1000,hash:"d567d6cb604019ab474cf35f730970531f6deac146b9cfddb89f34a522299d5a"},
+    {train:9000,validation:1000,test:10000,hash:"d64c3c31d16d3ed1e0babc32435e4a833ce6964068e64266981e5c03b4c3da8d"},
+    {train:54000,validation:6000,test:10000,hash:"7189635e27d58bddf63a1657cadb0295241c677dc6d940846c82794b61df08b6"},
+  ];
+  const model=buildBrowserCNN(config,10);
+  try{
+    for(const scenario of scenarios){
+      const meta={...report,classes:digits,parameters:model.countParams(),
+        samples:{train:scenario.train,validation:scenario.validation,test:scenario.test},
+        dataset_fingerprint:scenario.hash};
+      assert.equal(validatePortableIdentity(project,meta),meta);
+      let backupFile;
+      await model.save(tf.io.withSaveHandler(async artifacts=>{
+        backupFile=await encodeCNNBackup(project,meta,artifacts);
+        return {modelArtifactsInfo:{dateSaved:new Date(),modelTopologyType:"JSON",
+          modelTopologyBytes:0,weightSpecsBytes:0,weightDataBytes:0}};
+      }),{includeOptimizer:false});
+      const parsed=await decodeCNNBackup(backupFile,project);
+      assert.equal(parsed.report.dataset_fingerprint,scenario.hash);
+      const loaded=await tf.loadLayersModel({load:async()=>parsed.artifacts});
+      try{assert.equal(loaded.countParams(),model.countParams());}finally{loaded.dispose();}
+      assert.throws(()=>validatePortableIdentity(project,{...meta,dataset_fingerprint:"f".repeat(64)}),/inconsistentes/);
+      assert.throws(()=>validatePortableIdentity(project,{...meta,samples:{...meta.samples,test:meta.samples.test+1}}),/inconsistentes/);
+      assert.throws(()=>validatePortableIdentity(project,{...meta,classes:digits.toReversed()}),/inconsistentes/);
+    }
+  }finally{model.dispose();}
+});

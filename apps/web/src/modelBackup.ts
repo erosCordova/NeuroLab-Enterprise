@@ -45,10 +45,29 @@ export function validatePortableIdentity(projectId:string,value:unknown):Browser
      parsed.model_ref.length>240)
     error("El modelo no corresponde a este proyecto de NeuroLab.");
   const result=parsed as BrowserReport;
+  const samples=result.samples;
+  const counts=[samples.train,samples.validation,samples.test];
+  // Los entrenamientos convencionales mantienen el límite histórico de 200.
+  // Los respaldos de MNIST tienen tres particiones conocidas, sus diez clases
+  // ordenadas, arquitectura de 28×28×1 y huellas deterministas del importador.
+  // Se validan los pesos y la topología por separado antes de restaurar.
+  const mnistRecords=[
+    {counts:[900,100,1000],hash:"d567d6cb604019ab474cf35f730970531f6deac146b9cfddb89f34a522299d5a"},
+    {counts:[9000,1000,10000],hash:"d64c3c31d16d3ed1e0babc32435e4a833ce6964068e64266981e5c03b4c3da8d"},
+    {counts:[54000,6000,10000],hash:"7189635e27d58bddf63a1657cadb0295241c677dc6d940846c82794b61df08b6"},
+  ];
+  const validMnist=counts.every(n=>Number.isInteger(n)&&n>=2)&&
+    result.classes.length===10&&result.classes.every((name,index)=>name===String(index))&&
+    result.config.size===28&&result.config.channels===1&&result.seed===42&&
+    mnistRecords.some(item=>
+      item.hash===result.dataset_fingerprint&&
+      item.counts.every((value,index)=>value===counts[index])
+    );
+  const validSamples=counts.every(n=>Number.isInteger(n)&&n>=2)&&
+    (counts.reduce((total,n)=>total+n,0)<=200||validMnist);
   if(result.classes.length!==new Set(result.classes).size||
      result.classes.some(label=>typeof label!=="string"||!label.trim()||label.length>100)||
-     result.samples.train<2||result.samples.validation<2||result.samples.test<2||
-     result.samples.train+result.samples.validation+result.samples.test>200||
+     !validSamples||
      result.completed_epochs!==result.metrics.length||
      result.completed_epochs>result.requested_epochs||
      result.completed_epochs<1||

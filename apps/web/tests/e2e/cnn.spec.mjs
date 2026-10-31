@@ -993,4 +993,9 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
   await expect(page.getByText("Modelo CNN guardado en este navegador.")).toBeVisible({timeout:160000});
   await expect(page.locator(".browser-cnn-summary")).toBeVisible();
   await expect(page.getByRole("button",{name:"Descargar dígito oficial de prueba (PNG)"})).toBeVisible();
+  const saved=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Descargar respaldo CNN"}).click();
+  const backup=await saved;
+  expect(backup.suggestedFilename()).toMatch(/\.ncnn$/);
+  await expect(page.getByText(/parámetros de CNN inconsistentes o demasiado grandes/)).toHaveCount(0);
 });
