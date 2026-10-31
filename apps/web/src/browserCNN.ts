@@ -1,6 +1,8 @@
 import * as tf from "@tensorflow/tfjs";
 import type {Config,ImageDataset,Metric} from "./cnn";
 import {summary} from "./cnn.ts";
+import {captureNetworkTrace} from "./networkTelemetry.ts";
+import type {NetworkTrace} from "./networkTelemetry.ts";
 
 export type BrowserReport={
   training:"real";
@@ -129,6 +131,7 @@ function metricFromLogs(epoch:number,logs?:tf.Logs):Metric {
 export async function trainInBrowser(
   projectId:string,dataset:ImageDataset,config:Config,epochs:number,batch:number,
   onProgress:(progress:BrowserProgress)=>void,signal?:AbortSignal,
+  onTrace?:(trace:NetworkTrace)=>void,
 ):Promise<BrowserReport> {
   const architecture=validateBrowserBudget(config,dataset,epochs,batch);
   if(signal?.aborted)throw new TrainingCancelled();
@@ -152,6 +155,9 @@ export async function trainInBrowser(
     const all=remember(tf.tensor4d(buffer,[dataset.images.length,config.size,config.size,channels]));
     const inputs=(indices:number[])=>remember(tf.gather(all,remember(tf.tensor1d(indices,"int32"))) as tf.Tensor4D);
     const xTrain=inputs(dataset.train),xVal=inputs(dataset.validation),xTest=inputs(dataset.test);
+    // Una muestra fija del conjunto de validación; nunca del conjunto de prueba.
+    const sample=remember(tf.slice(xVal,[0,0,0,0],[1,config.size,config.size,channels]));
+    const label=dataset.images[dataset.validation[0]].label;
     const targets=(indices:number[])=>{
       const labels=indices.map(index=>{
         const label=classMap.get(dataset.images[index].label);
@@ -172,6 +178,10 @@ export async function trainInBrowser(
         onEpochEnd:async(epoch,logs)=>{
           const point=metricFromLogs(epoch+1,logs);
           metrics.push(point);
+          if(onTrace){
+            try{onTrace(captureNetworkTrace(model!,sample,config,classes,epoch+1,label));}
+            catch{/* Un error opcional del visor no debe interrumpir el entrenamiento. */}
+          }
           onProgress({epoch:epoch+1,epochs,metric:point});
           if(config.earlyStopping){
             if(bestLoss-point.valLoss>(config.minDelta??.01)){
