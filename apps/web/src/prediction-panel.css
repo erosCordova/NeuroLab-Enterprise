@@ -1,0 +1,24 @@
+.nl-prediction{display:grid;gap:16px;margin-top:16px}
+.nl-prediction-input{margin:0}
+.nl-prediction-layout{display:grid;grid-template-columns:minmax(180px,260px) minmax(0,1fr);gap:20px;align-items:center;padding:20px;border:1px solid #cce7df;border-radius:16px;background:linear-gradient(115deg,#f5fcfa,#f5faff)}
+.nl-prediction-image{min-width:0;aspect-ratio:1/1;border:1px solid #d7e9e5;border-radius:13px;background:#fff;display:grid;place-items:center;overflow:hidden;padding:12px}
+.nl-prediction-image img{display:block;max-width:100%;max-height:100%;object-fit:contain;width:auto;height:auto}
+.nl-prediction-outcome{min-width:0;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:9px}
+.nl-prediction-eyebrow{font-size:12px;font-weight:750;letter-spacing:.35px;color:#527a7b}
+.nl-prediction-class{font-size:clamp(36px,5vw,62px);line-height:1.1;color:#117a73;font-weight:850;overflow-wrap:anywhere}
+.nl-prediction-class.digit{font-size:clamp(72px,10vw,128px);letter-spacing:-3px}
+.nl-prediction-confidence{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;color:#4b7376;font-size:12px}
+.nl-prediction-confidence strong{font-size:clamp(23px,3vw,35px);font-variant-numeric:tabular-nums;color:#087e72}
+.nl-prediction-track{height:9px;width:min(100%,320px);background:#dcebe7;border-radius:15px;overflow:hidden}
+.nl-prediction-track span,.nl-prediction-detail-track span{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#13c3a3,#17a8c0)}
+.nl-prediction-wait{font-size:13px;color:#52777b;margin:10px 0}
+.nl-prediction-details{border:1px solid #dcebe7;border-radius:11px;background:#fff;overflow:hidden}
+.nl-prediction-details summary{cursor:pointer;padding:13px 16px;color:#23766d;font-size:12px;font-weight:750}
+.nl-prediction-details summary:hover{background:#f5fbf8}
+.nl-prediction-detail-list{border-top:1px solid #e5f0ed;padding:8px 15px}
+.nl-prediction-detail-row{display:grid;grid-template-columns:minmax(30px,1fr) minmax(60px,2fr) 80px;gap:12px;align-items:center;padding:8px 0;font-size:12px;color:#416269;border-bottom:1px solid #f1f6f5}
+.nl-prediction-detail-row:last-child{border:0}
+.nl-prediction-detail-row>strong{text-align:right;font-variant-numeric:tabular-nums;color:#255e5c}
+.nl-prediction-detail-track{height:7px;background:#e3f1ed;border-radius:12px;overflow:hidden}
+@media(max-width:700px){.nl-prediction-layout{grid-template-columns:1fr;padding:14px}.nl-prediction-image{width:100%;max-width:300px;margin-inline:auto}.nl-prediction-outcome{align-items:center;text-align:center}.nl-prediction-confidence{justify-content:center}.nl-prediction-class.digit{font-size:86px}}
+@media(prefers-reduced-motion:reduce){.nl-prediction *{transition:none!important}}

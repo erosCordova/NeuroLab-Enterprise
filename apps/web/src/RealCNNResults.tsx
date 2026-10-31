@@ -3,6 +3,7 @@ import {api} from "./api";
 import type {RealRun} from "./realRuns";
 import {prepareRealReport} from "./realRuns";
 import CNNBackupActions from "./CNNBackupActions";
+import PredictionPanel from "./PredictionPanel";
 import type {BrowserReport} from "./browserCNN";
 
 type Props={projectId:string};
@@ -37,9 +38,6 @@ export default function RealCNNResults({projectId}:Props) {
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
-  const [predicting,setPredicting]=useState(false);
-  const [predictionError,setPredictionError]=useState("");
-  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
 
   useEffect(()=>{
     let active=true;
@@ -75,17 +73,6 @@ export default function RealCNNResults({projectId}:Props) {
     completed_epochs:current.completed_epochs,batch:current.batch,seed:current.seed,
     metrics:current.metrics,test:current.test,
   }:null;
-  async function classify(file:File) {
-    if(!current?.model_ref||current.engine!=="TensorFlow.js")return;
-    setPredictionError("");setPredictions([]);setPredicting(true);
-    try {
-      const {predictInBrowser}=await import("./browserCNN");
-      const result=await predictInBrowser(current.model_ref,file,current.config,current.classes);
-      setPredictions(result);
-    }catch(cause) {
-      setPredictionError("No se encontró el modelo en este navegador o la imagen no es válida: "+(cause instanceof Error?cause.message:"error desconocido"));
-    }finally {setPredicting(false);}
-  }
   return <section className="panel recent" aria-label="Resultados CNN reales importados">
     <div className="panel-head">
       <div>
@@ -111,7 +98,7 @@ export default function RealCNNResults({projectId}:Props) {
     {!loading&&!runs.length&&<p className="caption">Aún no hay reportes importados en este proyecto.</p>}
     {current&&<>
       <label className="field"><span>Entrenamiento importado</span>
-        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);setPredictions([]);setPredictionError("");}}>
+        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);}}>
           {runs.map(run=><option key={run.id} value={run.id}>{new Date(run.imported_at).toLocaleString("es-PE")+" · "+run.classes.join(", ")}</option>)}
         </select>
       </label>
@@ -130,10 +117,14 @@ export default function RealCNNResults({projectId}:Props) {
       {current.engine==="TensorFlow.js"&&current.model_ref&&<div className="browser-cnn-summary cnn-spaced">
         <h3>Reconocer otra imagen con este modelo</h3>
         <p className="caption">El modelo se recupera de IndexedDB en este navegador; no se vuelve a entrenar. Si cambias de equipo o eliminas los datos del navegador, puede no estar disponible.</p>
-        <label className="field"><span>Imagen PNG, JPG o WebP</span><input aria-label="Imagen para predecir con CNN real" type="file" accept="image/png,image/jpeg,image/webp" disabled={predicting} onChange={event=>{const file=event.target.files?.[0];event.target.value="";if(file)void classify(file);}}/></label>
-        {predicting&&<p role="status">Evaluando imagen con los pesos guardados…</p>}
-        {predictionError&&<p className="error" role="alert">{predictionError}</p>}
-        {predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
+        <PredictionPanel key={current.id} inputLabel="Imagen PNG, JPG o WebP"
+          inputAriaLabel="Imagen para predecir con CNN real"
+          digitMode={current.classes.length===10&&current.classes.every((name,index)=>name===String(index))}
+          onPredict={async file=>{
+            const {predictInBrowser}=await import("./browserCNN");
+            const isMnist=current.classes.length===10&&current.classes.every((name,index)=>name===String(index));
+            return predictInBrowser(current.model_ref,file,current.config,current.classes,isMnist);
+          }}/>
       </div>}
       <details className="cnn-fingerprint"><summary>Huella SHA-256 del dataset declarado</summary><code>{current.dataset_fingerprint}</code></details>
     </>}

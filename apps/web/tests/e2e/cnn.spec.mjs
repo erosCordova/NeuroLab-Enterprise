@@ -899,8 +899,14 @@ test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar"
     await expect(restored.getByText(/Modelo CNN restaurado con integridad verificada/)).toBeVisible({timeout:30000});
     await restored.getByLabel("Imagen para predecir con modelo respaldado")
       .setInputFiles(path.join(datasetDirectory,"0",fs.readdirSync(path.join(datasetDirectory,"0"))[0]));
-    await expect(restored.getByRole("table")).toBeVisible({timeout:30000});
-    await expect(restored.getByRole("table").locator("tbody tr")).toHaveCount(10);
+    const prediction=restored.getByRole("region",{name:"Resultado de predicción"});
+    await expect(prediction.getByRole("img",{name:/Imagen seleccionada/})).toBeVisible({timeout:30000});
+    await expect(prediction.getByText("Número detectado")).toBeVisible();
+    await expect(prediction.locator(".nl-prediction-class")).toBeVisible();
+    await expect(prediction.getByText("Confianza del modelo")).toBeVisible();
+    await expect(restored.getByText("Ver detalles")).toBeVisible();
+    await expect(restored.locator(".nl-prediction-detail-row")).toHaveCount(10);
+    await expect(restored.locator(".nl-prediction-details")).not.toHaveAttribute("open",/.+/);
     // Reimportar no debe sobrescribir sin autorización los pesos guardados.
     await restored.getByLabel("Restaurar modelo CNN desde respaldo").setInputFiles(backupPath);
     await expect(restored.getByRole("alert")).toContainText("ya existe en este navegador");

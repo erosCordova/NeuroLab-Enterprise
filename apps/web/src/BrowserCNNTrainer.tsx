@@ -4,6 +4,7 @@ import type {Config,ImageDataset,Metric,Job} from "./cnn";
 import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
 import CNNBackupActions from "./CNNBackupActions";
+import PredictionPanel from "./PredictionPanel";
 import NetworkFlow from "./NetworkFlow";
 import type {NetworkTrace} from "./networkTelemetry";
 import type {MnistData} from "./mnistDataset";
@@ -52,9 +53,6 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [report,setReport]=useState<BrowserReport|null>(null);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
-  const [predicting,setPredicting]=useState(false);
-  const [predictionError,setPredictionError]=useState("");
-  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
   const [batchState,setBatchState]=useState("");
   const [tensorBytes,setTensorBytes]=useState(0);
   const [savingHistory,setSavingHistory]=useState(false);
@@ -116,18 +114,6 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       if(controller.current===abort)controller.current=null;
       setWorking(false);
     }
-  }
-
-  async function classify(file:File){
-    if(!report)return;
-    setPredicting(true);setPredictionError("");setPredictions([]);
-    try{
-      const {predictInBrowser}=await import("./browserCNN");
-      const isMnist=Boolean(mnist)&&report.classes.length===10&&report.classes.every((name,index)=>name===String(index));
-      const values=await predictInBrowser(report.model_ref,file,report.config,report.classes,isMnist);
-      setPredictions(values);
-    }catch(cause){setPredictionError(cause instanceof Error?cause.message:"No se pudo reconocer la imagen.");}
-    finally{setPredicting(false);}
   }
 
   async function downloadMnistExample(){
@@ -251,19 +237,21 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     </>}
     {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setNetworkTrace(null);setNetworkHistory([]);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setReport(restored);setNetworkTrace(null);setNetworkHistory([]);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
       <h3>Reconocer una imagen con los pesos guardados</h3>
       {mnist&&<><p className="caption">MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro.</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>Descargar dígito oficial de prueba (PNG)</button></>}
       <p className="caption">El modelo no se reentrena: se recupera de IndexedDB y se aplica a una imagen nueva.</p>
-      <label className="field"><span>Imagen para clasificar</span><input aria-label="Imagen para predecir con modelo respaldado" type="file" accept="image/png,image/jpeg,image/webp" disabled={working||predicting} onChange={event=>{
-        const file=event.target.files?.[0];event.target.value="";if(file)void classify(file);
-      }}/></label>
-      {predicting&&<p role="status">Reconociendo imagen…</p>}
-      {predictionError&&<p className="error" role="alert">{predictionError}</p>}
-      {predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
+      <PredictionPanel key={report.model_ref} inputLabel="Imagen para clasificar"
+        inputAriaLabel="Imagen para predecir con modelo respaldado"
+        disabled={working} digitMode={report.classes.length===10&&report.classes.every((name,index)=>name===String(index))}
+        onPredict={async file=>{
+          const {predictInBrowser}=await import("./browserCNN");
+          const isMnist=report.classes.length===10&&report.classes.every((name,index)=>name===String(index));
+          return predictInBrowser(report.model_ref,file,report.config,report.classes,isMnist);
+        }}/>
     </section>}
   </section>;
 }
