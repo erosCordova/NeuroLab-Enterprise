@@ -57,6 +57,12 @@ export default function TabularPanel({dataset,onApply,onRemove,report,onSaveRepo
     if(!dataset)return;
     onApply({...dataset,task,automatic:false});setResult(null);onSaveReport?.(null);setHistory([]);setError("");
   }
+  function changeManual(field:"units1"|"units2"|"learningRate"|"dropout",value:number){
+    if(!dataset)return;
+    const previous=dataset.manualConfig??{units1:64,units2:32,learningRate:.001,dropout:0};
+    onApply({...dataset,manualConfig:{...previous,[field]:value}});
+    setResult(null);onSaveReport?.(null);setHistory([]);setError("");
+  }
   function updateName(name:string){
     if(!dataset)return;onApply({...dataset,name});
   }
@@ -127,6 +133,20 @@ export default function TabularPanel({dataset,onApply,onRemove,report,onSaveRepo
             <option value="regression">Regresión</option>
           </select></label>}
       </div>
+      {!dataset.automatic&&<div className="nl-tabular-manual" aria-label="Parámetros manuales">
+        <label className="field"><span>Capa oculta 1</span><input aria-label="Neuronas capa 1" type="number" min="4" max="256"
+          value={dataset.manualConfig?.units1??64} disabled={training}
+          onChange={e=>changeManual("units1",Number(e.target.value))}/></label>
+        <label className="field"><span>Capa oculta 2 (0 para desactivar)</span><input aria-label="Neuronas capa 2" type="number" min="0" max="128"
+          value={dataset.manualConfig?.units2??32} disabled={training}
+          onChange={e=>changeManual("units2",Number(e.target.value))}/></label>
+        <label className="field"><span>Tasa de aprendizaje</span><input aria-label="Tasa de aprendizaje" type="number" min=".0001" max=".01" step=".0001"
+          value={dataset.manualConfig?.learningRate??.001} disabled={training}
+          onChange={e=>changeManual("learningRate",Number(e.target.value))}/></label>
+        <label className="field"><span>Dropout</span><input aria-label="Dropout tabular" type="number" min="0" max=".6" step=".05"
+          value={dataset.manualConfig?.dropout??0} disabled={training}
+          onChange={e=>changeManual("dropout",Number(e.target.value))}/></label>
+      </div>}
       {plan?<div className="nl-tabular-plan">
         <div><small>Tarea</small><strong>{taskName[plan.task]}</strong></div>
         <div><small>Salida</small><strong>{plan.activation}</strong></div>

@@ -3,6 +3,7 @@ export type PredictionTask="binary"|"multiclass"|"regression";
 export type TabularDataset={
   name:string;source:string;headers:string[];rows:string[][];
   target:string;task:PredictionTask;automatic:boolean;createdAt:number;
+  manualConfig?:{units1:number;units2:number;learningRate:number;dropout:number};
 };
 export type TabularPlan={task:PredictionTask;activation:"sigmoid"|"softmax"|"linear";
   loss:"binaryCrossentropy"|"categoricalCrossentropy"|"meanSquaredError";

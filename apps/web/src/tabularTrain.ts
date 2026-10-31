@@ -87,12 +87,21 @@ export async function trainTabular(data:TabularDataset,epochs:number,batch:numbe
     });
   const xs=subsets.map(ids=>tf.tensor2d(features(ids),[ids.length,columns]));
   const ys=subsets.map(ids=>tf.tensor2d(labels(ids),[ids.length,plan.task==="multiclass"?plan.classes.length:1]));
+  const options=data.automatic?{units1:Math.min(64,Math.max(12,columns*2)),
+    units2:Math.min(32,Math.max(8,columns)),learningRate:.001,dropout:0}
+    :data.manualConfig??{units1:64,units2:32,learningRate:.001,dropout:0};
+  if(!Number.isInteger(options.units1)||options.units1<4||options.units1>256||
+     !Number.isInteger(options.units2)||options.units2<0||options.units2>128||
+     !Number.isFinite(options.learningRate)||options.learningRate<.0001||options.learningRate>.01||
+     !Number.isFinite(options.dropout)||options.dropout<0||options.dropout>.6)
+    throw new Error("Revisa capas ocultas, tasa de aprendizaje y Dropout.");
   const model=tf.sequential();
   try{
-    model.add(tf.layers.dense({units:Math.min(64,Math.max(12,columns*2)),inputShape:[columns],activation:"relu"}));
-    model.add(tf.layers.dense({units:Math.min(32,Math.max(8,columns)),activation:"relu"}));
+    model.add(tf.layers.dense({units:options.units1,inputShape:[columns],activation:"relu"}));
+    if(options.dropout>0)model.add(tf.layers.dropout({rate:options.dropout}));
+    if(options.units2>0)model.add(tf.layers.dense({units:options.units2,activation:"relu"}));
     model.add(tf.layers.dense({units:plan.task==="multiclass"?plan.classes.length:1,activation:plan.activation}));
-    model.compile({optimizer:tf.train.adam(.001),loss:plan.loss,
+    model.compile({optimizer:tf.train.adam(options.learningRate),loss:plan.loss,
       metrics:plan.task==="regression"?["mae"]:["accuracy"]});
     const history:TabularMetric[]=[];
     await model.fit(xs[0],ys[0],{
