@@ -26,7 +26,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
   const epochs=Math.max(1,realEpochs),done=Math.min(epochs,realMetrics.length);
   const latest=epochView==="latest"?realMetrics.at(-1):realMetrics.find(m=>String(m.epoch)===epochView)??realMetrics.at(-1);
   const labels=classNames?.length===classCount?classNames:Array.from({length:classCount},(_,i)=>String(i));
-  const running=working&&Boolean(visible)&&motion;
+  const running=Boolean(visible)&&motion;
   const width=graphCanvasWidth(stages.length);
   const counts=stages.map(visibleNodeCount);
   const positions=stages.map((_,column)=>Array.from({length:counts[column]},(_,index)=>graphNodePosition(column,index,counts[column])));
@@ -56,7 +56,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
           <button type="button" className={view==="3d"?"selected":""} aria-pressed={view==="3d"} onClick={()=>setView("3d")}>3D</button>
           <button type="button" className={view==="2d"?"selected":""} aria-pressed={view==="2d"} onClick={()=>setView("2d")}>2D</button>
         </div>
-        {working&&visible&&<button type="button" className="nl-motion-toggle" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}>{motion?"Pausar":"Animar"}</button>}
+        {visible&&<button type="button" className="nl-motion-toggle" aria-pressed={motion} onClick={()=>setMotion(v=>!v)}>{motion?"Pausar":"Animar"}</button>}
       </div>
     </div>
     <div className="nl-neural-data-heading">
@@ -101,7 +101,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                   <line x1={point.x+7} y1={point.y-6} x2={point.x} y2={point.y} stroke="#96eee2" strokeOpacity=".28"/></>}
                 {chosen&&<circle cx={point.x} cy={point.y} r={r+6} fill="none" stroke="#64fce0" strokeOpacity=".36"/>}
                 <circle cx={point.x} cy={point.y} r={r} fill={observed?"url(#"+gradientId+"-node)":"#2c6678"}
-                  fillOpacity={observed?.55+value*.45:.65} stroke={observed?"#a5ffeb":"#82b5ce"} strokeWidth={chosen?1.7:1.0}/>
+                  fillOpacity={observed ? .55+value*.45 : .65} stroke={observed?"#a5ffeb":"#82b5ce"} strokeWidth={chosen?1.7:1.0}/>
                 {observed&&<circle cx={point.x-2} cy={point.y-2} r={Math.max(1.5,r*.26)} fill="#e9ffff" fillOpacity=".55"/>}
               </g>;
             })}
