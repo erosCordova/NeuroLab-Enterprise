@@ -1,10 +1,10 @@
 import * as tf from "@tensorflow/tfjs";
-import type {Config,Metric} from "./cnn";
-import {summary} from "./cnn";
-import {buildBrowserCNN,TrainingCancelled} from "./browserCNN";
-import type {BrowserReport} from "./browserCNN";
-import {mnistFingerprint,partitionMnist} from "./mnistDataset";
-import type {MnistData} from "./mnistDataset";
+import type {Config,Metric} from "./cnn.ts";
+import {summary} from "./cnn.ts";
+import {buildBrowserCNN,TrainingCancelled} from "./browserCNN.ts";
+import type {BrowserReport} from "./browserCNN.ts";
+import {mnistFingerprint,partitionMnist} from "./mnistDataset.ts";
+import type {MnistData} from "./mnistDataset.ts";
 
 export type BatchState={epoch:number;epochs:number;batch:number;batches:number;tensorBytes:number};
 const safe=(v:number,min:number,max:number)=>Number.isInteger(v)&&v>=min&&v<=max;
