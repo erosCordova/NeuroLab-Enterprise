@@ -237,12 +237,9 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
   if(!modelRef.startsWith("indexeddb://neurolab-cnn-"))throw new Error("Referencia de modelo inválida.");
   const model=await tf.loadLayersModel(modelRef);
   try {
-    const pixels=await pixelsOfImage(file,config);
-    // La tinta sobre papel blanco tiene la polaridad inversa de MNIST.
-    if(autoInvertLightBackground&&config.channels===1){
-      let avg=0;for(const value of pixels)avg+=value;
-      if(avg/pixels.length>.55)for(let i=0;i<pixels.length;i++)pixels[i]=1-pixels[i];
-    }
+    const pixels=autoInvertLightBackground&&config.channels===1&&config.size===28
+      ?await (await import("./mnistPreprocess")).preprocessMnistPhoto(file)
+      :await pixelsOfImage(file,config);
     const input=tf.tensor4d(pixels,[1,config.size,config.size,config.channels]);
     try{
       const output=model.predict(input) as tf.Tensor;
