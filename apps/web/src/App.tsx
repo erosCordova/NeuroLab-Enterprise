@@ -1,4 +1,6 @@
 import TrainingHistory from "./TrainingHistory";
+import MNISTImportPanel from "./MNISTImportPanel";
+import type {MnistData} from "./mnistDataset";
 import RealCNNResults from "./RealCNNResults";
 import RealModelRegistry from "./RealModelRegistry";
 import BrowserCNNTrainer from "./BrowserCNNTrainer";
@@ -93,6 +95,8 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
   const [configs,setConfigs]=useState<Record<string,Config>>({});
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
+  const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
+  const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist">>({});
   const [versions,setVersions]=useState<Version[]>([]);
   const [jobs,setJobs]=useState<Job[]>([]);
   const [records,setRecords]=useState<RecordModel[]>([]);
@@ -121,6 +125,9 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
 
   const project=projects.find(item=>item.id===projectId)!;
   const dataset=datasets[projectId];
+  const mnist=mnistByProject[projectId];
+  const mnistActive=datasetOrigin[projectId]==="mnist"&&Boolean(mnist);
+  const activeClasses=mnistActive?10:dataset?.classes.length;
   const automatic=(cnnModes[projectId]??"automatic")==="automatic";
   const proposal=dataset?recommendCNN(dataset,defaultConfig()):null;
   const config=automatic
@@ -158,7 +165,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
   let info:ReturnType<typeof summary>|null=null;
   let architectureError="";
   try {
-    if(dataset) info=summary(config,dataset.classes.length);
+    if(activeClasses) info=summary(config,activeClasses);
   } catch(cause) {
     architectureError=cause instanceof Error?cause.message:"Configuración inválida.";
   }
@@ -219,6 +226,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
       prepared.fingerprint=await fingerprintDataset(prepared);
       if(token!==request.current)return;
       setDatasets(current=>({...current,[projectId]:prepared}));
+      setDatasetOrigin(current=>({...current,[projectId]:"folder"}));
       // En Automático la configuración se deriva del dataset aplicado.
       // En Manual se conservan los ajustes del proyecto.
       setMessage("Dataset de imágenes validado y aplicado.");
@@ -319,7 +327,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
 
         {page==="Dashboard"&&<>
           {onPersistProject&&<ProjectCNNReport projectId={projectId} projectName={project.name} mode="dashboard"/>}
-          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",Object.keys(datasets).length],["Simulaciones pendientes",pending],["Fichas simuladas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
+          <div className="stats">{[["Proyectos CNN",projects.length],["Datasets aplicados",new Set([...Object.keys(datasets),...Object.keys(mnistByProject)]).size],["Simulaciones pendientes",pending],["Fichas simuladas",records.length]].map(([label,value])=><article className="card stat" key={String(label)}><p>{label}</p><strong>{value}</strong></article>)}</div>
           <section className="panel cnn-quick-actions" aria-label="Accesos rápidos del laboratorio">
             <div><div className="eyebrow">CONTINÚA TU EXPERIMENTO</div><h2>¿Qué quieres hacer ahora?</h2>
               <p className="muted">Accede directamente a las herramientas de tu proyecto, sin salir del laboratorio.</p></div>
@@ -342,6 +350,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
           onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>
+          <MNISTImportPanel key={projectId} current={mnist} active={mnistActive} onApply={loaded=>{setMnistByProject(current=>({...current,[projectId]:loaded}));setDatasetOrigin(current=>({...current,[projectId]:"mnist"}));setError("");setMessage("MNIST seleccionado para el entrenamiento real. Abre Entrenamientos para comenzar.");}} onRemove={()=>{setMnistByProject(current=>{const copy={...current};delete copy[projectId];return copy;});setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>
           <section className="panel"><h2>Cargar imágenes por clase</h2><p className="muted">Selecciona la carpeta principal que contiene una subcarpeta por clase.</p>
             <div className="soft">Ejemplo: una carpeta «animales» con las subcarpetas «gatos» y «perros», cada una con sus imágenes. Se admiten PNG, JPG y WebP; entre 2 y 20 clases y al menos tres imágenes por clase. Máximo: 500 imágenes y 50 MiB.</div>
             <label className="field"><span>Carpeta de imágenes</span><input type="file" aria-label="Carpeta de imágenes" multiple ref={node=>{if(node)node.webkitdirectory=true;}} onChange={event=>{const files=Array.from(event.target.files??[]);event.target.value="";if(files.length)void load(files);}} /></label>
@@ -384,7 +393,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
         </div>}
 
         {page==="Entrenamientos"&&<>
-          <BrowserCNNTrainer key={projectId} projectId={projectId} dataset={dataset} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/>
+          <BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/>
           {onPersistProject&&<RealCNNResults key={projectId+":"+realRevision} projectId={projectId} />}
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
           <div className="training-layout"><section className="panel"><h2>Cola del proyecto</h2>{!projectJobs.length&&<div className="cnn-empty"><p>Todavía no hay ejecuciones en este proyecto.</p><button className="secondary" onClick={()=>navigate(dataset?"Diseñador CNN":"Datasets")}>{dataset?"Revisar arquitectura":"Cargar imágenes"}</button></div>}{[...projectJobs].reverse().map(job=><button className={selected?.id===job.id?"queue-item chosen":"queue-item"} key={job.id} onClick={()=>setSelectedId(job.id)}><strong>{job.name}</strong><span data-status={job.status}>{job.status}</span><small>{job.id}</small><progress max={job.epochs} value={job.status==="Completado"?job.epochs:job.epoch} /><small>{job.epoch}/{job.epochs} épocas</small></button>)}</section>

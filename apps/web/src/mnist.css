@@ -1,0 +1,8 @@
+.mnist-panel{border-color:#bfe6de;background:linear-gradient(145deg,#fff,#f6fcfa)}
+.mnist-panel .eyebrow{color:#078e80}
+.mnist-panel .field{max-width:800px}
+.mnist-status{padding:12px 0;overflow-wrap:anywhere}
+.mnist-ready{border:1px solid #cbe8df;border-radius:12px;background:#f3fcf8;padding:15px;margin-top:15px}
+.mnist-ready strong{color:#176258}
+.mnist-ready .metric-grid{margin:15px 0}
+.mnist-usage{background:#eaf9f4;border:1px solid #d2ebe3;padding:12px;border-radius:10px;margin-top:15px;color:#315f62;font-size:12px}

@@ -5,11 +5,13 @@ import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
 import CNNBackupActions from "./CNNBackupActions";
 import NetworkFlow from "./NetworkFlow";
+import type {MnistData} from "./mnistDataset";
 import "./browser-cnn.css";
 
 type Props={
   projectId:string;
   dataset?:ImageDataset;
+  mnist?:MnistData;
   config:Config;
   connected:boolean;
   onSaved:()=>void;
@@ -35,7 +37,7 @@ function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
   </svg>;
 }
 
-export default function BrowserCNNTrainer({projectId,dataset,config,connected,onSaved,demoJob,demoPaused}:Props) {
+export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connected,onSaved,demoJob,demoPaused}:Props) {
   const [epochs,setEpochs]=useState("12");
   const [batch,setBatch]=useState("16");
   const [working,setWorking]=useState(false);
@@ -47,6 +49,8 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
   const [predicting,setPredicting]=useState(false);
   const [predictionError,setPredictionError]=useState("");
   const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
+  const [batchState,setBatchState]=useState("");
+  const [tensorBytes,setTensorBytes]=useState(0);
   const controller=useRef<AbortController|null>(null);
 
   useEffect(()=>()=>controller.current?.abort(),[]);
@@ -59,19 +63,22 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
   }
 
   async function start() {
-    if(!dataset)return;
-    setError("");setMessage("");setReport(null);setMetrics([]);setWorking(true);
+    if(!dataset&&!mnist)return;
+    setError("");setMessage("");setReport(null);setMetrics([]);setBatchState("");setTensorBytes(0);setWorking(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
     try{
-      const {trainInBrowser}=await import("./browserCNN");
-      const result=await trainInBrowser(projectId,dataset,config,Number(epochs),Number(batch),
-        ({epoch,epochs:total,metric})=>{
-          if(abort.signal.aborted)return;
-          setMetrics(current=>[...current,metric]);
-          setStage("Entrenamiento real: época "+epoch+" de "+total);
-        },abort.signal);
+      const onEpoch=(epoch:number,total:number,metric:Metric)=>{
+        if(abort.signal.aborted)return;
+        setMetrics(current=>[...current,metric]);
+        setStage("Entrenamiento real: época "+epoch+" de "+total);
+      };
+      const result=mnist
+        ? await (await import("./mnistTrain")).trainMnistInBrowser(projectId,mnist,config,Number(epochs),Number(batch),onEpoch,
+          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);},abort.signal)
+        : await (await import("./browserCNN")).trainInBrowser(projectId,dataset!,config,Number(epochs),Number(batch),
+          ({epoch,epochs:total,metric})=>onEpoch(epoch,total,metric),abort.signal);
       if(abort.signal.aborted)return;
       setReport(result);
       setStage("Modelo CNN guardado en este navegador.");
@@ -124,9 +131,10 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
       <span className="badge">REAL · NAVEGADOR</span>
     </div>
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
-    <NetworkFlow config={demoJob?.config??config} classCount={demoJob?.dataset.classes.length??dataset?.classes.length??2} working={working} realMetrics={metrics} realEpochs={Number(epochs)} realComplete={Boolean(report)} demoJob={demoJob} demoPaused={demoPaused}/>
-    {!dataset?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
-      <p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>
+    <NetworkFlow config={demoJob?.config??config} classCount={demoJob?.dataset.classes.length??(mnist?10:dataset?.classes.length)??2} working={working} realMetrics={metrics} realEpochs={Number(epochs)} realComplete={Boolean(report)} demoJob={demoJob} demoPaused={demoPaused}/>
+    {!dataset&&!mnist?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
+      {mnist?<p><strong>MNIST · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
+      {mnist&&<p className="mnist-usage">El entrenamiento MNIST usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}
       {reason&&<p className="error" role="alert">{reason}</p>}
       <div className="cnn-three">
         <label className="field"><span>Épocas reales (1–40)</span>
@@ -140,6 +148,7 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
       {working&&<button className="secondary cnn-spaced" onClick={()=>controller.current?.abort()}>Cancelar entrenamiento real</button>}
       <p role="status" className="caption">{stage}</p>
       {working&&<progress aria-label="Épocas reales ejecutadas" max={Math.max(1,Number(epochs))} value={metrics.length}/>}
+      {mnist&&working&&<p role="status" className="caption">{batchState} · Memoria de tensores estimada: {(tensorBytes/1048576).toFixed(1)} MiB (no incluye RAM total)</p>}
       {error&&<p className="error" role="alert">{error}</p>}
       {message&&<p className="feedback" role="status">{message}</p>}
       {metrics.length>0&&<div className="cnn-two-charts cnn-spaced">
@@ -156,6 +165,7 @@ export default function BrowserCNNTrainer({projectId,dataset,config,connected,on
         <button className="secondary cnn-spaced" onClick={exportReport}>Exportar informe JSON de entrenamiento real</button>
       </div>}
     </>}
+    {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
       setReport(restored);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
