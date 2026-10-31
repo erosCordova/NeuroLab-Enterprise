@@ -32,7 +32,7 @@ export function summarizeLayer(values:ArrayLike<number>,shape:readonly number[],
   }else for(let i=0;i<Math.min(units,limit);i++)preview.push(values[i]);
   return {units,magnitude,preview};
 }
-export function captureNetworkTrace(model:tf.Sequential,sample:tf.Tensor4D,config:Config,
+export function captureNetworkTrace(model:tf.LayersModel,sample:tf.Tensor4D,config:Config,
   classes:string[],epoch:number,sampleLabel:string):NetworkTrace{
   if(sample.shape[0]!==1)throw new Error("La inspección usa una imagen.");
   return tf.tidy(()=>{
