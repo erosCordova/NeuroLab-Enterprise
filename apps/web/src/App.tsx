@@ -110,7 +110,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   const editWrites=useRef<Promise<void>>(Promise.resolve());
   const [tabularReports,setTabularReports]=useState<Record<string,import("./tabularTrain").TabularResult>>({});
   const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
-  const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular">>({});
+  const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular"|"none">>({});
   const [versions,setVersions]=useState<Version[]>([]);
   const [jobs,setJobs]=useState<Job[]>([]);
   const [records,setRecords]=useState<RecordModel[]>([]);
