@@ -93,8 +93,9 @@ export async function trainTabular(data:TabularDataset,epochs:number,batch:numbe
     const evalTensor=model.evaluate(xs[2],ys[2]) as tf.Scalar[];
     const testMetric=Number((await evalTensor[1].data())[0]);
     evalTensor.forEach(t=>t.dispose());
-    const predicted=model.predict(xs[2].slice([0,0],[1,columns])) as tf.Tensor;
-    const probabilities=Array.from(await predicted.data());predicted.dispose();
+    const example=xs[2].slice([0,0],[1,columns]);
+    const predicted=model.predict(example) as tf.Tensor;
+    const probabilities=Array.from(await predicted.data());predicted.dispose();example.dispose();
     const predictedValue=plan.task==="regression"?probabilities[0].toFixed(3):
       plan.task==="binary"?plan.classes[probabilities[0]>=.5?1:0]:
       plan.classes[probabilities.indexOf(Math.max(...probabilities))];

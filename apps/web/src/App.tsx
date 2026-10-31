@@ -99,6 +99,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
   const [cnnModes,setCnnModes]=useState<Record<string,"automatic"|"manual">>({});
   const [datasets,setDatasets]=useState<Record<string,ImageDataset>>({});
   const [tabularByProject,setTabularByProject]=useState<Record<string,TabularDataset>>({});
+  const [tabularReports,setTabularReports]=useState<Record<string,import("./tabularTrain").TabularResult>>({});
   const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
   const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular">>({});
   const [versions,setVersions]=useState<Version[]>([]);
@@ -204,6 +205,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
     setCnnModes(current=>{const next={...current};delete next[id];return next;});
     setDatasets(current=>{const next={...current};delete next[id];return next;});
     setTabularByProject(current=>{const next={...current};delete next[id];return next;});
+    setTabularReports(current=>{const next={...current};delete next[id];return next;});
     setMnistByProject(current=>{const next={...current};delete next[id];return next;});
     setDatasetOrigin(current=>{const next={...current};delete next[id];return next;});
     setVersions(current=>current.filter(v=>v.projectId!==id));
@@ -383,7 +385,9 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
 
         {page==="Datasets"&&<>
            <div className="nl-data-source-head"><span className="nl-data-source-kicker">NUEVO DATASET</span><h2>Añade tus datos</h2></div>
-           <TabularPanel key={"csv:"+projectId} dataset={tabular} onApply={next=>{
+           <TabularPanel key={"csv:"+projectId} dataset={tabular} report={tabularReports[projectId]}
+             onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})}
+             onApply={next=>{
              setTabularByProject(current=>({...current,[projectId]:next}));
              setDatasetOrigin(current=>({...current,[projectId]:"tabular"}));
            }} onRemove={()=>{
@@ -440,7 +444,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
           <button className="primary" onClick={()=>navigate("Entrenamientos")}>Ver entrenamiento tabular</button>
         </section>}
         {page==="Entrenamientos"&&tabularActive&&tabular&&<TabularPanel key={"train:"+projectId}
-          dataset={tabular} onApply={next=>setTabularByProject(current=>({...current,[projectId]:next}))}
+          dataset={tabular} report={tabularReports[projectId]}
+          onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})} onApply={next=>setTabularByProject(current=>({...current,[projectId]:next}))}
           onRemove={()=>{setTabularByProject(current=>{const copy={...current};delete copy[projectId];return copy;});
             setDatasetOrigin(current=>({...current,[projectId]:"folder"}));}}/>}
         {page==="Entrenamientos"&&!tabularActive&&<>
@@ -493,7 +498,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject}:{
           <section className="panel"><h2>Límites de la cola</h2><div className="cnn-three"><label className="field"><span>Máximo de pendientes · 1 a 10</span><input type="number" value={maxPending} onChange={event=>setMaxPending(event.target.value)} /></label><label className="field"><span>Máximo por sesión · hasta 100</span><input type="number" value={maxJobs} onChange={event=>setMaxJobs(event.target.value)} /></label><button className="primary" onClick={()=>{const first=Number(maxPending),second=Number(maxJobs);if(!Number.isInteger(first)||first<1||first>10||!Number.isInteger(second)||second<first||second>100){setError("Revisa los límites: pendientes 1 a 10; máximo por sesión entre ese límite y 100.");return;}setLimits({pending:first,jobs:second});setError("");setMessage("Límites aplicados a nuevas ejecuciones.");}}>Aplicar límites</button></div><div className="soft">Activos: {limits.pending} pendientes y {limits.jobs} por sesión. Un trabajo se procesa a la vez. Los límites no eliminan ejecuciones existentes.</div></section>
           <section className="panel recent"><h2>Usuarios de demostración</h2><form className="cnn-user-form" onSubmit={event=>{event.preventDefault();const email=userEmail.trim().toLowerCase();if(userName.trim().length<3||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)||users.some(user=>user.email===email)){setError("Revisa el nombre y utiliza un correo válido y único.");return;}setUsers(current=>[...current,{name:userName.trim(),email,role}]);setUserName("");setUserEmail("");setError("");}}><label className="field"><span>Nombre</span><input value={userName} maxLength={80} onChange={event=>setUserName(event.target.value)} required /></label><label className="field"><span>Correo</span><input type="email" value={userEmail} onChange={event=>setUserEmail(event.target.value)} required /></label><label className="field"><span>Rol</span><select value={role} onChange={event=>setRole(event.target.value)}>{["Administrador","Responsable de proyecto","Ingeniero/analista","Revisor","Lector"].map(value=><option key={value}>{value}</option>)}</select></label><button className="primary">Añadir usuario demo</button></form><div className="table-scroll"><table><thead><tr><th>Nombre</th><th>Correo</th><th>Rol</th></tr></thead><tbody>{users.map(user=><tr key={user.email}><td>{user.name}</td><td>{user.email}</td><td>{user.role}</td></tr>)}</tbody></table></div><p className="caption">No crea cuentas reales, envía mensajes ni aplica autorización.</p></section>
         </>}
-        <footer>NeuroLab Enterprise · Exclusivamente CNN · Pesos reales en IndexedDB · {onPersistProject?"Métricas en PostgreSQL":"Sesión sin persistencia en servidor"}</footer>
+        <footer>© NeuroLab Enterprise · Tus datos, tus modelos.</footer>
       </div>
     </main>
   </div>;

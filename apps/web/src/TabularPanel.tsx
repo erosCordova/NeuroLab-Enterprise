@@ -6,12 +6,12 @@ import type {TabularResult,TabularMetric} from "./tabularTrain";
 import "./tabular.css";
 
 type Props={dataset?:TabularDataset;onApply:(dataset:TabularDataset)=>void;
-  onRemove:()=>void};
+  onRemove:()=>void;report?:TabularResult|null;onSaveReport?:(result:TabularResult|null)=>void};
 const taskName:Record<PredictionTask,string>={
   binary:"Clasificación binaria",multiclass:"Clasificación multiclase",regression:"Regresión"
 };
 const fmt=(n:number)=>n.toLocaleString("es-PE",{maximumFractionDigits:4});
-export default function TabularPanel({dataset,onApply,onRemove}:Props){
+export default function TabularPanel({dataset,onApply,onRemove,report,onSaveReport}:Props){
   const [mode,setMode]=useState<"file"|"url">("file");
   const [url,setUrl]=useState("");
   const [busy,setBusy]=useState(false);
@@ -21,8 +21,8 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
   const [epochs,setEpochs]=useState("30");
   const [batch,setBatch]=useState("32");
   const [training,setTraining]=useState(false);
-  const [history,setHistory]=useState<TabularMetric[]>([]);
-  const [result,setResult]=useState<TabularResult|null>(null);
+  const [history,setHistory]=useState<TabularMetric[]>(report?.history??[]);
+  const [result,setResult]=useState<TabularResult|null>(report??null);
   const trainingAbort=useRef<AbortController|null>(null);
   useEffect(()=>()=>{abort.current?.abort();trainingAbort.current?.abort();},[]);
   async function importFile(file:File){
@@ -31,7 +31,7 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
       if(!/\.(csv|tsv|txt)$/i.test(file.name))throw new Error("Selecciona un archivo CSV o TSV.");
       if(file.size>12*1024*1024)throw new Error("Archivo demasiado grande (máximo 12 MB).");
       const next=parseTable(await file.text(),file.name);
-      onApply(next);setResult(null);setHistory([]);
+      onApply(next);setResult(null);onSaveReport?.(null);setHistory([]);
       setStatus("Dataset analizado correctamente.");
     }catch(cause){setError(cause instanceof Error?cause.message:"No se pudo leer el archivo.");}
     finally{setBusy(false);}
@@ -42,7 +42,7 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
     try{
       const next=await fetchPublicTable(url,controller.signal);
       if(controller.signal.aborted)return;
-      onApply(next);setResult(null);setHistory([]);
+      onApply(next);setResult(null);onSaveReport?.(null);setHistory([]);
       setStatus("Dataset importado desde la URL.");
     }catch(cause){if(!controller.signal.aborted)setError(cause instanceof Error?cause.message:"No se pudo importar la URL.");}
     finally{setBusy(false);if(abort.current===controller)abort.current=null;}
@@ -51,11 +51,11 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
     if(!dataset)return;
     const task=inferTask(dataset,target);
     onApply({...dataset,target,task,automatic:true});
-    setResult(null);setHistory([]);setError("");
+    setResult(null);onSaveReport?.(null);setHistory([]);setError("");
   }
   function updateTask(task:PredictionTask){
     if(!dataset)return;
-    onApply({...dataset,task,automatic:false});setResult(null);setHistory([]);setError("");
+    onApply({...dataset,task,automatic:false});setResult(null);onSaveReport?.(null);setHistory([]);setError("");
   }
   function updateName(name:string){
     if(!dataset)return;onApply({...dataset,name});
@@ -67,7 +67,7 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
     try{
       const output=await trainTabular(dataset,Number(epochs),Number(batch),
         metric=>{if(!controller.signal.aborted)setHistory(old=>[...old,metric]);},controller.signal);
-      if(!controller.signal.aborted){setResult(output);setStatus("Modelo entrenado y guardado en este navegador.");}
+      if(!controller.signal.aborted){setResult(output);onSaveReport?.(output);setStatus("Modelo entrenado y guardado en este navegador.");}
     }catch(cause){setError(cause instanceof Error?cause.message:"No se pudo completar el entrenamiento.");}
     finally{setTraining(false);trainingAbort.current=null;}
   }
@@ -105,7 +105,7 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
           disabled={training} onChange={e=>updateName(e.target.value)}/></label></div>
         <strong>{fmt(dataset.rows.length)} filas · {dataset.headers.length} columnas</strong>
         <button className="nl-danger" type="button" disabled={training}
-          onClick={()=>{if(window.confirm("¿Quitar este dataset del proyecto? Los modelos entrenados no se eliminarán.")){onRemove();setResult(null);setHistory([]);setStatus("");}}}>Quitar dataset</button>
+          onClick={()=>{if(window.confirm("¿Quitar este dataset del proyecto? Los modelos entrenados no se eliminarán.")){onRemove();setResult(null);onSaveReport?.(null);setHistory([]);setStatus("");}}}>Quitar dataset</button>
       </div>
       <div className="nl-tabular-preview table-scroll"><table><thead><tr>{dataset.headers.map(h=><th key={h}>{h}</th>)}</tr></thead>
         <tbody>{dataset.rows.slice(0,5).map((row,i)=><tr key={i}>{row.map((cell,j)=><td key={j}>{cell||"—"}</td>)}</tr>)}</tbody></table></div>
@@ -116,7 +116,7 @@ export default function TabularPanel({dataset,onApply,onRemove}:Props){
         <label className="field"><span>Configuración</span>
           <select aria-label="Modo de configuración tabular" disabled={training} value={dataset.automatic?"automatic":"manual"}
             onChange={e=>{if(!dataset)return;onApply({...dataset,automatic:e.target.value==="automatic",
-              task:e.target.value==="automatic"?inferTask(dataset,dataset.target):dataset.task});setResult(null);setHistory([]);}}>
+              task:e.target.value==="automatic"?inferTask(dataset,dataset.target):dataset.task});setResult(null);onSaveReport?.(null);setHistory([]);}}>
             <option value="automatic">Automática</option><option value="manual">Manual</option>
           </select></label>
         {!dataset.automatic&&<label className="field"><span>Tipo de problema</span>
