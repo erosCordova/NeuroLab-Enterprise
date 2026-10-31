@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test:unit": "node --test tests/cnn.test.mjs tests/inspection.test.mjs tests/pixels.test.mjs tests/integrity.test.mjs tests/adaptive.test.mjs tests/dataset-export.test.mjs tests/projects.test.mjs tests/evaluation.test.mjs tests/history.test.mjs tests/browser-cnn.test.mjs tests/model-backup.test.mjs tests/real-model-registry.test.mjs tests/real-comparison.test.mjs tests/project-report.test.mjs tests/real-runs.test.mjs tests/deployment.test.mjs tests/release-smoke.test.mjs tests/mnist.test.mjs tests/network-telemetry.test.mjs",
+    "test:unit": "node --test tests/cnn.test.mjs tests/inspection.test.mjs tests/pixels.test.mjs tests/integrity.test.mjs tests/adaptive.test.mjs tests/dataset-export.test.mjs tests/projects.test.mjs tests/evaluation.test.mjs tests/history.test.mjs tests/browser-cnn.test.mjs tests/model-backup.test.mjs tests/real-model-registry.test.mjs tests/real-comparison.test.mjs tests/project-report.test.mjs tests/real-runs.test.mjs tests/deployment.test.mjs tests/release-smoke.test.mjs tests/mnist.test.mjs tests/network-telemetry.test.mjs tests/tabular.test.mjs",
     "test:e2e": "playwright test --config playwright.cnn.config.mjs",
     "test:e2e:report": "playwright show-report ../../runtime/cnn-e2e-report",
     "test:platform": "playwright test --config playwright.platform.config.mjs",
