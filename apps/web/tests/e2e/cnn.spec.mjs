@@ -946,8 +946,8 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
   await expect(visual.getByText("CONV2D 1")).toBeVisible();
   await expect(visual.getByText("MAXPOOL 1")).toBeVisible();
   await expect(visual.getByRole("button",{name:"Examinar capa FLATTEN"})).toBeVisible();
-  await expect(visual.getByText("DENSE",{exact:true})).toBeVisible();
-  await expect(visual.getByText("SALIDA",{exact:true})).toBeVisible();
+  await expect(visual.getByRole("button",{name:"Examinar capa DENSE"})).toBeVisible();
+  await expect(visual.getByRole("button",{name:"Examinar capa SALIDA"})).toBeVisible();
   await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","3d");
   await visual.getByRole("button",{name:"Vista 2D"}).click();
   await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","2d");
