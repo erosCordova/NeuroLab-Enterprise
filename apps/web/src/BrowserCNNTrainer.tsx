@@ -45,6 +45,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [stage,setStage]=useState("");
   const [metrics,setMetrics]=useState<Metric[]>([]);
   const [networkTrace,setNetworkTrace]=useState<NetworkTrace|null>(null);
+  const [networkHistory,setNetworkHistory]=useState<NetworkTrace[]>([]);
   const [inspecting,setInspecting]=useState(false);
   const [inspectError,setInspectError]=useState("");
   const [inspectMessage,setInspectMessage]=useState("");
@@ -86,7 +87,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
 
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setNetworkHistory([]);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
@@ -99,10 +100,10 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       const result=mnist
         ? await (await import("./mnistTrain")).trainMnistInBrowser(projectId,mnist,config,Number(epochs),Number(batch),onEpoch,
           info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);},abort.signal,
-          snapshot=>{if(!abort.signal.aborted)setNetworkTrace(snapshot);})
+          snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}})
         : await (await import("./browserCNN")).trainInBrowser(projectId,dataset!,config,Number(epochs),Number(batch),
           ({epoch,epochs:total,metric})=>onEpoch(epoch,total,metric),abort.signal,
-          snapshot=>{if(!abort.signal.aborted)setNetworkTrace(snapshot);});
+          snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}});
       if(abort.signal.aborted)return;
       setReport(result);
       setStage("Modelo CNN guardado en este navegador.");
@@ -176,7 +177,8 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       }
       model=await tf.loadLayersModel(report.model_ref);
       sample=tf.tensor4d(values,[1,report.config.size,report.config.size,report.config.channels]);
-      setNetworkTrace(captureNetworkTrace(model,sample,report.config,report.classes,report.completed_epochs,label));
+      const snapshot=captureNetworkTrace(model,sample,report.config,report.classes,report.completed_epochs,label);
+      setNetworkTrace(snapshot);setNetworkHistory([snapshot]);
       setInspectMessage("Activaciones reales obtenidas de los pesos guardados. Se muestra el estado final del modelo, no un historial de épocas anteriores.");
     }catch(cause){
       setInspectError(cause instanceof Error?cause.message:"No se pudo inspeccionar el modelo guardado.");
@@ -203,7 +205,9 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       <span className="badge">REAL · NAVEGADOR</span>
     </div>
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
-    <NetworkFlow config={config} classCount={mnist?10:dataset?.classes.length??report?.classes.length??2} working={working} realMetrics={metrics} realEpochs={report?.requested_epochs??Number(epochs)} realComplete={Boolean(report)} trace={networkTrace} batchState={batchState}/>
+    <NetworkFlow config={config} classCount={mnist?10:dataset?.classes.length??report?.classes.length??2} working={working} realMetrics={metrics} realEpochs={report?.requested_epochs??Number(epochs)} realComplete={Boolean(report)} trace={networkTrace} history={networkHistory}
+      classNames={report?.classes??(mnist?Array.from({length:10},(_,i)=>String(i)):dataset?.classes)}
+      batchState={batchState}/>
     {!dataset&&!mnist?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
       {mnist?<p><strong>MNIST · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
       {mnist&&<p className="mnist-usage">El entrenamiento MNIST usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}
@@ -247,7 +251,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     </>}
     {mnist&&<p className="caption">Importación MNIST en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
     <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setNetworkTrace(null);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
+      setReport(restored);setNetworkTrace(null);setNetworkHistory([]);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);setPredictions([]);setPredictionError("");
       setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
     }}/>
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
