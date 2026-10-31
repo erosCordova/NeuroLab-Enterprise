@@ -9,10 +9,11 @@ type Props = {
   onSave: (draft:ProjectDraft,id:string)=>void|Promise<unknown>;
   persistent?:boolean;
   onOpen: (id:string)=>void;
+  onDelete?: (id:string)=>Promise<void>;
 };
 const emptyDraft = ():ProjectDraft => ({name:"",description:"",status:"Activo",tags:""});
 
-export default function ProjectsPanel({projects,activeId,onSave,onOpen,persistent=false}:Props) {
+export default function ProjectsPanel({projects,activeId,onSave,onOpen,onDelete,persistent=false}:Props) {
   const [search,setSearch]=useState("");
   const [status,setStatus]=useState("Todos");
   const [editing,setEditing]=useState<string|null>(null);
@@ -20,8 +21,23 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen,persisten
   const [error,setError]=useState("");
   const [notice,setNotice]=useState("");
   const [saving,setSaving]=useState(false);
+  const [target,setTarget]=useState<Project|null>(null);
+  const [confirmation,setConfirmation]=useState("");
+  const [deleting,setDeleting]=useState(false);
+  const [deleteError,setDeleteError]=useState("");
   const visible=filterProjects(projects,search,status);
 
+  async function confirmDeletion(){
+    if(!target||!onDelete||confirmation.trim()!==target.name)return;
+    setDeleting(true);setDeleteError("");
+    try {
+      await onDelete(target.id);
+      setNotice("Proyecto eliminado. El listado está actualizado.");
+      if(editing===target.id)reset();
+      setTarget(null);setConfirmation("");
+    }catch(cause){setDeleteError(cause instanceof Error?cause.message:"No se pudo eliminar el proyecto.");}
+    finally{setDeleting(false);}
+  }
   function reset() {setEditing(null);setDraft(emptyDraft());setError("");}
   function edit(project:Project) {
     setEditing(project.id);
@@ -31,6 +47,10 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen,persisten
     document.getElementById("project-name")?.focus({preventScroll:true});
   }
   return <div className="project-workspace">
+    <div className="project-overview">
+      <div><strong>Mis proyectos CNN</strong><p>Abre, edita o elimina cada proyecto desde su tarjeta. Las acciones de eliminación siempre requieren confirmación.</p></div>
+      <button type="button" className="primary" onClick={()=>{reset();document.getElementById("project-editor")?.scrollIntoView({behavior:"smooth",block:"start"});document.getElementById("project-name")?.focus({preventScroll:true});}}>+ Nuevo proyecto</button>
+    </div>
     <section className="panel project-editor" id="project-editor" aria-label="Editor del proyecto">
       <div className="panel-head"><div><div className="eyebrow">CONTEXTO DEL EXPERIMENTO</div>
         <h2>{editing?"Editar proyecto":"Crear proyecto CNN"}</h2>
@@ -76,11 +96,32 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen,persisten
         <div className="panel-head"><span className="badge">CNN · {project.status}</span>{project.id===activeId&&<span className="caption">Proyecto activo</span>}</div>
         <h2>{project.name}</h2><p className="muted project-description">{project.description||"Añade una descripción del problema que deseas resolver."}</p>
         <div className="project-tags">{project.tags.map(tag=><span key={tag}>{tag}</span>)}</div>
-        <div className="actions"><button className="text-button" onClick={()=>onOpen(project.id)}>Abrir proyecto →</button>
-          <button className="secondary" aria-label={`Editar proyecto ${project.name}`} onClick={()=>edit(project)}>Editar</button></div>
+        <div className="actions project-card-actions">
+          <button className="primary" onClick={()=>onOpen(project.id)}>Abrir proyecto →</button>
+          <button className="secondary" aria-label={`Editar proyecto ${project.name}`} onClick={()=>edit(project)}>Editar</button>
+          {onDelete&&<button type="button" className="project-delete-trigger" aria-label={`Eliminar proyecto ${project.name}`}
+            onClick={()=>{setTarget(project);setConfirmation("");setDeleteError("");}}>Eliminar</button>}
+        </div>
       </article>)}</div>
       {!visible.length&&<div className="panel cnn-empty"><h2>No hay proyectos que coincidan</h2><p className="muted">Prueba otro nombre, etiqueta o estado.</p>
         <button className="secondary" onClick={()=>{setSearch("");setStatus("Todos");}}>Limpiar filtros de proyectos</button></div>}
     </section>
+    {target&&<div className="project-dialog-backdrop">
+      <section className="project-dialog" role="alertdialog" aria-modal="true" aria-label={"Confirmar eliminación de "+target.name} aria-describedby="project-delete-warning">
+        <div className="project-danger-icon" aria-hidden="true">!</div>
+        <h2>Eliminar proyecto</h2>
+        <p id="project-delete-warning">Eliminarás <strong>{target.name}</strong> de manera irreversible, junto con sus resultados de entrenamiento y las fichas guardadas en PostgreSQL. Los pesos almacenados en otros navegadores no pueden eliminarse desde esta página.</p>
+        <p>Si deseas conservar el modelo, descarga antes su archivo de respaldo <strong>.ncnn</strong>.</p>
+        <label className="field"><span>Escribe exactamente <strong>{target.name}</strong> para confirmar</span>
+          <input aria-label="Escribe el nombre del proyecto para eliminarlo" autoFocus disabled={deleting}
+            value={confirmation} onChange={e=>setConfirmation(e.target.value)}/></label>
+        {deleteError&&<p className="error" role="alert">{deleteError}</p>}
+        <div className="project-dialog-actions">
+          <button type="button" className="secondary" disabled={deleting} onClick={()=>{setTarget(null);setConfirmation("");}}>Cancelar</button>
+          <button type="button" className="project-danger-button" disabled={deleting||confirmation.trim()!==target.name}
+            onClick={()=>void confirmDeletion()}>{deleting?"Eliminando…":"Eliminar definitivamente"}</button>
+        </div>
+      </section>
+    </div>}
   </div>;
 }

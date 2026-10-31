@@ -999,3 +999,28 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
   expect(backup.suggestedFilename()).toMatch(/\.ncnn$/);
   await expect(page.getByText(/parámetros de CNN inconsistentes o demasiado grandes/)).toHaveCount(0);
 });
+
+
+test("Eliminar proyectos: confirmación obligatoria y selección consistente",async({page})=>{
+  await navigate(page,"Proyectos");
+  const name="Clasificación de imágenes";
+  const deleteButton=page.getByRole("button",{name:"Eliminar proyecto "+name});
+  await deleteButton.click();
+  const dialog=page.getByRole("alertdialog",{name:"Confirmar eliminación de "+name});
+  await expect(dialog).toBeVisible();
+  const confirm=dialog.getByRole("button",{name:"Eliminar definitivamente"});
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole("button",{name:"Cancelar"}).click();
+  await expect(page.getByRole("article",{name:"Proyecto "+name})).toBeVisible();
+  await page.getByLabel("Nuevo proyecto CNN",{exact:true}).fill("Proyecto seguro");
+  await page.getByRole("button",{name:"Crear proyecto",exact:true}).click();
+  await deleteButton.click();
+  await dialog.getByRole("textbox",{name:"Escribe el nombre del proyecto para eliminarlo"}).fill("Nombre equivocado");
+  await expect(confirm).toBeDisabled();
+  await dialog.getByRole("textbox",{name:"Escribe el nombre del proyecto para eliminarlo"}).fill(name);
+  await confirm.click();
+  await expect(page.getByRole("article",{name:"Proyecto "+name})).toHaveCount(0);
+  await expect(page.getByRole("article",{name:"Proyecto Proyecto seguro"})).toBeVisible();
+  await expect(page.getByLabel("Proyecto activo")).toHaveValue(/.+/);
+  await expect(page.getByRole("navigation").getByText("DATOS Y ENTRENAMIENTO")).toBeVisible();
+});

@@ -85,7 +85,7 @@ function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
   </div>;
 }
 
-export default function App({initialProjects,onPersistProject}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>}={}) {
+export default function App({initialProjects,onPersistProject,onDeleteProject}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>;onDeleteProject?:(id:string)=>Promise<void>}={}) {
   const [page,setPage]=useState<Page>("Dashboard");
   const [mobileMenuOpen,setMobileMenuOpen]=useState(true);
   const pageHeading=useRef<HTMLHeadingElement>(null);
@@ -188,6 +188,25 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
   function changeProject(id:string) {
     request.current++;setBusy(false);setDraft(null);
     setProjectId(id);setSelectedId("");setError("");setMessage("");
+  }
+  async function deleteProject(id:string){
+    if(onDeleteProject)await onDeleteProject(id);
+    const remaining=projects.filter(p=>p.id!==id);
+    setProjects(remaining);
+    request.current++;
+    setConfigs(current=>{const next={...current};delete next[id];return next;});
+    setCnnModes(current=>{const next={...current};delete next[id];return next;});
+    setDatasets(current=>{const next={...current};delete next[id];return next;});
+    setMnistByProject(current=>{const next={...current};delete next[id];return next;});
+    setDatasetOrigin(current=>{const next={...current};delete next[id];return next;});
+    setVersions(current=>current.filter(v=>v.projectId!==id));
+    setJobs(current=>current.filter(j=>j.projectId!==id));
+    setRecords(current=>current.filter(r=>r.job.projectId!==id));
+    setManualEpochsByProject(current=>{const next={...current};delete next[id];return next;});
+    setDraft(null);setSelectedId("");setModelId("");
+    if(projectId===id)setProjectId(remaining[0]?.id??"");
+    setMessage("Proyecto eliminado. Tus otros proyectos se conservan.");
+    setError("");
   }
   function updateConfig(next:Config) {
     if(automatic)return;
@@ -314,14 +333,21 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
       </div>
       <div className="workspace"><span>CNN</span><div><strong>Visión computacional</strong><small>Clasificación de imágenes</small></div></div>
       <p className="nav-label">ESPACIO DE TRABAJO</p>
-      <nav id="neurolab-main-nav" className="cnn-main-nav" data-collapsed={mobileMenuOpen?undefined:"true"} aria-label="Navegación principal">{pages.map(item=><button type="button" className={page===item?"nav-item active":"nav-item"} key={item} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>)}</nav>
+      <nav id="neurolab-main-nav" className="cnn-main-nav" data-collapsed={mobileMenuOpen?undefined:"true"} aria-label="Navegación principal">
+      {pages.map((item,index)=><div key={item}>
+        {[0,3,5,8].includes(index)&&<p className="nav-group-label">{index===0?"INICIO Y DISEÑO":index===3?"DATOS Y ENTRENAMIENTO":index===5?"RESULTADOS Y MODELOS":"GESTIÓN"}</p>}
+        <button type="button" className={page===item?"nav-item active":"nav-item"} aria-current={page===item?"page":undefined} onClick={()=>navigate(item)}>{item}</button>
+      </div>)}
+    </nav>
       <div className="sidebar-foot">Exclusivamente CNN<small>{onPersistProject?"Proyectos y métricas en PostgreSQL":"Datos de esta sesión en memoria"}</small></div>
     </aside>
     <main id="neurolab-main-content" tabIndex={-1}>
       <header className="topbar"><div><span className="muted">NeuroLab</span><span className="slash">/</span><strong>{page}</strong></div><span className="badge">CNN · REAL + DEMO</span></header>
       <div className="content">
         <div className="heading"><div><div className="eyebrow">REDES NEURONALES CONVOLUCIONALES</div><h1 ref={pageHeading} tabIndex={-1}>{page}</h1><p className="muted">{pageDescriptions[page]}</p></div></div>
-        <div className="notice"><strong>Alcance actual:</strong> puedes entrenar CNN reales con TensorFlow.js y guardar los pesos en este navegador (IndexedDB). La cola de simulaciones, sus métricas y las fichas de demostración están claramente separadas de los resultados reales. {onPersistProject?"Proyectos y reportes CNN se conservan en PostgreSQL; las imágenes y arquitecturas aún no se sincronizan.":"Sin iniciar sesión, las métricas y proyectos no se sincronizan con PostgreSQL."}</div>
+        <details className="cnn-storage-info"><summary>¿Qué se guarda en el servidor y qué queda en mi navegador?</summary>
+          <p>Los pesos de los modelos se conservan en este navegador (IndexedDB). {onPersistProject?"Los proyectos y reportes se guardan en PostgreSQL. Las imágenes y configuraciones de arquitectura todavía no se sincronizan.":"Los proyectos y métricas de esta sesión no se sincronizan con PostgreSQL."} Las simulaciones solo son didácticas.</p>
+        </details>
         <label className="field cnn-project no-print"><span>Proyecto activo</span><select aria-label="Proyecto activo" value={projectId} onChange={event=>changeProject(event.target.value)}>{projects.map(item=><option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
         {error&&<p className="error" role="alert">{error}</p>}{message&&<p className="feedback" role="status">{message}</p>}
 
@@ -347,6 +373,7 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
             if(onPersistProject){const stored=await onPersistProject(draft,id);setProjects(current=>current.some(item=>item.id===stored.id)?current.map(item=>item.id===stored.id?stored:item):[...current,stored]);}
             else setProjects(validated);
           }}
+          onDelete={deleteProject}
           onOpen={id=>{changeProject(id);navigate("Diseñador CNN");}} />}
 
         {page==="Datasets"&&<>
@@ -393,8 +420,14 @@ export default function App({initialProjects,onPersistProject}:{initialProjects?
         </div>}
 
         {page==="Entrenamientos"&&<>
-          <BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/>
-          {onPersistProject&&<RealCNNResults key={projectId+":"+realRevision} projectId={projectId} />}
+          <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
+            <a href="#cnn-real-training">1. Entrenar y reconocer</a>
+            {onPersistProject&&<a href="#cnn-real-results">2. Resultados guardados</a>}
+            <a href="#cnn-simulations">Simulación didáctica</a>
+          </nav>
+          <div id="cnn-real-training"><BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/></div>
+          {onPersistProject&&<div id="cnn-real-results"><RealCNNResults key={projectId+":"+realRevision} projectId={projectId}/></div>}
+          <div id="cnn-simulations" className="cnn-demo-divider"><strong>Simulación didáctica · no entrena una red neuronal real</strong><p>Esta cola genera métricas ilustrativas. Usa «Entrenar CNN con TensorFlow.js» arriba para un entrenamiento real.</p></div>
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
           <div className="training-layout"><section className="panel"><h2>Cola del proyecto</h2>{!projectJobs.length&&<div className="cnn-empty"><p>Todavía no hay ejecuciones en este proyecto.</p><button className="secondary" onClick={()=>navigate(dataset?"Diseñador CNN":"Datasets")}>{dataset?"Revisar arquitectura":"Cargar imágenes"}</button></div>}{[...projectJobs].reverse().map(job=><button className={selected?.id===job.id?"queue-item chosen":"queue-item"} key={job.id} onClick={()=>setSelectedId(job.id)}><strong>{job.name}</strong><span data-status={job.status}>{job.status}</span><small>{job.id}</small><progress max={job.epochs} value={job.status==="Completado"?job.epochs:job.epoch} /><small>{job.epoch}/{job.epochs} épocas</small></button>)}</section>
           <div className="training-detail">{selected&&<>

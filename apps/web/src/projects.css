@@ -9,3 +9,26 @@
 .project-tags span{background:#edf1fc;color:#42568f;font-size:.75rem;border-radius:6px;padding:4px 8px;overflow-wrap:anywhere;max-width:100%}
 .project-card .actions{justify-content:space-between;margin-top:8px}
 @media(max-width:600px){.project-filters{grid-template-columns:minmax(0,1fr)}.project-editor .panel-head{flex-wrap:wrap}.project-editor input,.project-editor textarea{min-width:0;max-width:100%}}
+
+.project-workspace{gap:16px}
+.project-overview{order:-2;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:16px 20px;background:#eaf9f5;border:1px solid #cee8df;border-radius:13px}
+.project-overview strong{color:#154c49;font-size:16px}
+.project-overview p{font-size:12px;line-height:1.7;margin:4px 0;color:#4c7679}
+.project-overview button{white-space:nowrap}
+.project-library{order:-1}
+.project-editor{order:2;border-top-color:#089f90}
+.project-card{border:1px solid #d0e6df}
+.project-card-actions{justify-content:flex-start!important;flex-wrap:wrap;gap:8px;margin-top:auto!important}
+.project-card-actions button{min-height:38px;font-size:11px}
+.project-delete-trigger{padding:9px 13px;background:#fff5f5;border:1px solid #ecc9cf;border-radius:8px;color:#a83247;cursor:pointer}
+.project-delete-trigger:hover{background:#ffe9eb;border-color:#d7a0ab}
+.project-dialog-backdrop{position:fixed;inset:0;z-index:999;background:rgba(4,24,34,.63);display:flex;align-items:center;justify-content:center;padding:20px}
+.project-dialog{max-height:calc(100dvh - 40px);overflow:auto;width:min(100%,520px);padding:26px;border-radius:16px;background:#fff;box-shadow:0 25px 85px #071c2b50;border:1px solid #eec7cf}
+.project-dialog h2{font-size:21px;margin:12px 0;color:#173940}
+.project-dialog p{font-size:12px;line-height:1.8;color:#51666b}
+.project-danger-icon{width:36px;height:36px;border-radius:10px;background:#fae7ea;color:#b82d44;display:grid;place-items:center;font-size:19px;font-weight:bold}
+.project-dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;flex-wrap:wrap}
+.project-danger-button{background:#b93249;color:white;border:0;border-radius:8px;padding:11px 17px;cursor:pointer;font-weight:650}
+.project-danger-button:hover:not(:disabled){background:#972238}
+.project-danger-button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:650px){.project-overview{flex-direction:column;align-items:stretch}.project-dialog{padding:18px}}
