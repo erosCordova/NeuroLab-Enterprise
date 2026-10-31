@@ -4,6 +4,7 @@ import * as tf from "@tensorflow/tfjs";
 import {gzipSync} from "node:zlib";
 import {MNIST_REPOSITORY,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
 import {makeMnistBatches} from "../src/mnistTrain.ts";
+import {augmentMnistPixels,mnistInferenceViews} from "../src/mnistRobust.ts";
 test("MNIST: valida el repositorio y rechaza dominios arbitrarios",()=>{
   assert.equal(validateMnistUrl(MNIST_REPOSITORY),MNIST_REPOSITORY);
   assert.equal(validateMnistUrl("https://storage.googleapis.com/cvdf-datasets/mnist"),MNIST_REPOSITORY);
@@ -62,4 +63,22 @@ test("MNIST: mini-batch crea solo tensores del lote y con etiquetas one-hot",asy
   assert.equal((await first.value.ys.data())[19],1);
   first.value.xs.dispose();first.value.ys.dispose();
   assert.ok(tf.memory().numTensors-before<=1);
+});
+
+test("MNIST: variantes de inferencia preservan la imagen original y no modifican los pesos",()=>{
+ const data=new Float32Array(784);data[13*28+12]=1;
+ const views=mnistInferenceViews(data);
+ assert.equal(views.length,5);
+ assert.deepEqual(views[0],data);
+ for(const view of views)assert.ok(view.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+ assert.equal(data[13*28+12],1);
+});
+test("MNIST: aumentos del entrenamiento preservan dimensión y normalización",()=>{
+ const data=new Float32Array(784);data[12*28+14]=1;
+ let i=0;const random=()=>[.2,.8,.1,.4,.7,.6][(i++)%6];
+ const out=augmentMnistPixels(data,random);
+ assert.equal(out.length,784);
+ assert.ok(out.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+ assert.ok(out.reduce((a,b)=>a+b,0)>0);
+ assert.equal(data[12*28+14],1);
 });

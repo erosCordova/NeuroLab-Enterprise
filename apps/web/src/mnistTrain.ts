@@ -6,6 +6,7 @@ import type {BrowserReport} from "./browserCNN.ts";
 import {mnistFingerprint,partitionMnist} from "./mnistDataset.ts";
 import type {MnistData} from "./mnistDataset.ts";
 import {captureNetworkTrace} from "./networkTelemetry.ts";
+import {augmentMnistPixels} from "./mnistRobust.ts";
 import type {NetworkTrace} from "./networkTelemetry.ts";
 
 export type BatchState={epoch:number;epochs:number;batch:number;batches:number;tensorBytes:number};
@@ -13,7 +14,7 @@ const safe=(v:number,min:number,max:number)=>Number.isInteger(v)&&v>=min&&v<=max
 type Cfg={size:number;channels:number};
 export function makeMnistBatches(
   pixels:Uint8Array,labels:Uint8Array,indices:number[],config:Cfg,batchSize:number,
-  signal?:AbortSignal,shuffle=false,
+  signal?:AbortSignal,shuffle=false,augment=false,
 ) {
   const size=config.size*config.size*config.channels;
   if(config.size!==28||config.channels!==1)throw new Error("MNIST requiere entrada de 28×28 y un canal.");
@@ -32,7 +33,13 @@ export function makeMnistBatches(
       const targets=new Float32Array(take*10);
       for(let row=0;row<take;row++){
         const index=selected[start+row],offset=index*784;
-        for(let p=0;p<784;p++)values[row*size+p]=pixels[offset+p]/255;
+        if(augment&&Math.random()<.7){
+          const source=new Float32Array(784);
+          for(let p=0;p<784;p++)source[p]=pixels[offset+p]/255;
+          values.set(augmentMnistPixels(source),row*size);
+        }else{
+          for(let p=0;p<784;p++)values[row*size+p]=pixels[offset+p]/255;
+        }
         targets[row*10+labels[index]]=1;
       }
       yield {xs:tf.tensor4d(values,[take,28,28,1]),ys:tf.tensor2d(targets,[take,10])};
@@ -73,7 +80,7 @@ export async function trainMnistInBrowser(
   let bestLoss=Infinity,stale=0;
   const metrics:Metric[]=[];
   let currentEpoch=0,currentBatch=0;
-  const train=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.train,config,batchSize,signal,true).repeat();
+  const train=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.train,config,batchSize,signal,true,true).repeat();
   const validation=makeMnistBatches(data.trainPixels,data.trainLabels,partitions.validation,config,batchSize,signal).repeat();
   const sampleIndex=partitions.validation[0];
   const samplePixels=new Float32Array(784);

@@ -240,13 +240,28 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
     const pixels=autoInvertLightBackground&&config.channels===1&&config.size===28
       ?await (await import("./mnistPreprocess")).preprocessMnistPhoto(file)
       :await pixelsOfImage(file,config);
-    const input=tf.tensor4d(pixels,[1,config.size,config.size,config.channels]);
+    const mnistPhoto=autoInvertLightBackground&&config.channels===1&&config.size===28;
+    const views=mnistPhoto
+      ?(await import("./mnistRobust")).mnistInferenceViews(pixels):[pixels];
+    const flattened=new Float32Array(views.length*pixels.length);
+    views.forEach((view,index)=>flattened.set(view,index*pixels.length));
+    const input=tf.tensor4d(flattened,[views.length,config.size,config.size,config.channels]);
     try{
       const output=model.predict(input) as tf.Tensor;
       try {
         const values=Array.from(await output.data());
-        const probabilities=classes.length===2?[1-values[0],values[0]]:values;
-        return classes.map((label,index)=>({clase:label,probabilidad:probabilities[index]}))
+        const averaged=classes.map((_,i)=>{
+          let score=0;
+          const count=classes.length===2?1:classes.length;
+          for(let k=0;k<views.length;k++){
+            const value=values[k*count+i];
+            score+=classes.length===2?(i===0?1-values[k]:values[k]):value;
+          }
+          return score/views.length;
+        });
+        if(averaged.some(value=>!Number.isFinite(value)))
+          throw new Error("El modelo no devolvió probabilidades válidas.");
+        return classes.map((label,index)=>({clase:label,probabilidad:averaged[index]}))
           .sort((left,right)=>right.probabilidad-left.probabilidad);
       }finally{output.dispose();}
     }finally{input.dispose();}

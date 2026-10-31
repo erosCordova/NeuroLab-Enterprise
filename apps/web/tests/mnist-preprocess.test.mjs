@@ -45,3 +45,22 @@ test("Foto con fondo desigual y cifra grande: separa tinta y centra el dígito",
  assert.ok(cy/sum>10&&cy/sum<17,"centrado vertical");
  assert.ok(result[0]<.05,"no confundir ruido de esquina con trazo");
 });
+
+test("Fotografía oscura sobre papel: el trazo queda separado del fondo",()=>{
+ const w=120,h=120,data=new Float32Array(w*h);
+ for(let y=0;y<h;y++)for(let x=0;x<w;x++)data[y*w+x]=.68+.15*x/w;
+ for(let y=25;y<95;y++)for(let x=34;x<39;x++)data[y*w+x]=.15;
+ for(let x=37;x<86;x++)for(let y=90;y<94;y++)data[y*w+x]=.15;
+ const out=normalizeMnistPixels(data,w,h);
+ assert.equal(out.length,784);
+ assert.ok(out.every(v=>v>=0&&v<=1));
+ assert.ok(out.reduce((a,b)=>a+b,0)>5);
+ assert.ok(out[0]<.1);
+});
+test("Dígito claro sobre fondo oscuro: conserva la polaridad de MNIST",()=>{
+ const w=112,h=112,data=new Float32Array(w*h).fill(.08);
+ for(let y=18;y<93;y++)for(let x=48;x<54;x++)data[y*w+x]=.9;
+ const output=normalizeMnistPixels(data,w,h);
+ assert.ok(output.reduce((a,b)=>a+b,0)>4);
+ assert.ok(output[0]<.1);
+});
