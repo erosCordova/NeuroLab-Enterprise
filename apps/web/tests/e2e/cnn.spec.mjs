@@ -952,6 +952,7 @@ test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla anim
 
 
 test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas las imágenes a tensores", async ({page})=>{
+  test.setTimeout(180000);
   const {gzipSync}=await import("node:zlib");
   const base="https://storage.googleapis.com/cvdf-datasets/mnist/";
   const sources=[
@@ -986,4 +987,10 @@ test("MNIST por URL: carga offline simulada de 70 000 IDX sin convertir todas la
   await expect(page.getByText(/MNIST · origen público/)).toBeVisible();
   await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
   await expect(page.locator(".nl-neural-stage").filter({hasText:"SALIDA"})).toBeVisible();
+  await page.getByLabel("Épocas de entrenamiento real").fill("1");
+  await page.getByLabel("Batch del entrenamiento real").fill("64");
+  await page.getByRole("button",{name:"Entrenar CNN real"}).click();
+  await expect(page.getByText("Modelo CNN guardado en este navegador.")).toBeVisible({timeout:160000});
+  await expect(page.locator(".browser-cnn-summary")).toBeVisible();
+  await expect(page.getByRole("button",{name:"Descargar dígito oficial de prueba (PNG)"})).toBeVisible();
 });
