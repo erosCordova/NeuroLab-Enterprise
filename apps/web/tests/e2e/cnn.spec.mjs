@@ -1067,3 +1067,19 @@ test("CSV URL pública: multiclase Softmax y configuración manual",async({page}
   await box.getByLabel("Tipo de problema").selectOption("regression");
   await expect(box.getByText(/Regresión requiere una variable objetivo numérica/)).toBeVisible();
 });
+
+
+test("CSV regresión: recomienda salida lineal y evalúa MAE",async({page})=>{
+  await navigate(page,"Datasets");
+  const csv=["edad,habitaciones,precio"];
+  for(let i=0;i<125;i++)csv.push([25+i%45,1+i%5,(160000+i%45*3200+(1+i%5)*30000).toFixed(1)].join(","));
+  const box=page.getByRole("region",{name:"Datos tabulares"});
+  await box.getByLabel("Archivo CSV o TSV").setInputFiles({
+    name:"viviendas.csv",mimeType:"text/csv",buffer:Buffer.from(csv.join("\n"))});
+  await expect(box.getByText("Regresión",{exact:true})).toBeVisible();
+  await expect(box.getByText("linear",{exact:true})).toBeVisible();
+  await box.getByLabel("Épocas tabulares").fill("2");
+  await box.getByRole("button",{name:"Iniciar entrenamiento"}).click();
+  await expect(box.getByText("Modelo entrenado y guardado en este navegador.")).toBeVisible({timeout:90000});
+  await expect(box.getByText("Prueba independiente · MAE")).toBeVisible();
+});
