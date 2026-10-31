@@ -26,10 +26,27 @@ export async function trainTabular(data:TabularDataset,epochs:number,batch:numbe
   const valid=data.rows.filter(row=>row[targetIndex]!==""&&
     (plan.task!=="regression"||Number.isFinite(Number(row[targetIndex]))));
   if(valid.length<25)throw new Error("Para entrenar necesitas al menos 25 filas válidas.");
-  const shuffled=shuffleIndices(valid.length);
-  const trainSize=Math.floor(valid.length*.8);
-  const validSize=Math.max(2,Math.floor(valid.length*.1));
-  const subsets=[shuffled.slice(0,trainSize),shuffled.slice(trainSize,trainSize+validSize),shuffled.slice(trainSize+validSize)];
+  const subsets:number[][]=[[],[],[]];
+  if(plan.task==="regression"){
+    const shuffled=shuffleIndices(valid.length);
+    const trainSize=Math.floor(valid.length*.8),valSize=Math.max(2,Math.floor(valid.length*.1));
+    subsets[0].push(...shuffled.slice(0,trainSize));
+    subsets[1].push(...shuffled.slice(trainSize,trainSize+valSize));
+    subsets[2].push(...shuffled.slice(trainSize+valSize));
+  }else{
+    // Partición estratificada reproducible: cada clase presente en los tres conjuntos.
+    plan.classes.forEach((label,k)=>{
+      const indices=valid.flatMap((row,i)=>row[targetIndex]===label?[i]:[]);
+      if(indices.length<10)throw new Error("Cada clase necesita al menos 10 ejemplos para entrenar.");
+      const shuffled=shuffleIndices(indices.length,42+k).map(i=>indices[i]);
+      const trainCount=Math.floor(indices.length*.8);
+      const valCount=Math.max(1,Math.floor(indices.length*.1));
+      subsets[0].push(...shuffled.slice(0,trainCount));
+      subsets[1].push(...shuffled.slice(trainCount,trainCount+valCount));
+      subsets[2].push(...shuffled.slice(trainCount+valCount));
+    });
+    subsets.forEach((indices,i)=>{const order=shuffleIndices(indices.length,82+i);subsets[i]=order.map(j=>indices[j]);});
+  }
   if(subsets.some(arr=>arr.length<2))throw new Error("No hay suficientes datos para las tres particiones.");
   // Las transformaciones se aprenden solo sobre entrenamiento; validación y prueba no contaminan el ajuste.
   const numeric=plan.numeric.map(name=>{
@@ -53,11 +70,16 @@ export async function trainTabular(data:TabularDataset,epochs:number,batch:numbe
       for(const c of categories){const pos=c.allowed.indexOf(row[c.idx]);for(let j=0;j<=c.allowed.length;j++)vec.push(j===(pos<0?c.allowed.length:pos)?1:0);}
       return vec;
     });
+  const trainTargets=subsets[0].map(i=>Number(valid[i][targetIndex]));
+  const meanTarget=plan.task==="regression"
+    ?trainTargets.reduce((a,b)=>a+b,0)/trainTargets.length:0;
+  const stdTarget=plan.task==="regression"
+    ?Math.max(1e-6,Math.sqrt(trainTargets.reduce((a,b)=>a+(b-meanTarget)**2,0)/trainTargets.length)):1;
   const labelIndex=(value:string)=>plan.classes.indexOf(value);
   const labels=(indices:number[])=>
     indices.map(i=>{
       const val=valid[i][targetIndex];
-      if(plan.task==="regression")return [Number(val)];
+      if(plan.task==="regression")return [(Number(val)-meanTarget)/stdTarget];
       const label=labelIndex(val);
       if(label<0)throw new Error("Clase no reconocida.");
       if(plan.task==="binary")return [label];
@@ -91,12 +113,12 @@ export async function trainTabular(data:TabularDataset,epochs:number,batch:numbe
     });
     if(signal?.aborted)throw new Error("Entrenamiento cancelado.");
     const evalTensor=model.evaluate(xs[2],ys[2]) as tf.Scalar[];
-    const testMetric=Number((await evalTensor[1].data())[0]);
+    const testMetric=Number((await evalTensor[1].data())[0])*(plan.task==="regression"?stdTarget:1);
     evalTensor.forEach(t=>t.dispose());
     const example=xs[2].slice([0,0],[1,columns]);
     const predicted=model.predict(example) as tf.Tensor;
     const probabilities=Array.from(await predicted.data());predicted.dispose();example.dispose();
-    const predictedValue=plan.task==="regression"?probabilities[0].toFixed(3):
+    const predictedValue=plan.task==="regression"?(probabilities[0]*stdTarget+meanTarget).toFixed(3):
       plan.task==="binary"?plan.classes[probabilities[0]>=.5?1:0]:
       plan.classes[probabilities.indexOf(Math.max(...probabilities))];
     const id="indexeddb://neurolab-tabular-"+Date.now()+"-"+Math.random().toString(36).slice(2);
