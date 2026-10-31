@@ -1030,3 +1030,40 @@ test("Eliminar proyectos: confirmación obligatoria y selección consistente",as
   await expect(page.getByLabel("Proyecto activo")).toHaveValue(/.+/);
   await expect(page.getByRole("navigation").getByText("DATOS Y ENTRENAMIENTO")).toBeVisible();
 });
+
+
+test("CSV real: importar, inferir sigmoid, entrenar y evaluar",async({page})=>{
+  await navigate(page,"Datasets");
+  const csv=["edad,region,churn"];
+  for(let i=0;i<160;i++)csv.push([20+i%50,i%2?"Norte":"Sur",i%2].join(","));
+  await page.getByLabel("Archivo CSV o TSV").setInputFiles({
+    name:"clientes.csv",mimeType:"text/csv",buffer:Buffer.from(csv.join("\n"))});
+  const box=page.getByRole("region",{name:"Datos tabulares"});
+  await expect(box.getByText("Clasificación binaria",{exact:true})).toBeVisible();
+  await expect(box.getByText("sigmoid",{exact:true})).toBeVisible();
+  await expect(box.getByText("binaryCrossentropy")).toHaveCount(0);
+  await box.getByLabel("Épocas tabulares").fill("2");
+  await box.getByRole("button",{name:"Iniciar entrenamiento"}).click();
+  await expect(box.getByText("Modelo entrenado y guardado en este navegador.")).toBeVisible({timeout:90000});
+  await expect(box.getByText("Prueba independiente · Precisión")).toBeVisible();
+  await expect(box.getByRole("button",{name:"Exportar informe JSON"})).toBeVisible();
+});
+
+test("CSV URL pública: multiclase Softmax y configuración manual",async({page})=>{
+  await navigate(page,"Datasets");
+  const csv=["sepal_length,species"];
+  for(let i=0;i<80;i++)csv.push([4+i*.03,["setosa","versicolor","virginica"][i%3]].join(","));
+  await page.route("https://example.org/datasets/iris.csv",async route=>
+    route.fulfill({status:200,contentType:"text/csv",
+      headers:{"access-control-allow-origin":"*"},body:csv.join("\n")}));
+  const box=page.getByRole("region",{name:"Datos tabulares"});
+  await box.getByRole("button",{name:"Desde URL"}).click();
+  await box.getByLabel("URL del dataset tabular").fill("https://example.org/datasets/iris.csv");
+  await box.getByRole("button",{name:"Importar URL"}).click();
+  await expect(box.getByText("Clasificación multiclase",{exact:true})).toBeVisible();
+  await expect(box.getByText("softmax",{exact:true})).toBeVisible();
+  await box.getByLabel("Modo de configuración tabular").selectOption("manual");
+  await expect(box.getByLabel("Tipo de problema")).toBeVisible();
+  await box.getByLabel("Tipo de problema").selectOption("regression");
+  await expect(box.getByText(/Regresión requiere una variable objetivo numérica/)).toBeVisible();
+});
