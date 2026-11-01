@@ -4,7 +4,7 @@ import * as tf from "@tensorflow/tfjs";
 import {gzipSync} from "node:zlib";
 import {MNIST_REPOSITORY,FASHION_REPOSITORY,FASHION_LABELS_ES,isFashionDataset,classNamesForSource,validateIdxSourceUrl,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
 import {makeMnistBatches} from "../src/mnistTrain.ts";
-import {augmentMnistPixels,mnistInferenceViews} from "../src/mnistRobust.ts";
+import {augmentMnistPixels,mnistInferenceViews,mnistInferenceVariants,transformMnistPixels,estimateMnistSlant,deskewMnistPixels} from "../src/mnistRobust.ts";
 import {fashionDomainIssue,isFashionMnistClassifier,PredictionDomainError} from "../src/fashionDomain.ts";
 test("MNIST: valida el repositorio y rechaza dominios arbitrarios",()=>{
   assert.equal(validateMnistUrl(MNIST_REPOSITORY),MNIST_REPOSITORY);
@@ -69,7 +69,7 @@ test("MNIST: mini-batch crea solo tensores del lote y con etiquetas one-hot",asy
 test("MNIST: variantes de inferencia preservan la imagen original y no modifican los pesos",()=>{
  const data=new Float32Array(784);data[13*28+12]=1;
  const views=mnistInferenceViews(data);
- assert.equal(views.length,5);
+ assert.ok(views.length>=9&&views.length<=10);
  assert.deepEqual(views[0],data);
  for(const view of views)assert.ok(view.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
  assert.equal(data[13*28+12],1);
@@ -120,4 +120,45 @@ test("Fashion-MNIST: no confunde fotografía de camiseta con muestra oficial",()
   }
   assert.match(fashionDomainIssue(28,28,white),/fondo/);
   assert.equal(new PredictionDomainError("Foto no compatible").name,"PredictionDomainError");
+});
+
+
+test("MNIST: giros de 24° y traslaciones preservan píxeles y la entrada original",()=>{
+ const src=new Float32Array(784);
+ for(let y=5;y<24;y++)for(let x=12;x<15;x++)src[y*28+x]=1;
+ const before=new Float32Array(src);
+ const rotated=transformMnistPixels(src,24*Math.PI/180);
+ const back=transformMnistPixels(rotated,-24*Math.PI/180);
+ assert.deepEqual(src,before);
+ assert.equal(rotated.length,784);
+ assert.ok(rotated.every(v=>Number.isFinite(v)&&v>=0&&v<=1));
+ assert.ok(back.reduce((a,b)=>a+b,0)>5);
+ assert.notDeepEqual(rotated,src);
+ assert.throws(()=>transformMnistPixels(src,Infinity),/fuera de rango/);
+});
+test("MNIST: corregir inclinación reduce el sesgo horizontal de un trazo diagonal",()=>{
+ const src=new Float32Array(784);
+ for(let y=5;y<=23;y++){
+   const x=Math.round(10+(y-5)*.38);
+   for(let dx=0;dx<3;dx++)src[y*28+x+dx]=1;
+ }
+ const skew=estimateMnistSlant(src);
+ assert.ok(skew>.2&&skew<.6,"Pendiente estimada "+skew);
+ const corrected=deskewMnistPixels(src);
+ assert.ok(corrected.reduce((a,b)=>a+b,0)>6);
+ assert.ok(Math.abs(estimateMnistSlant(corrected))<Math.abs(skew),"La pendiente no disminuyó");
+});
+test("MNIST: inferencia ponderada conserva la muestra original y no afecta Fashion-MNIST",()=>{
+ const src=new Float32Array(784);
+ for(let y=5;y<24;y++)src[y*28+Math.round(12+(y-5)*.3)]=1;
+ const views=mnistInferenceVariants(src);
+ assert.equal(views[0].kind,"original");
+ assert.deepEqual(views[0].pixels,src);
+ assert.ok(views.some(v=>v.kind==="rotación"));
+ assert.ok(views.some(v=>v.kind==="inclinación corregida"));
+ assert.ok(Math.abs(views.reduce((sum,v)=>sum+v.weight,0)-1)<1e-7);
+ assert.ok(views[0].weight>views[1].weight);
+ assert.ok(views.every(v=>v.pixels.length===784&&v.pixels.every(x=>Number.isFinite(x)&&x>=0&&x<=1)));
+ assert.equal(isFashionDataset(FASHION_REPOSITORY),true);
+ assert.deepEqual(classNamesForSource(FASHION_REPOSITORY),[...FASHION_LABELS_ES]);
 });

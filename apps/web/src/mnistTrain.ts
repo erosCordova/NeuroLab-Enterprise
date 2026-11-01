@@ -33,7 +33,7 @@ export function makeMnistBatches(
       const targets=new Float32Array(take*10);
       for(let row=0;row<take;row++){
         const index=selected[start+row],offset=index*784;
-        if(augment&&Math.random()<.7){
+        if(augment&&Math.random()<.80){
           const source=new Float32Array(784);
           for(let p=0;p<784;p++)source[p]=pixels[offset+p]/255;
           values.set(augmentMnistPixels(source),row*size);

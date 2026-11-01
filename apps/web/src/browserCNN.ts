@@ -243,12 +243,14 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
     const prepared=mnistPhoto
       ?await (await import("./mnistPreprocess")).preprocessMnistPhotoWithMeta(file):null;
     const pixels=prepared?.pixels??await pixelsOfImage(file,config);
-    // Las muestras oficiales MNIST de 28x28 no necesitan ensamble de traslaciones.
-    const views=prepared&&!prepared.was28
-      ?(await import("./mnistRobust")).mnistInferenceViews(pixels):[pixels];
-    const flattened=new Float32Array(views.length*pixels.length);
-    views.forEach((view,index)=>flattened.set(view,index*pixels.length));
-    const input=tf.tensor4d(flattened,[views.length,config.size,config.size,config.channels]);
+    // Conserva sin transformaciones los PNG oficiales MNIST de 28×28.
+    // Para fotografías usa vistas ponderadas: giros, pequeños desplazamientos y desinclinación.
+    const variants=prepared&&!prepared.was28
+      ?(await import("./mnistRobust")).mnistInferenceVariants(pixels)
+      :[{pixels,weight:1,kind:"original"}];
+    const flattened=new Float32Array(variants.length*pixels.length);
+    variants.forEach((variant,index)=>flattened.set(variant.pixels,index*pixels.length));
+    const input=tf.tensor4d(flattened,[variants.length,config.size,config.size,config.channels]);
     try{
       const output=model.predict(input) as tf.Tensor;
       try {
@@ -256,11 +258,11 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
         const averaged=classes.map((_,i)=>{
           let score=0;
           const count=classes.length===2?1:classes.length;
-          for(let k=0;k<views.length;k++){
+          for(let k=0;k<variants.length;k++){
             const value=values[k*count+i];
-            score+=classes.length===2?(i===0?1-values[k]:values[k]):value;
+            score+=variants[k].weight*(classes.length===2?(i===0?1-values[k]:values[k]):value);
           }
-          return score/views.length;
+          return score;
         });
         if(averaged.some(value=>!Number.isFinite(value)))
           throw new Error("El modelo no devolvió probabilidades válidas.");
