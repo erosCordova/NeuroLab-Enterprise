@@ -243,10 +243,11 @@ export async function predictInBrowser(modelRef:string,file:File,config:Config,c
     const prepared=mnistPhoto
       ?await (await import("./mnistPreprocess")).preprocessMnistPhotoWithMeta(file):null;
     const pixels=prepared?.pixels??await pixelsOfImage(file,config);
-    // Conserva sin transformaciones los PNG oficiales MNIST de 28×28.
-    // Para fotografías usa vistas ponderadas: giros, pequeños desplazamientos y desinclinación.
-    const variants=prepared&&!prepared.was28
-      ?(await import("./mnistRobust")).mnistInferenceVariants(pixels)
+    // Conservar una sola pasada para PNG oficiales derechos de 28×28; aplicar
+    // TTA también a imágenes pequeñas si muestran una inclinación marcada.
+    const robust=prepared&&(await import("./mnistRobust"));
+    const variants=prepared&&robust!.shouldUseMnistRobustInference(prepared.was28,pixels)
+      ?robust!.mnistInferenceVariants(pixels)
       :[{pixels,weight:1,kind:"original"}];
     const flattened=new Float32Array(variants.length*pixels.length);
     variants.forEach((variant,index)=>flattened.set(variant.pixels,index*pixels.length));

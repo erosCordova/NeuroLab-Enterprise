@@ -104,3 +104,8 @@ export function mnistInferenceVariants(source:Float32Array):MnistView[]{
 export function mnistInferenceViews(source:Float32Array):Float32Array[]{
   return mnistInferenceVariants(source).map(item=>item.pixels);
 }
+
+/** No omitir la robustez en un PNG de 28×28 si ya presenta inclinación notable. */
+export function shouldUseMnistRobustInference(was28:boolean,pixels:Float32Array):boolean{
+  return !was28||Math.abs(estimateMnistSlant(pixels))>=.18;
+}

@@ -4,7 +4,7 @@ import * as tf from "@tensorflow/tfjs";
 import {gzipSync} from "node:zlib";
 import {MNIST_REPOSITORY,FASHION_REPOSITORY,FASHION_LABELS_ES,isFashionDataset,classNamesForSource,validateIdxSourceUrl,validateMnistUrl,parseIdxImages,parseIdxLabels,selectMnistIndices,partitionMnist} from "../src/mnistDataset.ts";
 import {makeMnistBatches} from "../src/mnistTrain.ts";
-import {augmentMnistPixels,mnistInferenceViews,mnistInferenceVariants,transformMnistPixels,estimateMnistSlant,deskewMnistPixels} from "../src/mnistRobust.ts";
+import {augmentMnistPixels,mnistInferenceViews,mnistInferenceVariants,transformMnistPixels,estimateMnistSlant,deskewMnistPixels,shouldUseMnistRobustInference} from "../src/mnistRobust.ts";
 import {fashionDomainIssue,isFashionMnistClassifier,PredictionDomainError} from "../src/fashionDomain.ts";
 test("MNIST: valida el repositorio y rechaza dominios arbitrarios",()=>{
   assert.equal(validateMnistUrl(MNIST_REPOSITORY),MNIST_REPOSITORY);
@@ -161,4 +161,12 @@ test("MNIST: inferencia ponderada conserva la muestra original y no afecta Fashi
  assert.ok(views.every(v=>v.pixels.length===784&&v.pixels.every(x=>Number.isFinite(x)&&x>=0&&x<=1)));
  assert.equal(isFashionDataset(FASHION_REPOSITORY),true);
  assert.deepEqual(classNamesForSource(FASHION_REPOSITORY),[...FASHION_LABELS_ES]);
+});
+
+test("MNIST: un PNG inclinado de 28×28 también recibe inferencia robusta",()=>{
+ const upright=new Float32Array(784);for(let y=5;y<24;y++)for(let dx=0;dx<3;dx++)upright[y*28+12+dx]=1;
+ const tilted=new Float32Array(784);for(let y=5;y<24;y++){const x=10+Math.round((y-5)*.38);for(let dx=0;dx<3;dx++)tilted[y*28+x+dx]=1;}
+ assert.equal(shouldUseMnistRobustInference(true,upright),false);
+ assert.equal(shouldUseMnistRobustInference(true,tilted),true);
+ assert.equal(shouldUseMnistRobustInference(false,upright),true);
 });
