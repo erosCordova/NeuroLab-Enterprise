@@ -33,3 +33,38 @@
 .nl-digit-result strong{font-size:28px;color:#087f72}
 .nl-digit-result>span:last-child{font-variant-numeric:tabular-nums;color:#29776f}
 @media(max-width:620px){.nl-digit-result{grid-template-columns:55px 1fr auto}.nl-digit-result>span:last-child{grid-column:2/-1}}
+
+/* Resultados tipo Colab: fotografía anotada y tabla legible de recortes. */
+.nl-prediction-layout:has(.nl-colab-summary){grid-template-columns:minmax(245px,380px) minmax(0,1fr);align-items:start}
+.nl-prediction-image-multi{aspect-ratio:auto;display:flex;flex-direction:column;align-items:center;gap:12px;padding:12px}
+.nl-prediction-image-multi img{max-height:410px;max-width:100%;object-fit:contain}
+.nl-image-switch{width:100%;display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.nl-image-switch button{background:#fff;border:1px solid #c9e6de;border-radius:8px;padding:8px 10px;color:#397970;font-size:11px;font-weight:750}
+.nl-image-switch button[aria-pressed="true"]{background:#def6ef;border-color:#3fb29b;color:#076f62}
+.nl-colab-summary{min-width:0;display:grid;gap:12px;align-content:start;padding-top:12px}
+.nl-colab-summary>strong{font-size:clamp(22px,3vw,35px);line-height:1.12;color:#0e736e}
+.nl-colab-summary>span{color:#507a78;font-size:12px}
+.nl-colab-row-readings{display:grid;grid-template-columns:repeat(auto-fit,minmax(105px,1fr));gap:8px}
+.nl-colab-reading{display:flex;flex-direction:column;gap:7px;padding:13px;border:1px solid #d8ebe5;border-radius:12px;background:#fff;min-width:0}
+.nl-colab-reading small{color:#53827b;font-size:11px;font-weight:700}
+.nl-colab-reading strong{font-size:clamp(24px,3vw,34px);font-weight:850;color:#087e73;line-height:1;overflow-wrap:anywhere}
+.nl-colab-results{border:1px solid #d4e6e1;border-radius:15px;padding:18px;background:#fff;min-width:0}
+.nl-colab-results-head{display:flex;align-items:start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.nl-colab-results-head h3{font-size:17px;margin:0 0 6px;color:#174b47}
+.nl-colab-results-head p{font-size:12px;margin:0;color:#65817f}
+.nl-colab-results-head>span{flex:none;padding:7px 10px;background:#e6f8f2;border-radius:9px;color:#0f796c;font-size:11px;font-weight:750}
+.nl-colab-table-scroll{max-width:100%;overflow-x:auto}
+.nl-colab-table{width:100%;min-width:710px;border-collapse:collapse;font-size:12px;text-align:center;color:#395c62}
+.nl-colab-table th{background:#edf8f4;color:#1b6760;padding:14px 11px;font-size:11px;text-align:center;border-bottom:1px solid #cde9dc;white-space:nowrap}
+.nl-colab-table td{padding:10px 11px;border-bottom:1px solid #e1ede9;vertical-align:middle}
+.nl-colab-table tr:nth-child(even) td{background:#fafdfc}
+.nl-colab-table tbody tr:last-child td{border-bottom:0}
+.nl-colab-table img{image-rendering:pixelated;width:62px;height:62px;background:#07151d;border:1px solid #c9e3dd;border-radius:9px;padding:5px}
+.nl-colab-position{font-weight:750;color:#155b54}
+.nl-colab-digit{font-size:26px;font-weight:850;color:#087d70;min-width:90px}
+.nl-colab-confidence{font-variant-numeric:tabular-nums;font-weight:750;color:#215d59}
+.nl-colab-state{display:inline-flex;white-space:nowrap;border-radius:20px;padding:6px 9px;font-size:11px;font-weight:700}
+.nl-colab-state.good{background:#ddf5e9;color:#0c7c61}
+.nl-colab-state.review{background:#fff1d7;color:#9d631a}
+.nl-colab-results-caption{font-size:11px;color:#67827e;margin:12px 0 0;line-height:1.6}
+@media(max-width:790px){.nl-prediction-layout:has(.nl-colab-summary){grid-template-columns:1fr}.nl-prediction-image-multi{max-width:100%}.nl-colab-results{padding:12px}.nl-colab-summary{padding-top:0}}
