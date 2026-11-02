@@ -167,7 +167,7 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
     {(["Todos","Disponibles","Archivados","Favoritos"] as ModelFilter[]).map(item=><option key={item}>{item}</option>)}
    </select></label>
   </div>
-  {!loading&&!models.length&&<p className="caption">Todavía no existen modelos reales registrados. Las fichas de demostración están separadas debajo.</p>}
+  {!loading&&!models.length&&<p className="caption">Todavía no existen modelos entrenados registrados.</p>}
   <div className="real-registry-grid">
    {visible.map(item=><article key={item.id} aria-label={"Modelo real "+item.display_name} className={item.id===selected?"real-model-card selected":"real-model-card"}>
     <div className="real-model-top"><span className="badge">{item.status}</span><span aria-label={item.favorite?"Favorito":"No favorito"}>{item.favorite?"★":"☆"}</span></div>
@@ -216,6 +216,6 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
       predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
    </section>}
   </div>}
-  <p className="caption">El registro administra metadatos de modelos reales sin certificación independiente; no modifica las fichas de demostración.</p>
+  <p className="caption">El registro administra metadatos de modelos reales; los pesos siguen almacenados por separado.</p>
  </section>;
 }

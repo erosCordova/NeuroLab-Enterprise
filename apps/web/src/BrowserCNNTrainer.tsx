@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from "react";
 import {api} from "./api";
-import type {Config,ImageDataset,Metric,Job} from "./cnn";
+import type {Config,ImageDataset,Metric} from "./cnn";
 import {summary} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
 import CNNBackupActions from "./CNNBackupActions";
@@ -18,8 +18,6 @@ type Props={
   config:Config;
   connected:boolean;
   onSaved:()=>void;
-  demoJob?:Job;
-  demoPaused?:boolean;
   onWorkingChange?:(working:boolean)=>void;
 };
 

@@ -78,7 +78,7 @@ export default function ProjectsPanel({projects,activeId,onSave,onOpen,onDelete,
         <label className="field"><span>Etiquetas del proyecto</span><input aria-label="Etiquetas del proyecto" value={draft.tags} maxLength={160}
           placeholder="MNIST, dígitos, clasificación" aria-describedby="project-tags-help"
           onChange={event=>setDraft({...draft,tags:event.target.value})}/></label>
-        <p className="caption" id="project-tags-help">Hasta seis etiquetas separadas por comas. Archivar bloquea nuevas simulaciones, pero conserva el historial y permite terminar las ya iniciadas.</p>
+        <p className="caption" id="project-tags-help">Hasta seis etiquetas separadas por comas. Archivar mantiene la información del proyecto. Reactívalo antes de iniciar nuevos entrenamientos.</p>
         {error&&<p className="error" role="alert">{error}</p>}
         <div className="actions"><button className="primary">{editing?"Guardar cambios":"Crear proyecto"}</button>
           {editing&&<button type="button" className="secondary" onClick={reset}>Cancelar edición</button>}</div>

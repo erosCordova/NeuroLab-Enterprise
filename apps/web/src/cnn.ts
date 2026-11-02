@@ -203,7 +203,7 @@ export async function readImages(files: File[]): Promise<ImageRecord[]> {
   const images = files.filter(file => /\.(png|jpe?g|webp)$/i.test(file.name));
 
   if (!images.length) throw new Error("La carpeta no contiene imágenes PNG, JPG o WebP.");
-  if (images.length > 500) throw new Error("La demo admite hasta 500 imágenes.");
+  if (images.length > 500) throw new Error("La importación de este dataset admite hasta 500 imágenes.");
   if (images.reduce((total,file) => total + file.size,0) > 50 * 1024 * 1024) {
     throw new Error("Las imágenes superan el límite conjunto de 50 MiB.");
   }

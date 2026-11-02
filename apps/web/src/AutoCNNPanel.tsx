@@ -87,10 +87,8 @@ export default function AutoCNNPanel({
     </fieldset>
 
     <p className="caption">
-      Dropout y L2 se conservan como configuración para entrenamiento real.
-      No modifican las curvas ilustrativas actuales. La parada temprana sí
-      controla cuándo termina la simulación. No se restauran pesos porque
-      todavía no existe un modelo entrenado.
+      Dropout y L2 se aplican durante el entrenamiento de la red. La parada temprana
+      utiliza la pérdida de validación medida para decidir si detener el ajuste.
     </p>
   </section>;
 }

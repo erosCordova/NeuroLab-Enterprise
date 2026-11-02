@@ -19,21 +19,15 @@ export default function Landing({children}:{children:React.ReactNode}){
           <div className="nl-landing-buttons"><a href="#acceso" className="nl-landing-primary">Comenzar ahora <span aria-hidden="true">→</span></a><a href="#flujo" className="nl-landing-secondary">Ver cómo funciona</a></div>
           <div className="nl-landing-tags"><span>Imágenes</span><span>MNIST</span><span>Datos tabulares CSV</span></div>
         </div>
-        <div className="nl-landing-demo" aria-label="Vista de las etapas del entrenamiento">
-          <div className="nl-demo-toolbar"><BrandLogo compact/><span>● &nbsp; ● &nbsp; ●</span></div>
-          <div className="nl-demo-head"><div><small>FLUJO DE TRABAJO</small><strong>De tus datos a una predicción</strong></div><span className="nl-demo-status">Automático o manual</span></div>
-          <div className="nl-demo-cards">
+        <div className="nl-landing-flow" aria-label="Vista de las etapas del entrenamiento">
+          <div className="nl-flow-toolbar"><BrandLogo compact/><span>● &nbsp; ● &nbsp; ●</span></div>
+          <div className="nl-flow-head"><div><small>FLUJO DE TRABAJO</small><strong>De tus datos a una predicción</strong></div><span className="nl-flow-status">Automático o manual</span></div>
+          <div className="nl-flow-cards">
             <div><span>01</span><strong>Dataset</strong><small>Importar y revisar</small></div>
             <div><span>02</span><strong>Preparar</strong><small>Elegir el modelo</small></div>
             <div><span>03</span><strong>Entrenar</strong><small>Aprender patrones</small></div>
             <div><span>04</span><strong>Evaluar</strong><small>Medir resultados</small></div>
           </div>
-          <div className="nl-demo-chart" aria-hidden="true">
-            <svg viewBox="0 0 450 110" preserveAspectRatio="none">
-              <path d="M0 100 L65 77 L130 63 L196 51 L260 36 L323 29 L388 19 L450 17" fill="none" stroke="#06b9aa" strokeWidth="4"/>
-              <path d="M0 106 L65 93 L130 73 L196 59 L260 52 L323 40 L388 36 L450 29" fill="none" stroke="#786de3" strokeWidth="3" strokeDasharray="7 5"/>
-            </svg>
-          </div><small className="nl-demo-foot">Vista ilustrativa del proceso · Los resultados se obtienen al entrenar</small>
         </div>
       </div>
       <section id="funciones" className="nl-landing-features">

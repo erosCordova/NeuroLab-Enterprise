@@ -66,7 +66,7 @@ export default function ProjectCNNReport({projectId,projectName,mode}:Props){
    {!report.coverage.exhaustive&&<p className="soft">Vista parcial: se consultan como máximo 50 entrenamientos y 50 modelos por proyecto; los totales y máximos podrían no abarcar el historial completo.</p>}
    {!report.rows.length?<div className="project-report-empty">
     <h3>Sin entrenamientos CNN reales registrados</h3>
-    <p>Entrena una CNN desde Entrenamientos o importa un informe válido. Los datos de demostración están separados y no se cuentan como reales.</p>
+    <p>Entrena una CNN desde Entrenamientos para generar informes con métricas observadas.</p>
    </div>:<>
     <div className="project-report-main">
      <article className="project-report-section" aria-label="Precisión de últimos entrenamientos reales">
