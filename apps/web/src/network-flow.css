@@ -79,3 +79,28 @@
   .nl-energy-streams{display:none!important}
   .nl-neuron-halo,.nl-neuron-core{animation:none!important}
 }
+
+/* Mapas de activación reales y colores secundarios funcionales por tipo de capa. */
+.nl-feature-section{flex-basis:100%;border-top:1px solid #d2e8df;margin-top:4px;padding:13px 0 4px}
+.nl-feature-heading{display:flex;justify-content:space-between;gap:9px;align-items:center;flex-wrap:wrap}
+.nl-feature-heading strong{color:#245b72;font-size:12px}
+.nl-feature-heading span{font-size:10px;color:#8065a7;font-weight:750}
+.nl-feature-grid{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}
+.nl-feature-card{padding:9px;background:#0b2232;border:1px solid #54728c;border-radius:10px;min-width:108px}
+.nl-feature-card>span{display:block;color:#c4e9e4;font-size:10px;font-weight:750;margin-bottom:7px}
+.nl-feature-pixels{display:grid;grid-template-columns:repeat(8,10px);grid-template-rows:repeat(8,10px);gap:1px;background:#091623;padding:3px;border-radius:4px}
+.nl-feature-pixels i{display:block;width:10px;height:10px;border-radius:1px}
+.nl-feature-section p{font-size:11px;color:#607d81;line-height:1.5;margin:5px 0 0}
+.nl-graph-legend{display:flex;align-items:center;gap:13px;flex-wrap:wrap;font-size:10px;color:#557b7e}
+.nl-graph-legend span{display:flex;align-items:center;gap:6px}
+.nl-graph-legend i{display:inline-block;width:10px;height:10px;border-radius:50%}
+.nl-legend-sim{background:#21b9bb;box-shadow:0 0 0 2px #d1f3f0}
+.nl-legend-data{background:#9874ce;box-shadow:0 0 0 2px #eee7fa}
+.nl-node-selector button:nth-child(3n+2){border-bottom:2px solid #9a7bd3}
+.nl-node-selector button:nth-child(3n){border-bottom:2px solid #eeae56}
+.nl-layer-details{background:linear-gradient(105deg,#eaf7f3,#f2f0fd)}
+.nl-neural-progress progress{accent-color:#159b89}
+.nl-neural-metrics span:nth-child(2){background:#f0ebfb;border-color:#e0d7f3}
+.nl-neural-metrics span:nth-child(2) strong{color:#755ab2}
+.nl-neural-metrics span:nth-child(3){background:#fff5e7;border-color:#f7ddbd}
+.nl-neural-metrics span:nth-child(3) strong{color:#a26d2a}

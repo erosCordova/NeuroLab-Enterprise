@@ -67,7 +67,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
       {visible?<><span className="nl-epoch-pill">Época {visible.epoch}</span>
         <span>Original: <strong>{visible.sampleLabel}</strong></span><span aria-hidden="true">→</span>
         <span>Predicción: <strong>{visible.predictedLabel}</strong> <small>{percent(visible.confidence)}</small></span></>:
-        <span className="nl-empty-pill">{working?"Entrenando · esperando primeras métricas":"Vista de arquitectura · aún sin mediciones"}{working?" · "+(running?"Flujo luminoso activo":"Animación pausada"):" · Animación al iniciar entrenamiento"}</span>}
+        <span className="nl-empty-pill">{working?"Entrenando · esperando primeras métricas":"Vista de arquitectura · aún sin mediciones"}{working?" · "+(running?"Animación ilustrativa activa":"Animación ilustrativa en pausa"):" · Animación al iniciar entrenamiento"}</span>}
     </div>
     {stages.length?<div className="nl-neural-window" data-view={view} data-motion={running?"running":"paused"} data-training={working?"true":"false"}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Diagrama desplazable de neuronas y conexiones">
@@ -137,7 +137,16 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
     </div>}
     {selected&&<div className="nl-layer-details" aria-live="polite">
       <strong>{selected.label}</strong><span>{active?.shape??selected.shape}</span>
-      <span className="nl-detail-value">{active?"Activación media: "+active.magnitude.toFixed(3):"Configuración prevista"}</span>
+      <span className="nl-detail-value">{active?"Activación media medida: "+active.magnitude.toFixed(3):"Sin activaciones medidas todavía"}</span>
+      {active?.maps&&active.maps.length>0&&<div className="nl-feature-section" aria-label={"Mapas reales de activación de "+selected.label}>
+        <div className="nl-feature-heading"><strong>Mapas de características reales</strong><span>Época {visible?.epoch} · muestra {visible?.sampleLabel}</span></div>
+        <div className="nl-feature-grid">{active.maps.map((map,i)=><div className="nl-feature-card" key={i}>
+          <span>Canal {i+1}</span>
+          <div className="nl-feature-pixels" role="img" aria-label={"Intensidades medidas del canal "+(i+1)}>
+            {map.map((value,index)=><i key={index} style={{backgroundColor:`rgba(${selected.key.startsWith("pool")?"246,164,70":"97,196,218"},${Math.max(.05,value).toFixed(3)})`}}/>)}</div>
+        </div>)}</div>
+        <p>Promedios de activaciones obtenidas de TensorFlow.js y normalizados para visualización. Son mediciones de una muestra de validación, no pesos ni gradientes.</p>
+      </div>}
       {selected.key==="output"&&active&&<div className="nl-output-probabilities" aria-label="Probabilidades por clase">
         {active.preview.map((v,i)=><div key={i} className="nl-prob"><span>{labels[i]??i}</span>
           <div className="nl-prob-track"><span style={{width:percent(v)}}/></div><strong>{percent(v)}</strong>
@@ -151,7 +160,11 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
         <span>Validación <strong>{percent(latest.valAccuracy)}</strong></span>
         <span>Pérdida <strong>{latest.valLoss.toFixed(3)}</strong></span></div>}
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
-      <p className="nl-neural-disclaimer">{visible?"Brillo de neuronas: resumen de activaciones medidas.":working?"Flujo ilustrativo durante el entrenamiento; todavía sin activaciones medidas.":"El grafo permanece estático hasta que pulses Entrenar CNN real."} Las conexiones representan la arquitectura simplificada, no pesos individuales.</p>
+      <div className="nl-graph-legend" aria-label="Leyenda del gráfico">
+        <span><i className="nl-legend-sim"/> Movimiento esquemático</span>
+        <span><i className="nl-legend-data"/> Activación medida (si existe)</span>
+      </div>
+      <p className="nl-neural-disclaimer">{visible?"Los mapas y valores de la capa seleccionada proceden de una muestra real al terminar la época.":working?"Animación ilustrativa mientras se calculan lotes; aún sin mediciones.":"El grafo permanece estático hasta pulsar Entrenar CNN real."} Las conexiones son una representación simplificada, no conexiones o pesos individuales reales.</p>
     </div>
   </section>;
 }
