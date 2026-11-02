@@ -1,4 +1,3 @@
-import TrainingHistory from "./TrainingHistory";
 import TabularPanel from "./TabularPanel";
 import DatasetLibraryPanel from "./DatasetLibraryPanel";
 import {listLibrary,getLibraryEntry,saveLibraryEntry,chooseLibraryEntry,renameLibraryEntry,deleteLibraryEntry,clearProjectLibrary} from "./datasetLibrary";
@@ -13,8 +12,6 @@ import BrowserCNNTrainer from "./BrowserCNNTrainer";
 import PretrainedModelsPanel from "./PretrainedModelsPanel";
 import "./training-workspace.css";
 import PhotoTrainingPanel from "./PhotoTrainingPanel";
-import {repeatRun,cancelRun} from "./trainingHistory";
-import EvaluationPanel from "./EvaluationPanel";
 import RealEvaluationPanel from "./RealEvaluationPanel";
 import ProjectCNNReport from "./ProjectCNNReport";
 import ProjectsPanel from "./ProjectsPanel";
@@ -25,20 +22,18 @@ import NetworkFlow from "./NetworkFlow";
 import {isFashionDataset,classNamesForSource} from "./mnistDataset";
 import DatasetTransfer from "./DatasetTransfer";
 import {recommendCNN} from "./adaptiveTraining";
-import {fingerprintDataset,validateCompletedJob} from "./integrity";
+import {fingerprintDataset} from "./integrity";
 import DatasetExplorer from "./DatasetExplorer";
 import "./explorer.css";
 import { useEffect, useRef, useState } from "react";
 import {
-  advanceJobs, csvCell, datasetMeta, defaultConfig,
-  partition, readImages, summary, terminal,
+  defaultConfig, partition, readImages, summary,
 } from "./cnn";
-import type { Config, ImageDataset, ImageRecord, Job } from "./cnn";
+import type { Config, ImageDataset, ImageRecord } from "./cnn";
 import "./cnn.css";
 
 type Page = "Dashboard" | "Proyectos" | "Diseñador CNN" | "Datasets" | "Entrenamientos" | "Evaluación" | "Modelos" | "Fundamentos" | "Reportes";
 type Version = { id:string; projectId:string; version:number; config:Config; datasetName:string; classes:number; datasetFingerprint?:string };
-type RecordModel = { id:string; version:number; job:Job; status:"Borrador"|"Revisado"|"Aprobado"|"Retirado"; history:string[] };
 
 const pages: Page[] = ["Dashboard","Proyectos","Diseñador CNN","Datasets","Entrenamientos","Evaluación","Modelos","Fundamentos","Reportes"];
 
@@ -72,29 +67,6 @@ function Preview({image}:{image:ImageRecord}) {
   return <figure className="cnn-preview"><img src={url || undefined} alt={`Ejemplo de la clase ${image.label}`} /><figcaption>{image.label}<small>{image.width} × {image.height}</small></figcaption></figure>;
 }
 
-function Chart({job,kind}:{job:Job;kind:"accuracy"|"loss"}) {
-  const max=kind==="accuracy"?1:1.6;
-  const chartEpochs=job.status==="Completado"?job.epoch:job.epochs;
-  const x=(epoch:number)=>42+epoch/chartEpochs*430;
-  const y=(value:number)=>165-value/max*145;
-  const path=(validation:boolean)=>job.metrics.map((point,index)=>{
-    const value=kind==="accuracy" ? validation?point.valAccuracy:point.accuracy : validation?point.valLoss:point.loss;
-    return `${index?"L":"M"}${x(point.epoch)},${y(value)}`;
-  }).join(" ");
-
-  return <div className="cnn-chart">
-    <svg viewBox="0 0 500 205" role="img" aria-label={kind==="accuracy"?"Precisión simulada de entrenamiento y validación":"Pérdida simulada de entrenamiento y validación"}>
-      {[0,.25,.5,.75,1].map(ratio=><g key={ratio}><line x1="42" x2="472" y1={y(ratio*max)} y2={y(ratio*max)} stroke="#e2e8f1" /><text x="34" y={y(ratio*max)+4} textAnchor="end" fontSize="10" fill="#718098">{kind==="accuracy"?`${ratio*100}%`:(ratio*max).toFixed(2)}</text></g>)}
-      <path d={path(false)} fill="none" stroke="#536bce" strokeWidth="2.5" />
-      <path d={path(true)} fill="none" stroke="#318b79" strokeWidth="2.5" strokeDasharray="6 4" />
-      {[0,.5,1].map(ratio=><text key={ratio} x={x(ratio*chartEpochs)} y="183" fontSize="10" fill="#718098" textAnchor="middle">{Math.round(ratio*chartEpochs)}</text>)}
-      <text x="255" y="201" fontSize="10" fill="#718098" textAnchor="middle">Época</text>
-    </svg>
-    <div className="cnn-legend"><span>━ Entrenamiento</span><span>┄ Validación</span></div>
-    {!job.metrics.length&&<p className="caption">Esperando las primeras épocas.</p>}
-  </div>;
-}
-
 export default function App({initialProjects,onPersistProject,onDeleteProject,storageOwner="invitado"}:{initialProjects?:Project[];onPersistProject?:(draft:ProjectDraft,id:string)=>Promise<Project>;onDeleteProject?:(id:string)=>Promise<void>;storageOwner?:string}={}) {
   const [page,setPage]=useState<Page>("Dashboard");
   const [mobileMenuOpen,setMobileMenuOpen]=useState(true);
@@ -116,17 +88,10 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   const [mnistByProject,setMnistByProject]=useState<Record<string,MnistData>>({});
   const [datasetOrigin,setDatasetOrigin]=useState<Record<string,"folder"|"mnist"|"tabular"|"none">>({});
   const [versions,setVersions]=useState<Version[]>([]);
-  const [jobs,setJobs]=useState<Job[]>([]);
-  const [records,setRecords]=useState<RecordModel[]>([]);
-  const [selectedId,setSelectedId]=useState("");
-  const [modelId,setModelId]=useState("");
-  const [note,setNote]=useState("");
-  const [paused,setPaused]=useState(false);
   const [realRevision,setRealRevision]=useState(0);
   const [trainingView,setTrainingView]=useState<"train"|"import">("train");
   const [trainingRunning,setTrainingRunning]=useState(false);
   const [manualEpochsByProject,setManualEpochsByProject]=useState<Record<string,string>>({});
-  const [batch,setBatch]=useState("32");
   const [train,setTrain]=useState("70");
   const [validation,setValidation]=useState("15");
   const [seed,setSeed]=useState("42");
@@ -134,13 +99,6 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
-  const [maxPending,setMaxPending]=useState("5");
-  const [maxJobs,setMaxJobs]=useState("30");
-  const [limits,setLimits]=useState({pending:5,jobs:30});
-  const [users,setUsers]=useState([{name:"Administrador demo",email:"admin@example.com",role:"Administrador"}]);
-  const [userName,setUserName]=useState("");
-  const [userEmail,setUserEmail]=useState("");
-  const [role,setRole]=useState("Lector");
   const request=useRef(0);
 
   const project=projects.find(item=>item.id===projectId)!;
@@ -181,11 +139,6 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
       ? "Modo automático activo: la configuración se calcula con el dataset del proyecto."
       : "Modo manual activo: puedes editar la arquitectura y los controles de entrenamiento.");
   }
-  const projectJobs=jobs.filter(job=>job.projectId===projectId);
-  const selected=projectJobs.find(job=>job.id===selectedId)??projectJobs.at(-1);
-  const model=records.find(record=>record.id===modelId);
-  const pending=jobs.filter(job=>!terminal(job.status)).length;
-
   let info:ReturnType<typeof summary>|null=null;
   let architectureError="";
   try {
@@ -302,12 +255,6 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
     void chooseLibraryEntry(owner,pid,null).catch(fail);
   }
   useEffect(()=>{
-    if(paused)return;
-    const timer=window.setInterval(()=>setJobs(current=>advanceJobs(current)),700);
-    return ()=>window.clearInterval(timer);
-  },[paused]);
-
-  useEffect(()=>{
     document.title=page+" | NeuroLab Enterprise";
     if(previousPage.current!==page){
       previousPage.current=page;
@@ -318,7 +265,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   function navigate(next:Page) {setPage(next);setError("");setMessage("");}
   function changeProject(id:string) {
     request.current++;setBusy(false);setDraft(null);
-    setProjectId(id);setSelectedId("");setError("");setMessage("");setTrainingView("train");setTrainingRunning(false);
+    setProjectId(id);setError("");setMessage("");setTrainingView("train");setTrainingRunning(false);
   }
   async function deleteProject(id:string){
     if(onDeleteProject)await onDeleteProject(id);
@@ -335,10 +282,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
     setMnistByProject(current=>{const next={...current};delete next[id];return next;});
     setDatasetOrigin(current=>{const next={...current};delete next[id];return next;});
     setVersions(current=>current.filter(v=>v.projectId!==id));
-    setJobs(current=>current.filter(j=>j.projectId!==id));
-    setRecords(current=>current.filter(r=>r.job.projectId!==id));
     setManualEpochsByProject(current=>{const next={...current};delete next[id];return next;});
-    setDraft(null);setSelectedId("");setModelId("");
+    setDraft(null);
     if(projectId===id)setProjectId(remaining[0]?.id??"");
     setMessage("Proyecto eliminado. Tus otros proyectos se conservan.");
     setError("");
@@ -400,62 +345,6 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
       setVersions(current=>[...current,{id:crypto.randomUUID(),projectId,version,config:structuredClone(config),datasetName:dataset.name,classes:dataset.classes.length,datasetFingerprint:dataset.fingerprint}]);
       setMessage(`Arquitectura CNN guardada como versión ${version}.`);
     } catch(cause){fail(cause);}
-  }
-
-  function createJob() {
-    setError("");setMessage("");
-    try {
-      if(project.status==="Archivado")throw new Error("El proyecto está archivado. Actívalo desde Proyectos para crear nuevas simulaciones.");
-      if(!dataset?.fingerprint)throw new Error("Primero carga y aplica el dataset con su huella digital.");
-      summary(config,dataset.classes.length);
-      const count=Number(epochs),batchSize=Number(batch);
-      if(!epochs.trim()||!Number.isInteger(count)||count<1||count>100||!batch.trim()||!Number.isInteger(batchSize)||batchSize<1||batchSize>256)throw new Error("Épocas: entero de 1 a 100. Batch: entero de 1 a 256.");
-      if(pending>=limits.pending||jobs.length>=limits.jobs)throw new Error(`Límite activo: ${limits.pending} trabajos pendientes y ${limits.jobs} por sesión.`);
-      const version=[...versions].reverse().find(item=>item.projectId===projectId&&JSON.stringify(item.config)===JSON.stringify(config)&&item.datasetFingerprint===dataset.fingerprint);
-      const id=`CNN-${crypto.randomUUID().slice(0,8)}`;
-      const job:Job={createdAt:new Date().toISOString(),configurationMode:automatic?"automatic":"manual",id,projectId,name:project.name,config:structuredClone(config),dataset:datasetMeta(dataset),versionId:version?.id??null,epochs:count,batch:batchSize,epoch:0,status:"En cola",metrics:[]};
-      setJobs(current=>[...current,job]);setSelectedId(id);
-    } catch(cause){fail(cause);}
-  }
-
-  function repeatJob(source:Job) {
-    setError("");setMessage("");
-    try {
-      if(source.projectId!==projectId)throw new Error("Selecciona una ejecución de este proyecto.");
-      if(project.status==="Archivado")throw new Error("Activa el proyecto antes de repetir una simulación.");
-      if(pending>=limits.pending||jobs.length>=limits.jobs)throw new Error(`Límite activo: ${limits.pending} trabajos pendientes y ${limits.jobs} por sesión.`);
-      const next=repeatRun(source,`CNN-${crypto.randomUUID().slice(0,8)}`,new Date().toISOString());
-      setJobs(current=>[...current,next]);setSelectedId(next.id);
-      setMessage("Nueva simulación creada con la configuración original.");
-    } catch(cause){fail(cause);}
-  }
-
-  function register(job:Job) {
-    setError("");setMessage("");
-    try{validateCompletedJob(job);}catch(cause){fail(cause);return;}
-    if(records.some(record=>record.job.id===job.id)){setError("Esta ejecución ya tiene una ficha.");return;}
-    const version=records.filter(record=>record.job.projectId===job.projectId).length+1;
-    const record:RecordModel={id:crypto.randomUUID(),version,job:structuredClone(job),status:"Borrador",history:["Ficha CNN de demostración registrada. Sin pesos entrenados."]};
-    setRecords(current=>[...current,record]);setModelId(record.id);setMessage("Ficha CNN registrada.");
-  }
-
-  function review(next:RecordModel["status"]) {
-    if(!model)return;
-    const allowed=model.status==="Borrador"?["Revisado","Retirado"]:model.status==="Revisado"?["Aprobado","Retirado"]:model.status==="Aprobado"?["Retirado"]:[];
-    if(!allowed.includes(next)||note.trim().length<10){setError("Utiliza una transición permitida y una observación de al menos diez caracteres.");return;}
-    setRecords(current=>current.map(record=>record.id===model.id?{...record,status:next,history:[...record.history,`${next}: ${note.trim()}`]}:record));
-    setNote("");setError("");
-  }
-
-  function exportJobs() {
-    const rows=[
-      ["ejecucion","proyecto","tipo","estado","dataset","imagenes","clases","epocas_configuradas","epocas_ejecutadas","parada_temprana","precision_validacion","perdida_validacion"],
-      ...projectJobs.map(job=>{
-        const last=job.status==="Completado"?job.metrics.at(-1):undefined;
-        return [job.id,job.name,"CNN_SIMULADA",job.status,job.dataset.name,job.dataset.count,job.dataset.classes.length,job.epochs,job.epoch,job.stoppedEarly?"SI":"NO",last?.valAccuracy??"",last?.valLoss??""];
-      }),
-    ];
-    download("neurolab-cnn-reporte.csv","\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n"),"text/csv;charset=utf-8");
   }
 
   return <div className="shell">
