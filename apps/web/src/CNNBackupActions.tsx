@@ -18,7 +18,8 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
   const [message,setMessage]=useState("");
   const [colab,setColab]=useState<ColabImported|null>(null);
   useEffect(()=>{
-    if(strictSelection)return;
+    // El modelo original de Colab es independiente del entrenamiento seleccionado.
+    // Debe poder verse y recuperarse en cualquier panel de respaldo de este proyecto.
     let active=true;
     void import("./colabCNN").then(async mod=>{
       const saved=mod.readImportedColab(projectId);
@@ -28,7 +29,7 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
       if(active&&models[saved.modelRef])setColab(saved);
     }).catch(()=>undefined);
     return ()=>{active=false;};
-  },[projectId,strictSelection]);
+  },[projectId]);
 
   async function save(){
     if(!report)return;
@@ -54,7 +55,9 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
     try{
       const colabModule=await import("./colabCNN");
       if(await colabModule.isColabCNNFile(file)){
-        if(strictSelection)throw new Error("Para importar la CNN de Colab, utiliza la sección Respaldo del modelo CNN en Entrenamientos.");
+        // El filtro strictSelection solo aplica a respaldos ordinarios NLCNN001.
+        // Los pesos NLCOLAB1 se almacenan como otro modelo, sin reemplazar
+        // ni modificar los pesos del entrenamiento que se esté consultando.
         const imported=await colabModule.importColabCNN(projectId,file);
         setColab(imported);
         setMessage("Modelo real de Colab importado correctamente. Sus pesos están en este navegador y ya puedes reconocer números sin entrenar otra vez.");
@@ -77,7 +80,7 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
       </button>}
     </div>
     <label className="field">
-      <span>{strictSelection?"Restaurar respaldo .ncnn":"Restaurar respaldo .ncnn o importar CNN de Colab"}</span>
+      <span>Restaurar respaldo .ncnn o importar CNN de Colab</span>
       <input type="file" aria-label="Restaurar modelo CNN desde respaldo" accept=".ncnn,application/octet-stream" disabled={busy}
         onChange={event=>{
           const file=event.target.files?.[0];
@@ -85,11 +88,11 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
           if(file)void restore(file);
         }}/>
     </label>
-    <p className="caption">El respaldo debe corresponder a este proyecto{strictSelection?" y al entrenamiento seleccionado":""}. Si el modelo ya existe aquí, no será sobrescrito. Los pesos se conservan solo en el navegador.</p>
+    <p className="caption">Los respaldos normales deben corresponder a este proyecto{strictSelection?" y al entrenamiento seleccionado":""}. El modelo de Colab se importa de forma independiente y no sobrescribe los pesos existentes. Todo se conserva en este navegador.</p>
     {busy&&<p role="status">Verificando el modelo y sus pesos…</p>}
     {message&&<p className="feedback" role="status">{message}</p>}
     {error&&<p className="error" role="alert">{error}</p>}
-    {colab&&!strictSelection&&<section className="cnn-backup-predictions" aria-label="Modelo original importado desde Colab">
+    {colab&&<section className="cnn-backup-predictions" aria-label="Modelo original importado desde Colab">
       <h3>Modelo entrenado en Google Colab</h3>
       <p className="caption">Arquitectura original: 4 convoluciones (32, 32, 64 y 64 filtros), Dense de 128 unidades y salida de 10 dígitos. Se importaron 271 210 parámetros entrenados, sin volver a entrenar. Los pesos quedan guardados en este navegador y no modifican el modelo anterior.</p>
       <PredictionPanel key={colab.modelRef} inputLabel="Imagen PNG, JPG o WebP"

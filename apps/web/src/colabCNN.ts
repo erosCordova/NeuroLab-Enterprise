@@ -139,7 +139,10 @@ export async function importColabCNN(projectId:string,file:Blob):Promise<ColabIm
     }
     if(offset!==weights.length)fail("El número de pesos cargados es inconsistente.");
     model.setWeights(tensors);
-    const check=model.predict(tf.zeros([1,28,28,1])) as tf.Tensor;
+    const zeros=tf.zeros([1,28,28,1]);
+    let check:tf.Tensor;
+    try{check=model.predict(zeros) as tf.Tensor;}
+    finally{zeros.dispose();}
     try{
       const values=await check.data();
       if(values.length!==10||Array.from(values).some(v=>!Number.isFinite(v)))
