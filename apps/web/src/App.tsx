@@ -11,7 +11,6 @@ import RealModelRegistry from "./RealModelRegistry";
 import BrowserCNNTrainer from "./BrowserCNNTrainer";
 import PretrainedModelsPanel from "./PretrainedModelsPanel";
 import "./training-workspace.css";
-import PhotoTrainingPanel from "./PhotoTrainingPanel";
 import RealEvaluationPanel from "./RealEvaluationPanel";
 import ProjectCNNReport from "./ProjectCNNReport";
 import ProjectsPanel from "./ProjectsPanel";
@@ -506,13 +505,9 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           </section>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
             <a href="#cnn-real-training">Entrenar CNN con imágenes</a>
-            <a href="#photo-real-training">Entrenar con fotografías</a>
             {onPersistProject&&<a href="#cnn-real-results">Resultados anteriores</a>}
           </nav>
           <div id="cnn-real-training"><BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} onWorkingChange={setTrainingRunning}/></div>
-          <details className="training-extras" id="photo-real-training"><summary>Entrenar con fotografías reales (MobileNet) · opción adicional</summary>
-            <div><PhotoTrainingPanel owner={storageOwner} projectId={projectId} dataset={mnistActive?undefined:dataset}/></div>
-          </details>
           {onPersistProject&&<details className="training-extras" id="cnn-real-results"><summary>Consultar resultados e historial de entrenamientos reales</summary>
             <div><RealCNNResults key={projectId+":"+realRevision} projectId={projectId}/></div>
           </details>}

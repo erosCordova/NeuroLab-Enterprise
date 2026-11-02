@@ -856,3 +856,17 @@ test("No se ofrecen simulaciones, colas ficticias, usuarios demo ni métricas in
  await navigate(page,"Reportes");
  await expect(page.getByText(/Reporte de simulaciones CNN/)).toHaveCount(0);
 });
+
+
+test("Entrenamientos no incluye MobileNet ni transferencia fotográfica retirada",async({page})=>{
+  await navigate(page,"Entrenamientos");
+  const local=page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"});
+  await expect(local).toBeVisible();
+  await expect(local.getByText(/MobileNet|Entrenar con fotografías reales|Reconocer fotos reales/i)).toHaveCount(0);
+  await expect(local.locator("#photo-real-training")).toHaveCount(0);
+  await expect(local.getByRole("button",{name:"Entrenar CNN real"})).toBeVisible();
+  await page.getByRole("tab",{name:/Modelo preentrenado importado/}).click();
+  const imported=page.getByRole("tabpanel",{name:"Modelo preentrenado importado"});
+  await expect(imported).toBeVisible();
+  await expect(imported.getByText(/MobileNet/i)).toHaveCount(0);
+});
