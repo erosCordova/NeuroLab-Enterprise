@@ -312,9 +312,10 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
         inputAriaLabel="Imagen para predecir con modelo respaldado"
         disabled={working} digitMode={report.classes.length===10&&report.classes.every((name,index)=>name===String(index))}
         onPredict={async file=>{
-          const {predictInBrowser}=await import("./browserCNN");
           const isMnist=report.classes.length===10&&report.classes.every((name,index)=>name===String(index));
-          return predictInBrowser(report.model_ref,file,report.config,report.classes,isMnist);
+          if(isMnist){const {predictMultipleDigits}=await import("./multiDigitInference");return predictMultipleDigits(report.model_ref,file,report.config,report.classes);}
+          const {predictInBrowser}=await import("./browserCNN");
+          return predictInBrowser(report.model_ref,file,report.config,report.classes,false);
         }}/>
     </section>}
   </section>;

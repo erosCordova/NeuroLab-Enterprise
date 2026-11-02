@@ -121,9 +121,10 @@ export default function RealCNNResults({projectId}:Props) {
           inputAriaLabel="Imagen para predecir con CNN real"
           digitMode={current.classes.length===10&&current.classes.every((name,index)=>name===String(index))}
           onPredict={async file=>{
-            const {predictInBrowser}=await import("./browserCNN");
             const isMnist=current.classes.length===10&&current.classes.every((name,index)=>name===String(index));
-            return predictInBrowser(current.model_ref,file,current.config,current.classes,isMnist);
+            if(isMnist){const {predictMultipleDigits}=await import("./multiDigitInference");return predictMultipleDigits(current.model_ref,file,current.config,current.classes);}
+            const {predictInBrowser}=await import("./browserCNN");
+            return predictInBrowser(current.model_ref,file,current.config,current.classes,false);
           }}/>
       </div>}
       <details className="cnn-fingerprint"><summary>Huella SHA-256 del dataset declarado</summary><code>{current.dataset_fingerprint}</code></details>
