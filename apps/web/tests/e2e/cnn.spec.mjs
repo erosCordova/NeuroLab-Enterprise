@@ -1153,7 +1153,7 @@ test("Entrenamientos aísla el modelo local del importado",async({page})=>{
   await expect(page.getByText("Entrenar CNN con TensorFlow.js",{exact:true})).toBeVisible();
   await pretrained.click();
   await expect(pretrained).toHaveAttribute("aria-selected","true");
-  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeHidden();
+  await expect(page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"})).toBeHidden();
   const imported=page.getByRole("tabpanel",{name:"Modelo preentrenado importado"});
   await expect(imported).toBeVisible();
   await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\.ncnn/);
@@ -1161,6 +1161,6 @@ test("Entrenamientos aísla el modelo local del importado",async({page})=>{
   await expect(imported.getByRole("button",{name:"Entrenar CNN real"})).toHaveCount(0);
   await expect(imported.getByRole("heading",{name:"Sin modelo importado activo"})).toBeVisible();
   await train.click();
-  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
-  await expect(page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"})).toBeHidden();
+  await expect(page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"})).toBeVisible();
+  await expect(page.getByRole("tabpanel",{name:"Modelo preentrenado importado"})).toBeHidden();
 });
