@@ -17,10 +17,11 @@ const legacyColabKey=(projectId:string)=>"neurolab-colab-keras-v1:"+projectId;
 const trimName=(name:string)=>name.trim().slice(0,80);
 export function isOwnedModelRef(projectId:string,ref:string,origin:"colab"|"ncnn"|"local"):boolean{
   if(!projectId||!ref||!projectId.match(/^[a-zA-Z0-9_-]{1,128}$/))return false;
-  const prefix="indexeddb://neurolab-cnn-"+projectId+"-";
-  if(!ref.startsWith(prefix)||ref.length>240)return false;
+  if(ref.length>240)return false;
   if(origin==="colab")return ref.startsWith("indexeddb://neurolab-cnn-colab-"+encodeURIComponent(projectId)+"-")&&
     !ref.includes("..");
+  const prefix="indexeddb://neurolab-cnn-"+projectId+"-";
+  if(!ref.startsWith(prefix))return false;
   if(origin==="ncnn")return ref.startsWith(prefix+"imported-")&&/^[a-f0-9]{24}$/.test(ref.slice((prefix+"imported-").length));
   return !ref.startsWith(prefix+"imported-")&&!ref.includes("-colab-");
 }
