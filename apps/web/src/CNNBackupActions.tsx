@@ -10,9 +10,10 @@ type Props={
   report?:BrowserReport|null;
   onRestored?:(report:BrowserReport)=>void;
   strictSelection?:boolean;
+  mode?:"full"|"import"|"export";
 };
 
-export default function CNNBackupActions({projectId,report,onRestored,strictSelection=false}:Props) {
+export default function CNNBackupActions({projectId,report,onRestored,strictSelection=false,mode="full"}:Props) {
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
@@ -20,6 +21,7 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
   useEffect(()=>{
     // El modelo original de Colab es independiente del entrenamiento seleccionado.
     // Debe poder verse y recuperarse en cualquier panel de respaldo de este proyecto.
+    if(mode==="export")return;
     let active=true;
     void import("./colabCNN").then(async mod=>{
       const saved=mod.readImportedColab(projectId);
@@ -29,7 +31,7 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
       if(active&&models[saved.modelRef])setColab(saved);
     }).catch(()=>undefined);
     return ()=>{active=false;};
-  },[projectId]);
+  },[projectId,mode]);
 
   async function save(){
     if(!report)return;
@@ -72,27 +74,28 @@ export default function CNNBackupActions({projectId,report,onRestored,strictSele
     }finally{setBusy(false);}
   }
 
-  return <div className="cnn-backup-panel" aria-label="Respaldo y recuperación del modelo CNN">
+  return <div className={"cnn-backup-panel "+(mode==="import"?"cnn-backup-import":mode==="export"?"cnn-backup-export":"")} aria-label={mode==="import"?"Cargar modelo preentrenado":"Respaldo del modelo CNN"}>
     <div className="panel-head">
-      <div><h3>Respaldo del modelo CNN</h3><p className="caption">Copia portátil de arquitectura, pesos y métricas. Sin ZIP, sin subir tus imágenes.</p></div>
-      {report&&<button type="button" className="secondary" disabled={busy} onClick={()=>void save()}>
-        {busy?"Procesando…":"Descargar respaldo CNN"}
+      <div><h3>{mode==="import"?"Seleccionar archivo de modelo":"Respaldo del modelo CNN"}</h3>
+        <p className="caption">{mode==="import"?"Importa un respaldo .ncnn compatible de NeuroLab o un modelo de Colab convertido a .ncnn. No tienes que entrenarlo otra vez.":"Guarda una copia de la arquitectura, los pesos y las métricas, sin incluir las imágenes."}</p></div>
+      {mode!=="import"&&report&&<button type="button" className="secondary" disabled={busy} onClick={()=>void save()}>
+        {busy?"Procesando…":"Descargar modelo .ncnn"}
       </button>}
     </div>
-    <label className="field">
-      <span>Restaurar respaldo .ncnn o importar CNN de Colab</span>
+    {mode!=="export"&&<label className="field">
+      <span>{mode==="import"?"Archivo del modelo preentrenado (.ncnn)":"Restaurar respaldo .ncnn o importar CNN de Colab"}</span>
       <input type="file" aria-label="Restaurar modelo CNN desde respaldo" accept=".ncnn,application/octet-stream" disabled={busy}
         onChange={event=>{
           const file=event.target.files?.[0];
           event.target.value="";
           if(file)void restore(file);
         }}/>
-    </label>
-    <p className="caption">Los respaldos normales deben corresponder a este proyecto{strictSelection?" y al entrenamiento seleccionado":""}. El modelo de Colab se importa de forma independiente y no sobrescribe los pesos existentes. Todo se conserva en este navegador.</p>
+    </label>}
+    {mode!=="export"&&<p className="caption">Los archivos .ncnn de NeuroLab deben corresponder a este proyecto{strictSelection?" y al entrenamiento seleccionado":""}. Los modelos convertidos desde Colab se importan por separado y nunca sobrescriben tus pesos existentes. Los archivos originales .keras requieren conversión previa.</p>}
     {busy&&<p role="status">Verificando el modelo y sus pesos…</p>}
     {message&&<p className="feedback" role="status">{message}</p>}
     {error&&<p className="error" role="alert">{error}</p>}
-    {colab&&<section className="cnn-backup-predictions" aria-label="Modelo original importado desde Colab">
+    {mode!=="export"&&colab&&<section className="cnn-backup-predictions" aria-label="Modelo original importado desde Colab">
       <h3>Modelo entrenado en Google Colab</h3>
       <p className="caption">Arquitectura original: 4 convoluciones (32, 32, 64 y 64 filtros), Dense de 128 unidades y salida de 10 dígitos. Se importaron 271 210 parámetros entrenados, sin volver a entrenar. Los pesos quedan guardados en este navegador y no modifican el modelo anterior.</p>
       <PredictionPanel key={colab.modelRef} inputLabel="Imagen PNG, JPG o WebP"

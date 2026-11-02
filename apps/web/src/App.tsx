@@ -10,6 +10,8 @@ import type {MnistData} from "./mnistDataset";
 import RealCNNResults from "./RealCNNResults";
 import RealModelRegistry from "./RealModelRegistry";
 import BrowserCNNTrainer from "./BrowserCNNTrainer";
+import PretrainedModelsPanel from "./PretrainedModelsPanel";
+import "./training-workspace.css";
 import PhotoTrainingPanel from "./PhotoTrainingPanel";
 import {repeatRun,cancelRun} from "./trainingHistory";
 import EvaluationPanel from "./EvaluationPanel";
@@ -46,7 +48,7 @@ const pageDescriptions:Record<Page,string>={
   Proyectos:"Organiza y administra tus proyectos de inteligencia artificial.",
   "Diseñador CNN":"Construye una arquitectura CNN válida para entrenar o simular.",
   Datasets:"Añade datos desde tu equipo o un enlace y prepara tu modelo.",
-  Entrenamientos:"Entrena, evalúa y compara modelos.",
+  Entrenamientos:"Entrena un modelo nuevo o carga uno ya entrenado para comenzar a predecir.",
   Evaluación:"Compara métricas de CNN reales y revisa simulaciones por separado.",
   Modelos:"Conserva versiones y revisa las fichas de cada experimento.",
   Fundamentos:"Comprende cada operación de una red convolucional.",
@@ -122,6 +124,8 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   const [note,setNote]=useState("");
   const [paused,setPaused]=useState(false);
   const [realRevision,setRealRevision]=useState(0);
+  const [trainingView,setTrainingView]=useState<"train"|"import">("train");
+  const [trainingRunning,setTrainingRunning]=useState(false);
   const [manualEpochsByProject,setManualEpochsByProject]=useState<Record<string,string>>({});
   const [batch,setBatch]=useState("32");
   const [train,setTrain]=useState("70");
@@ -315,7 +319,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
   function navigate(next:Page) {setPage(next);setError("");setMessage("");}
   function changeProject(id:string) {
     request.current++;setBusy(false);setDraft(null);
-    setProjectId(id);setSelectedId("");setError("");setMessage("");
+    setProjectId(id);setSelectedId("");setError("");setMessage("");setTrainingView("train");setTrainingRunning(false);
   }
   async function deleteProject(id:string){
     if(onDeleteProject)await onDeleteProject(id);
@@ -584,16 +588,41 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           onSaveReport={next=>setTabularReports(current=>{const copy={...current};if(next)copy[projectId]=next;else delete copy[projectId];return copy;})} onApply={editCurrentTable}
           onRemove={detachLibraryDataset}/>}
         {page==="Entrenamientos"&&!tabularActive&&<>
+          <section className="training-workspace-head" aria-label="Seleccionar forma de utilizar una CNN">
+            <div className="eyebrow">ELIGE CÓMO QUIERES COMENZAR</div>
+            <h2>¿Qué quieres hacer con tu modelo?</h2>
+            <p>Proyecto activo: <strong>{project?.name}</strong>. Puedes entrenar desde tus datos o utilizar una red neuronal que ya aprendió.</p>
+            <div className="training-route-buttons" role="tablist" aria-label="Opciones de Entrenamientos">
+              <button type="button" role="tab" aria-selected={trainingView==="train"} className="training-route-choice" onClick={()=>setTrainingView("train")}>
+                <span className="training-route-icon" aria-hidden="true">01</span><span className="training-route-copy">
+                  <strong>Entrenar un modelo nuevo</strong><small>Elige un dataset, configura la CNN, entrena y evalúa sus resultados.</small>
+                </span>
+              </button>
+              <button type="button" role="tab" aria-selected={trainingView==="import"} className="training-route-choice"
+                disabled={trainingRunning} onClick={()=>setTrainingView("import")}>
+                <span className="training-route-icon" aria-hidden="true">02</span><span className="training-route-copy">
+                  <strong>Cargar modelo preentrenado</strong><small>Importa un archivo .ncnn de Colab o NeuroLab y realiza predicciones sin entrenar.</small>
+                </span>
+              </button>
+            </div>
+            {trainingRunning&&<p className="training-route-status" role="status">Entrenamiento en curso. Puedes cambiar de opción cuando finalice o lo canceles.</p>}
+          </section>
+          <div role="tabpanel" aria-label="Entrenar un modelo nuevo" className="training-workspace-content" style={{display:trainingView==="train"?"":"none"}}>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
-            <a href="#cnn-real-training">1. Entrenar y reconocer</a>
-            <a href="#photo-real-training">Fotos reales</a>
-            {onPersistProject&&<a href="#cnn-real-results">2. Resultados guardados</a>}
-            <a href="#cnn-simulations">Simulación didáctica</a>
+            <a href="#cnn-real-training">Entrenar CNN con imágenes</a>
+            <a href="#photo-real-training">Entrenar con fotografías</a>
+            {onPersistProject&&<a href="#cnn-real-results">Resultados anteriores</a>}
+            <a href="#cnn-simulations">Simulación opcional</a>
           </nav>
-          <div id="cnn-real-training"><BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/></div>
-          <div id="photo-real-training"><PhotoTrainingPanel owner={storageOwner} projectId={projectId} dataset={mnistActive?undefined:dataset}/></div>
-          {onPersistProject&&<div id="cnn-real-results"><RealCNNResults key={projectId+":"+realRevision} projectId={projectId}/></div>}
-          <div id="cnn-simulations" className="cnn-demo-divider"><strong>Simulación didáctica · no entrena una red neuronal real</strong><p>Esta cola genera métricas ilustrativas. Usa «Entrenar CNN con TensorFlow.js» arriba para un entrenamiento real.</p></div>
+          <div id="cnn-real-training"><BrowserCNNTrainer key={projectId} projectId={projectId} dataset={mnistActive?undefined:dataset} mnist={mnistActive?mnist:undefined} config={config} connected={Boolean(onPersistProject)} onSaved={()=>setRealRevision(current=>current+1)} onWorkingChange={setTrainingRunning} demoJob={selected&&!terminal(selected.status)?selected:undefined} demoPaused={paused}/></div>
+          <details className="training-extras" id="photo-real-training"><summary>Entrenar con fotografías reales (MobileNet) · opción adicional</summary>
+            <div><PhotoTrainingPanel owner={storageOwner} projectId={projectId} dataset={mnistActive?undefined:dataset}/></div>
+          </details>
+          {onPersistProject&&<details className="training-extras" id="cnn-real-results"><summary>Consultar resultados e historial de entrenamientos reales</summary>
+            <div><RealCNNResults key={projectId+":"+realRevision} projectId={projectId}/></div>
+          </details>}
+          <details className="training-extras" id="cnn-simulations"><summary>Simulación didáctica y cola · no entrena una red real</summary><div>
+          <div className="cnn-demo-divider"><strong>Simulación didáctica · no entrena una red neuronal real</strong><p>Esta cola genera métricas ilustrativas. Para entrenar una red real utiliza el botón «Entrenar CNN real» de arriba.</p></div>
           <section className="panel"><div className="panel-head"><h2>Simulación CNN · {automatic?"Automático":"Manual"}</h2><button className="secondary" onClick={()=>setPaused(value=>!value)}>{paused?"Reanudar demo":"Pausar demo"}</button></div><div className="cnn-three"><label className="field"><span>Épocas</span><input aria-label="Épocas" type="number" min="1" max="100" disabled={automatic} value={epochs} onChange={event=>setEpochs(event.target.value)} /></label><label className="field"><span>Batch size</span><input type="number" value={batch} onChange={event=>setBatch(event.target.value)} /></label><button className="primary" onClick={createJob}>Añadir a la cola</button></div><div className="soft">Las imágenes son reales. Las curvas son ilustrativas y no dependen de los píxeles, filtros o batch. No se ejecuta TensorFlow ni se generan pesos.</div></section>
           <div className="training-layout"><section className="panel"><h2>Cola del proyecto</h2>{!projectJobs.length&&<div className="cnn-empty"><p>Todavía no hay ejecuciones en este proyecto.</p><button className="secondary" onClick={()=>navigate(dataset?"Diseñador CNN":"Datasets")}>{dataset?"Revisar arquitectura":"Cargar imágenes"}</button></div>}{[...projectJobs].reverse().map(job=><button className={selected?.id===job.id?"queue-item chosen":"queue-item"} key={job.id} onClick={()=>setSelectedId(job.id)}><strong>{job.name}</strong><span data-status={job.status}>{job.status}</span><small>{job.id}</small><progress max={job.epochs} value={job.status==="Completado"?job.epochs:job.epoch} /><small>{job.epoch}/{job.epochs} épocas</small></button>)}</section>
           <div className="training-detail">{selected&&<>
@@ -601,6 +630,11 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
             <p className="soft">{selected.stopReason??"Simulación en curso."} {selected.bestEpoch?`Época de referencia de mejora: ${selected.bestEpoch}.`:""} No se restauran pesos porque el entrenamiento es simulado.</p><div className="cnn-two-charts"><section className="panel"><h2>Precisión de entrenamiento</h2><p className="caption">Entrenamiento y validación · simulado</p><Chart job={selected} kind="accuracy" /></section><section className="panel"><h2>Pérdida</h2><p className="caption">Entrenamiento y validación · simulado</p><Chart job={selected} kind="loss" /></section></div>
           </>}</div></div>
           <TrainingHistory key={projectId} jobs={projectJobs} onRepeat={repeatJob} onSelect={setSelectedId}/>
+          </div></details>
+          </div>
+          <div role="tabpanel" aria-label="Cargar modelo preentrenado" className="training-workspace-content" style={{display:trainingView==="import"?"":"none"}}>
+            <PretrainedModelsPanel key={projectId} projectId={projectId}/>
+          </div>
         </>}
 
         {page==="Evaluación"&&<>

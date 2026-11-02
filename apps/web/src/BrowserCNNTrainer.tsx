@@ -20,6 +20,7 @@ type Props={
   onSaved:()=>void;
   demoJob?:Job;
   demoPaused?:boolean;
+  onWorkingChange?:(working:boolean)=>void;
 };
 
 function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
@@ -40,7 +41,7 @@ function Curve({metrics,kind}:{metrics:Metric[];kind:"accuracy"|"loss"}) {
   </svg>;
 }
 
-export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connected,onSaved}:Props) {
+export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connected,onSaved,onWorkingChange}:Props) {
   const [epochs,setEpochs]=useState("12");
   const [batch,setBatch]=useState("16");
   const [working,setWorking]=useState(false);
@@ -63,7 +64,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [official,setOfficial]=useState<{preview:string;expected:string;predicted:string;confidence:number;correct:boolean}|null>(null);
   const controller=useRef<AbortController|null>(null);
 
-  useEffect(()=>()=>controller.current?.abort(),[]);
+  useEffect(()=>()=>{controller.current?.abort();onWorkingChange?.(false);},[]);
   let reason="";
   if(dataset){
     try{
@@ -89,7 +90,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
 
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setNetworkHistory([]);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setNetworkHistory([]);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);onWorkingChange?.(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
@@ -113,7 +114,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       if(abort.signal.aborted)return;
       setReport(result);
       // Termina la animación al acabar el entrenamiento, no al finalizar el guardado remoto.
-      setWorking(false);
+      setWorking(false);onWorkingChange?.(false);
       setStage("Modelo CNN guardado en este navegador.");
       setMessage("Pesos guardados en IndexedDB. Puedes utilizarlos aquí para realizar predicciones sin reentrenar.");
       if(connected&&!abort.signal.aborted)await saveHistory(result);
@@ -122,7 +123,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       setStage("Sin entrenamiento completado.");
     }finally {
       if(controller.current===abort)controller.current=null;
-      setWorking(false);
+      setWorking(false);onWorkingChange?.(false);
     }
   }
 
@@ -285,10 +286,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       </div>}
     </>}
     {mnist&&<p className="caption">Importación IDX en RAM: al recargar la página deberás reconectar el origen; el modelo entrenado y guardado en IndexedDB permanece disponible para exportar o restaurar mediante los respaldos.</p>}
-    <CNNBackupActions projectId={projectId} report={report} onRestored={restored=>{
-      setReport(restored);setNetworkTrace(null);setNetworkHistory([]);setInspectMessage("");setInspectError("");setHistorySaved(false);setMetrics(restored.metrics);
-      setStage("Respaldo CNN recuperado desde otro navegador o dispositivo.");
-    }}/>
+    {report&&<CNNBackupActions mode="export" projectId={projectId} report={report}/> }
     {report&&<section className="cnn-backup-predictions" aria-label="Predicción con modelo recuperado">
       <h3>Reconocer una imagen con los pesos guardados</h3>
       {mnist&&<><p className="caption">{isFashionDataset(mnist.source)?"Fashion-MNIST utiliza imágenes oficiales en escala de grises de 28×28.":"MNIST utiliza números claros sobre fondo oscuro. También se invierte automáticamente una imagen cuando tiene el fondo claro."}</p><button className="secondary" type="button" onClick={()=>void downloadMnistExample()}>{isFashionDataset(mnist.source)?"Descargar prenda oficial de prueba (PNG)":"Descargar dígito oficial de prueba (PNG)"}</button></>}
