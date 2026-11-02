@@ -7,7 +7,9 @@ import * as tf from "@tensorflow/tfjs";
 import type {Config} from "./cnn.ts";
 import {normalizeDigitCrop,segmentDigitsFromFile} from "./digitSegmentation.ts";
 import type {DigitBox,DigitRegion} from "./digitSegmentation.ts";
-import {transformMnistPixels,deskewMnistPixels} from "./mnistRobust.ts";
+import {deskewMnistPixels} from "./mnistRobust.ts";
+import {hogDescriptor,loadOrientationBank,top3ReferenceSimilarity} from "./orientationReferences";
+import type {OrientationBank} from "./orientationReferences";
 
 export type DigitPrediction={
   position:number;row:number;digit:string;confidence:number;alternative:string;
@@ -71,19 +73,53 @@ function thumb(pixels:Float32Array):string{
   }
   ctx.putImageData(img,0,0);return canvas.toDataURL("image/png");
 }
+/** Girar en un lienzo ampliado: no cortar los extremos como en el visor anterior. */
 function normalizeRotated(source:Float32Array,angle:number):Float32Array{
-  const rotated=angle?transformMnistPixels(source,angle*Math.PI/180):source;
-  let minX=28,minY=28,maxX=-1,maxY=-1;
-  for(let y=0;y<28;y++)for(let x=0;x<28;x++){
-    if(rotated[y*28+x]>.025){
-      minX=Math.min(minX,x);maxX=Math.max(maxX,x);
-      minY=Math.min(minY,y);maxY=Math.max(maxY,y);
-    }
+  if(angle===0)return new Float32Array(source);
+  const rad=angle*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad);
+  const side=Math.ceil(28*(Math.abs(c)+Math.abs(s)))+4;
+  const expanded=new Float32Array(side*side),center=(side-1)/2;
+  const sample=(x:number,y:number)=>{
+    if(x<0||y<0||x>27||y>27)return 0;
+    const x0=Math.floor(x),y0=Math.floor(y),x1=Math.min(27,x0+1),y1=Math.min(27,y0+1),fx=x-x0,fy=y-y0;
+    return (source[y0*28+x0]*(1-fx)+source[y0*28+x1]*fx)*(1-fy)+
+      (source[y1*28+x0]*(1-fx)+source[y1*28+x1]*fx)*fy;
+  };
+  for(let y=0;y<side;y++)for(let x=0;x<side;x++){
+    const dx=x-center,dy=y-center;
+    expanded[y*side+x]=sample(c*dx-s*dy+13.5,s*dx+c*dy+13.5);
   }
-  if(maxX<minX||maxY<minY)return new Float32Array(source);
-  const w=maxX-minX+1,h=maxY-minY+1,patch=new Float32Array(w*h);
-  for(let y=0;y<h;y++)for(let x=0;x<w;x++)patch[y*w+x]=rotated[(minY+y)*28+minX+x];
-  return normalizeDigitCrop(patch,w,h);
+  return normalizeDigitCrop(expanded,side,side);
+}
+const SEARCH_ANGLES=Array.from({length:24},(_,i)=>i*15);
+type OrientationDecision={scores:number[];angle:number;pixels:Float32Array;confidence:number;margin:number};
+function decideWithReferences(
+  variants:ReadonlyArray<{pixels:Float32Array;angle:number}>,
+  distributions:ReadonlyArray<number[]>,bank:OrientationBank,
+):OrientationDecision{
+  if(variants.length!==48||distributions.length!==48)
+    throw new Error("La búsqueda de orientación requiere 24 giros con dos preparaciones.");
+  const raw=distributions.map((scores,i)=>{
+    const similarity=top3ReferenceSimilarity(hogDescriptor(variants[i].pixels),bank);
+    return scores.map((probability,digit)=>
+      Math.pow(Math.max(1e-7,probability),.75)*Math.exp(Math.max(-30,Math.min(0,(similarity[digit]-1)/.065))));
+  });
+  // Máximo entre preparación original y corregida, seguido de suavizado
+  // angular idéntico al Colab (la primera y última orientación son vecinas).
+  const max=SEARCH_ANGLES.map((_,i)=>raw[2*i].map((v,d)=>Math.max(v,raw[2*i+1][d])));
+  const smoothed=max.map((row,i)=>row.map((value,d)=>
+    .6*value+.2*max[(i+23)%24][d]+.2*max[(i+1)%24][d]));
+  const best=Array.from({length:10},(_,d)=>Math.max(...smoothed.map(row=>row[d])));
+  const order=Array.from({length:10},(_,d)=>d).sort((a,b)=>best[b]-best[a]);
+  const sum=best.reduce((n,v)=>n+v,0);
+  const confidence=best[order[0]]/Math.max(sum,1e-8);
+  const margin=(best[order[0]]-best[order[1]])/Math.max(sum,1e-8);
+  const digit=order[0];
+  const angleIndex=smoothed.findIndex(row=>row[digit]===best[digit]);
+  const v=raw[2*angleIndex][digit]>=raw[2*angleIndex+1][digit]?2*angleIndex:2*angleIndex+1;
+  const degrees=SEARCH_ANGLES[angleIndex];
+  return {scores:best.map(value=>value/Math.max(sum,1e-8)),confidence,margin,
+    angle:degrees>180?degrees-360:degrees,pixels:variants[v].pixels};
 }
 async function forward(model:tf.LayersModel,inputs:readonly Float32Array[]):Promise<number[][]>{
   const merged=new Float32Array(inputs.length*784);
@@ -100,29 +136,53 @@ async function forward(model:tf.LayersModel,inputs:readonly Float32Array[]):Prom
 }
 async function inferRegion(model:tf.LayersModel,region:DigitRegion):Promise<DigitPrediction>{
   const original=(await forward(model,[region.pixels]))[0];
-  let selected:Choice={scores:original,angle:0,pixels:region.pixels};
   const baseline=rankDigitScores(original);
+  let selected:Choice={scores:original,angle:0,pixels:region.pixels};
+  let confidence=baseline.confidence,margin=baseline.margin;
+  let needsReview=false;
+  // Los recortes claros conservan la decisión y la confianza original.
   if(baseline.confidence<.70||baseline.margin<.15){
-    const candidates:{pixels:Float32Array;angle:number}[]=[];
-    const correction=deskewMnistPixels(region.pixels);
-    candidates.push({pixels:correction,angle:0});
-    for(const angle of fallbackAngles){
-      candidates.push({pixels:normalizeRotated(region.pixels,angle),angle});
+    const referenceTask=loadOrientationBank().catch(()=>null);
+    const bank=await referenceTask;
+    if(bank){
+      const variants:Array<{pixels:Float32Array;angle:number}>=[];
+      for(const angle of SEARCH_ANGLES){
+        const rotated=normalizeRotated(region.pixels,angle);
+        variants.push({pixels:rotated,angle});
+        variants.push({pixels:deskewMnistPixels(rotated),angle});
+      }
+      const distributions:number[][]=[];
+      for(let i=0;i<variants.length;i+=12){
+        distributions.push(...await forward(model,variants.slice(i,i+12).map(v=>v.pixels)));
+        await tf.nextFrame();
+      }
+      const decision=decideWithReferences(variants,distributions,bank);
+      const winner=rankDigitScores(decision.scores);
+      if(decision.confidence>=.52&&decision.margin>=.12&&
+         (winner.digit===baseline.digit||decision.confidence>=baseline.confidence-.08)){
+        selected={scores:decision.scores,angle:decision.angle,pixels:decision.pixels};
+        confidence=decision.confidence;margin=decision.margin;
+      }else needsReview=true;
+    }else{
+      // Sin conexión se preserva el motor anterior, sin bloquear predicciones.
+      const candidates=[{pixels:deskewMnistPixels(region.pixels),angle:0},
+        ...fallbackAngles.map(angle=>({pixels:normalizeRotated(region.pixels,angle),angle}))];
+      const distributions:number[][]=[];
+      for(let i=0;i<candidates.length;i+=5)
+        distributions.push(...await forward(model,candidates.slice(i,i+5).map(v=>v.pixels)));
+      const index=chooseOrientation(original,distributions.map((scores,i)=>({scores,angle:candidates[i].angle})));
+      if(index>=0)selected={...candidates[index],scores:distributions[index]};
+      const ranked=rankDigitScores(selected.scores);
+      confidence=ranked.confidence;margin=ranked.margin;
+      needsReview=true;
     }
-    const scores:number[][]=[];
-    for(let i=0;i<candidates.length;i+=5){
-      scores.push(...await forward(model,candidates.slice(i,i+5).map(c=>c.pixels)));
-      await tf.nextFrame();
-    }
-    const index=chooseOrientation(original,scores.map((v,i)=>({scores:v,angle:candidates[i].angle})));
-    if(index>=0)selected={...candidates[index],scores:scores[index]};
   }
   const result=rankDigitScores(selected.scores);
-  const ambiguous69=selected.angle!==0&&Math.abs(selected.angle)>=90&&
-    (result.digit==="6"||result.digit==="9");
-  const uncertain=result.uncertain||ambiguous69;
+  const ambiguous69=Math.abs(selected.angle)>=90&&["6","9"].includes(result.digit)&&
+    (confidence<.8||margin<.25);
+  const uncertain=needsReview||confidence<.6||margin<.15||ambiguous69;
   return {...region.box,digit:ambiguous69?"6 / 9":result.digit,
-    alternative:result.alternative,confidence:result.confidence,margin:result.margin,
+    alternative:result.alternative,confidence,margin,
     uncertain,angle:selected.angle,box:region.box,thumbnail:thumb(selected.pixels)};
 }
 async function annotateImage(file:File,digits:DigitPrediction[]):Promise<string>{
