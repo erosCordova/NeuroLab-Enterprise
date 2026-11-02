@@ -85,6 +85,26 @@ async function inferRegion(model:tf.LayersModel,region:DigitRegion):Promise<Retu
 export async function predictMultipleDigits(modelRef:string,file:File,config:Config,classes:string[]):Promise<MultiDigitPrediction>{
   if(!modelRef.startsWith("indexeddb://neurolab-cnn-")||!isDigitClassifier(classes,config))
     throw new Error("La detección multi-dígito requiere una CNN MNIST compatible de 28 × 28.");
+  // Mantener la ruta original para imágenes oficiales de 28×28:
+  // fragmentar un "8" o un "9" del test en componentes perjudicaría los aciertos previos.
+  const probe=await createImageBitmap(file);
+  const isOfficial=probe.width===28&&probe.height===28;
+  probe.close();
+  if(isOfficial){
+    const {predictInBrowser}=await import("./browserCNN.ts");
+    const {preprocessMnistPhoto}=await import("./mnistPreprocess.ts");
+    const predictions=await predictInBrowser(modelRef,file,config,classes,true);
+    const pixels=await preprocessMnistPhoto(file);
+    const first=predictions[0];
+    const doubtful=first.probabilidad<.55;
+    const box:DigitBox={x:0,y:0,width:28,height:28,row:1,position:1};
+    return {
+      predictions,sequence:doubtful?"?":first.clase,
+      digits:[{position:1,row:1,digit:first.clase,confidence:first.probabilidad,
+        alternative:predictions[1]?.clase??"",angle:0,uncertain:doubtful,box,thumbnail:thumb(pixels)}],
+      warning:doubtful?"La imagen oficial tiene baja confianza; revisa el modelo y la etiqueta.":"Imagen MNIST de 28 × 28: se conservó la inferencia original del modelo.",
+    };
+  }
   const regions=await segmentDigitsFromFile(file);
   if(!regions.length)throw new Error("No se detectaron números en esta imagen.");
   const model=await tf.loadLayersModel(modelRef);
