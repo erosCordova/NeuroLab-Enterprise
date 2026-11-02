@@ -110,6 +110,27 @@ export async function deleteModelWeights(projectId:string,ref:string,origin:"col
   const tf=await import("@tensorflow/tfjs");
   const available=await tf.io.listModels();
   if(available[ref])await tf.io.removeModel(ref);
-  if(origin==="local")markLocalDeleted(projectId,ref);
+  if(origin==="local"){markLocalDeleted(projectId,ref);const names=localNames(projectId);delete names[ref];localStorage.setItem(nameKey(projectId),JSON.stringify(names));}
   else forgetImportedModel(projectId,ref);
+}
+
+const nameKey=(projectId:string)=>"neurolab-local-names-v1:"+projectId;
+function localNames(projectId:string):Record<string,string>{
+  try{
+    const raw=JSON.parse(localStorage.getItem(nameKey(projectId))||"{}");
+    if(!raw||typeof raw!=="object"||Array.isArray(raw))return {};
+    return Object.fromEntries(Object.entries(raw).filter(([ref,name])=>
+      isOwnedModelRef(projectId,ref,"local")&&typeof name==="string"&&name.length<=80));
+  }catch{return {};}
+}
+export function localModelName(projectId:string,ref:string):string{
+  if(!isOwnedModelRef(projectId,ref,"local"))return "";
+  return localNames(projectId)[ref]??"";
+}
+export function renameLocalModel(projectId:string,ref:string,name:string):void{
+  if(!isOwnedModelRef(projectId,ref,"local"))throw new Error("No es una CNN entrenada en este proyecto.");
+  const value=trimName(name);
+  if(!value)throw new Error("Escribe un nombre para el modelo.");
+  const names=localNames(projectId);names[ref]=value;
+  localStorage.setItem(nameKey(projectId),JSON.stringify(names));
 }
