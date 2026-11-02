@@ -47,16 +47,6 @@ async function applyDataset(page) {
   })).toBeVisible();
 }
 
-async function createJob(page, epochs = "3") {
-  await navigate(page, "Diseñador CNN");
-  await page.getByLabel("Modo de configuración CNN", {exact:true}).selectOption("manual");
-  await navigate(page, "Entrenamientos");
-  await page.getByLabel("Épocas",{exact:true}).fill(epochs);
-  await page.getByRole("button", {
-    name: "Añadir a la cola", exact: true,
-  }).click();
-}
-
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", {
@@ -64,11 +54,11 @@ test.beforeEach(async ({ page }) => {
   })).toBeVisible();
 });
 
-test("Los diez módulos corresponden exclusivamente a CNN", async ({ page }) => {
+test("Los módulos de la plataforma corresponden a funcionalidades reales", async ({ page }) => {
   for (const name of [
     "Dashboard", "Proyectos", "Diseñador CNN", "Datasets",
     "Entrenamientos", "Evaluación", "Modelos",
-    "Fundamentos", "Reportes", "Administración",
+    "Fundamentos", "Reportes",
   ]) {
     await navigate(page, name);
   }
@@ -107,216 +97,6 @@ test("Dataset de prueba: decodifica 200 imágenes y aplica las diez clases", asy
   await expect(page.locator(".properties dd").filter({
     hasText: /^26[.,\s]698$/,
   })).toBeVisible();
-});
-
-test("Flujo CNN: versión, dos gráficos, ficha, revisión y exportaciones", async ({ page }) => {
-  await applyDataset(page);
-  await navigate(page, "Diseñador CNN");
-
-  await page.getByRole("button", {
-    name: "Guardar versión CNN", exact: true,
-  }).click();
-
-  await expect(page.getByRole("status").filter({
-    hasText: "Arquitectura CNN guardada como versión 1.",
-  })).toBeVisible();
-
-  await createJob(page, "3");
-
-  await expect(page.locator(".cnn-two-charts")).toBeVisible();
-
-  await expect(
-    page.locator(".cnn-two-charts").getByRole("img")
-  ).toHaveCount(2);
-
-  await expect(page.getByRole("img", {
-    name: "Precisión simulada de entrenamiento y validación",
-    exact: true,
-  })).toBeVisible();
-
-  await expect(page.getByRole("img", {
-    name: "Pérdida simulada de entrenamiento y validación",
-    exact: true,
-  })).toBeVisible();
-
-  await navigate(page, "Dashboard");
-  await navigate(page, "Entrenamientos");
-
-  await expect(page.locator(".training-detail").getByText(
-    "Completado", { exact: true }
-  )).toBeVisible({ timeout: 20000 });
-
-  const charts = page.locator(".cnn-two-charts svg");
-  for (let index = 0; index < 2; index++) {
-    await expect(charts.nth(index).locator("path")).toHaveCount(2);
-    await expect(charts.nth(index).locator("path").nth(0))
-      .toHaveAttribute("d", /^M.+/);
-    await expect(charts.nth(index).locator("path").nth(1))
-      .toHaveAttribute("d", /^M.+/);
-  }
-
-  await navigate(page, "Diseñador CNN");
-
-  await page.getByLabel(/^Filtros · 1 a 128/)
-    .nth(0).fill("24");
-
-  await navigate(page, "Modelos");
-
-  await page.getByRole("button", {
-    name: "Registrar ficha", exact: true,
-  }).click();
-
-  const detail = page.getByRole("heading", {
-    name: "CNN v1 · Borrador", exact: true,
-  }).locator("..");
-
-  await expect(detail).toContainText("8 filtros 3×3");
-  await expect(detail).toContainText("200 imágenes");
-
-  await page.getByLabel(/^Observación de revisión/).fill(
-    "Configuración y metadatos revisados en la demostración."
-  );
-
-  await page.getByRole("button", {
-    name: "Marcar revisado", exact: true,
-  }).click();
-
-  await page.getByLabel(/^Observación de revisión/).fill(
-    "Ficha aprobada para comprobar el flujo de revisión."
-  );
-
-  await page.getByRole("button", {
-    name: "Aprobar demo", exact: true,
-  }).click();
-
-  await expect(page.getByRole("heading", {
-    name: "CNN v1 · Aprobado", exact: true,
-  })).toBeVisible();
-
-  const jsonEvent = page.waitForEvent("download");
-  await page.getByRole("button", {
-    name: "Exportar ficha JSON", exact: true,
-  }).click();
-
-  const jsonDownload = await jsonEvent;
-  const jsonPath = await jsonDownload.path();
-  expect(jsonPath).toBeTruthy();
-
-  const exported = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
-  expect(exported.simulated).toBe(true);
-  expect(exported.containsModelWeights).toBe(false);
-  expect(exported.record.job.config.layers[0].filters).toBe(8);
-  expect(exported.record.job.dataset.classes.length).toBe(10);
-
-  await navigate(page, "Evaluación");
-  await expect(page.locator(".evaluation-summary tbody tr")).toHaveCount(1);
-
-  await navigate(page, "Reportes");
-
-  const csvEvent = page.waitForEvent("download");
-  await page.getByRole("button", {
-    name: "Exportar CSV simulado", exact: true,
-  }).click();
-
-  const csvDownload = await csvEvent;
-  const csvPath = await csvDownload.path();
-  expect(csvPath).toBeTruthy();
-
-  const exportedCSV = fs.readFileSync(csvPath, "utf8");
-  expect(exportedCSV).toContain("CNN_SIMULADA");
-  expect(exportedCSV).toContain("Completado");
-
-  await page.emulateMedia({ media: "print" });
-  await expect(page.locator(".cnn-report")).toBeVisible();
-  await expect(page.locator(".sidebar")).toBeHidden();
-  await page.emulateMedia({ media: "screen" });
-});
-
-test("La pausa y cancelación conservan los estados terminales", async ({ page }) => {
-  await applyDataset(page);
-  await createJob(page, "100");
-
-  await page.getByRole("button", {
-    name: "Pausar demo", exact: true,
-  }).click();
-
-  await expect(page.getByRole("button", {
-    name: "Reanudar demo", exact: true,
-  })).toBeVisible();
-
-  const progress = page.locator(".training-detail progress");
-  const before = await progress.getAttribute("value");
-
-  await page.waitForTimeout(1200);
-
-  await expect(progress).toHaveAttribute("value", before ?? "0");
-
-  await page.getByRole("button", {
-    name: "Cancelar simulación", exact: true,
-  }).click();
-
-  await expect(page.locator(".training-detail").getByText(
-    "Cancelado", { exact: true }
-  )).toBeVisible();
-
-  await page.getByRole("button", {
-    name: "Reanudar demo", exact: true,
-  }).click();
-
-  await page.waitForTimeout(1000);
-
-  await expect(page.locator(".training-detail").getByText(
-    "Cancelado", { exact: true }
-  )).toBeVisible();
-
-  await expect(page.getByRole("button", {
-    name: "Cancelar simulación", exact: true,
-  })).toBeDisabled();
-});
-
-test("Los límites de Administración controlan la cola CNN", async ({ page }) => {
-  await applyDataset(page);
-  await navigate(page, "Administración");
-
-  await page.getByLabel(/^Máximo de pendientes/).fill("1");
-  await page.getByLabel(/^Máximo por sesión/).fill("2");
-
-  await page.getByRole("button", {
-    name: "Aplicar límites", exact: true,
-  }).click();
-
-  await expect(page.getByRole("status").filter({
-    hasText: "Límites aplicados a nuevas ejecuciones.",
-  })).toBeVisible();
-
-  await createJob(page, "100");
-
-  await page.getByRole("button", {
-    name: "Añadir a la cola", exact: true,
-  }).click();
-
-  await expect(page.getByRole("alert")).toContainText(
-    "Límite activo: 1 trabajos pendientes y 2 por sesión."
-  );
-
-  await expect(page.locator(".queue-item")).toHaveCount(1);
-
-  await page.getByRole("button", {
-    name: "Cancelar simulación", exact: true,
-  }).click();
-
-  await page.getByRole("button", {
-    name: "Añadir a la cola", exact: true,
-  }).click();
-
-  await expect(page.locator(".queue-item")).toHaveCount(2);
-
-  await page.getByRole("button", {
-    name: "Añadir a la cola", exact: true,
-  }).click();
-
-  await expect(page.locator(".queue-item")).toHaveCount(2);
-  await expect(page.getByRole("alert")).toContainText("Límite activo:");
 });
 
 test("El diseñador CNN funciona en pantalla pequeña y con teclado", async ({ page }) => {
@@ -749,109 +529,6 @@ test("Proyectos CNN: editar, filtrar, evitar duplicados y conservar arquitectura
   await expect(page.getByRole("heading",{name:"Dataset aplicado",exact:true}).locator("..")).toContainText("200 imágenes");
 });
 
-test("Proyectos CNN: archivar impide nuevas simulaciones y permite reactivar",async({page})=>{
-  await applyDataset(page);
-  await navigate(page,"Proyectos");
-  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
-  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Archivado");
-  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
-  await navigate(page,"Entrenamientos");
-  await page.getByRole("button",{name:"Añadir a la cola",exact:true}).click();
-  await expect(page.getByRole("alert")).toContainText("El proyecto está archivado");
-  await expect(page.locator(".queue-item")).toHaveCount(0);
-  await navigate(page,"Proyectos");
-  await page.getByRole("button",{name:"Editar proyecto Clasificación de imágenes",exact:true}).click();
-  await page.getByLabel("Estado del proyecto",{exact:true}).selectOption("Activo");
-  await page.getByRole("button",{name:"Guardar cambios",exact:true}).click();
-  await createJob(page,"3");
-  await expect(page.locator(".queue-item")).toHaveCount(1);
-  await page.setViewportSize({width:390,height:844});
-  await navigate(page,"Proyectos");
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
-});
-
-
-test("Evaluación CNN: comparación hasta tres ejecuciones y exportaciones trazables",async({page})=>{
-  await applyDataset(page);
-  for(let i=0;i<4;i++)await createJob(page,"2");
-  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible({timeout:25000});
-  await navigate(page,"Evaluación");
-  const results=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true});
-  await expect(results.locator("tbody tr")).toHaveCount(4);
-  const checks=results.getByRole("checkbox");
-  for(let i=0;i<3;i++)await checks.nth(i).check();
-  await expect(checks.nth(3)).toBeDisabled();
-  const comparison=page.getByRole("region",{name:"Comparación de ejecuciones",exact:true});
-  await expect(comparison.getByRole("article")).toHaveCount(3);
-  await expect(comparison.getByRole("status")).toContainText("misma huella");
-  const event=page.waitForEvent("download");
-  await comparison.getByRole("button",{name:"Exportar comparación JSON",exact:true}).click();
-  const report=JSON.parse(fs.readFileSync(await(await event).path(),"utf8"));
-  expect(report.simulated).toBe(true);expect(report.sameDataset).toBe(true);
-  expect(report.rows).toHaveLength(3);expect(report.rows.every(row=>row.epochsExecuted===2)).toBe(true);
-  const csvEvent=page.waitForEvent("download");
-  await comparison.getByRole("button",{name:"Exportar comparación CSV",exact:true}).click();
-  expect(fs.readFileSync(await(await csvEvent).path(),"utf8")).toContain("CNN_SIMULADA");
-  await results.getByRole("button",{name:/^Inspeccionar ejecución/}).first().click();
-  await expect(page.locator(".epoch-table tbody tr")).toHaveCount(2);
-  const metrics=page.getByRole("region",{name:"Métricas por época",exact:true});
-  const metricEvent=page.waitForEvent("download");
-  await metrics.getByRole("button",{name:"Exportar métricas por época CSV",exact:true}).click();
-  expect(fs.readFileSync(await(await metricEvent).path(),"utf8").split("\r\n")).toHaveLength(3);
-  await comparison.getByRole("button",{name:"Limpiar comparación",exact:true}).click();
-  await expect(comparison.getByRole("article")).toHaveCount(0);
-  await expect(checks.nth(3)).toBeEnabled();
-  await page.setViewportSize({width:390,height:844});
-  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
-});
-
-test("Evaluación CNN: advierte si cambian las particiones del dataset",async({page})=>{
-  await applyDataset(page);await createJob(page,"1");
-  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
-  await navigate(page,"Datasets");
-  await page.getByLabel(/^Semilla/).fill("43");
-  await page.getByRole("button",{name:"Enviar dataset al proyecto",exact:true}).click();
-  await expect(page.getByRole("status").filter({hasText:"Dataset de imágenes validado y aplicado."})).toBeVisible();
-  await createJob(page,"1");
-  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
-  await navigate(page,"Evaluación");
-  const checks=page.getByRole("region",{name:"Resultados de ejecuciones",exact:true}).getByRole("checkbox");
-  await checks.nth(0).check();await checks.nth(1).check();
-  await expect(page.getByRole("region",{name:"Comparación de ejecuciones",exact:true}).getByRole("status")).toContainText("no son directamente comparables");
-});
-
-
-test("Historial CNN: repetir una cancelación conserva la configuración de origen",async({page})=>{
-  await applyDataset(page);await createJob(page,"2");
-  await page.getByRole("button",{name:"Cancelar simulación",exact:true}).click();
-  const history=page.getByRole("region",{name:"Historial de entrenamientos",exact:true});
-  const sourceId=(await page.locator(".queue-item small").first().innerText()).trim();
-  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Cancelado");
-  await expect(history.locator("tbody tr")).toHaveCount(1);
-  await navigate(page,"Diseñador CNN");
-  await page.getByLabel(/^Filtros · 1 a 128/).first().fill("24");
-  await navigate(page,"Entrenamientos");
-  await history.getByRole("button",{name:`Repetir ejecución ${sourceId}`,exact:true}).click();
-  await expect(page.locator(".queue-item")).toHaveCount(2);
-  await expect(page.locator(".training-detail").getByText("Completado",{exact:true})).toBeVisible();
-  await history.getByLabel("Filtrar ejecuciones por estado",{exact:true}).selectOption("Completado");
-  await expect(history.locator("tbody tr")).toHaveCount(1);
-  await expect(history.locator("tbody")).toContainText(`Origen: ${sourceId}`);
-  const event=page.waitForEvent("download");
-  await history.getByRole("button",{name:"Exportar historial CSV",exact:true}).click();
-  const csv=fs.readFileSync(await(await event).path(),"utf8");
-  expect(csv).toContain(sourceId);expect(csv).toContain("CNN_SIMULADA");
-  await navigate(page,"Modelos");
-  await page.getByRole("button",{name:"Registrar ficha",exact:true}).click();
-  const modelEvent=page.waitForEvent("download");
-  await page.getByRole("button",{name:"Exportar ficha JSON",exact:true}).click();
-  const result=JSON.parse(fs.readFileSync(await(await modelEvent).path(),"utf8"));
-  expect(result.record.job.config.layers[0].filters).toBe(8);
-  expect(result.record.job.repeatedFrom).toBe(sourceId);
-  expect(result.record.job.startedAt).toBeTruthy();expect(result.record.job.endedAt).toBeTruthy();
-});
-
-
 test("Entrenamiento CNN real: aprende en navegador y guarda pesos sin desplegar",async({page,browser})=>{
   test.setTimeout(120000);
   await applyDataset(page);
@@ -941,25 +618,6 @@ test("Accesibilidad: salto al contenido, navegación y menú adaptable al móvil
   await page.getByRole("button",{name:"Abrir entrenamiento real",exact:true}).click();
   await expect(page.getByRole("heading",{name:"Entrenamientos",level:1,exact:true})).toBeVisible();
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
-});
-
-
-test("Visualizador CNN: muestra arquitectura real, alterna 2D/3D y controla animación",async({page})=>{
-  await navigate(page,"Entrenamientos");
-  const visual=page.getByRole("region",{name:"Visualización animada de la arquitectura CNN"});
-  await expect(visual).toBeVisible();
-  await expect(visual.getByText("Visualización CNN")).toBeVisible();
-  await expect(visual.getByText("CONV2D 1")).toBeVisible();
-  await expect(visual.getByText("MAXPOOL 1")).toBeVisible();
-  await expect(visual.getByRole("button",{name:"Examinar capa FLATTEN"})).toBeVisible();
-  await expect(visual.getByRole("button",{name:"Examinar capa DENSE"})).toBeVisible();
-  await expect(visual.getByRole("button",{name:"Examinar capa SALIDA"})).toBeVisible();
-  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","3d");
-  await visual.getByRole("button",{name:"Vista 2D"}).click();
-  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-view","2d");
-  await expect(visual.getByRole("button",{name:"Pausar animación"})).toHaveCount(0);
-  await expect(visual.locator(".nl-neural-window")).toHaveAttribute("data-motion","paused");
-  await expect(visual.getByText("Sin mediciones")).toBeVisible();
 });
 
 
@@ -1176,4 +834,25 @@ test("Los dos orígenes de CNN muestran controles CRUD sin compartir importador"
  await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toBeVisible();
  await expect(imported.getByRole("button",{name:"Entrenar CNN real"})).toHaveCount(0);
  await expect(imported.getByRole("region",{name:"Administrar modelos preentrenados importados"})).toBeVisible();
+});
+
+
+test("No se ofrecen simulaciones, colas ficticias, usuarios demo ni métricas inventadas",async({page})=>{
+ await navigate(page,"Dashboard");
+ await expect(page.getByText("Simulaciones pendientes")).toHaveCount(0);
+ await expect(page.getByText("Fichas simuladas")).toHaveCount(0);
+ await expect(page.getByRole("button",{name:"Administración",exact:true})).toHaveCount(0);
+ await navigate(page,"Entrenamientos");
+ await expect(page.getByText("Simulación CNN",{exact:false})).toHaveCount(0);
+ await expect(page.getByText("Cola del proyecto")).toHaveCount(0);
+ await expect(page.getByRole("button",{name:"Añadir a la cola"})).toHaveCount(0);
+ await expect(page.getByRole("button",{name:"Pausar demo"})).toHaveCount(0);
+ await expect(page.getByRole("region",{name:"Visualización de neuronas y conexiones de la CNN"})).toBeVisible();
+ await expect(page.locator(".nl-energy-particle")).toHaveCount(0);
+ await navigate(page,"Evaluación");
+ await expect(page.getByRole("heading",{name:"Evaluación de simulaciones CNN"})).toHaveCount(0);
+ await navigate(page,"Modelos");
+ await expect(page.getByText(/Aprobar demo/)).toHaveCount(0);
+ await navigate(page,"Reportes");
+ await expect(page.getByText(/Reporte de simulaciones CNN/)).toHaveCount(0);
 });

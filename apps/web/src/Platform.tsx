@@ -50,7 +50,10 @@ export default function Platform(){
     try{await api<void>("/auth/logout",{method:"POST"});setUser(null);setProjects([]);setPassword("");}
     catch(cause){setError(cause instanceof Error?cause.message:"No se pudo cerrar sesión.");}
   }
-  if(!apiEnabled)return <App/>;
+  if(!apiEnabled)return <Landing><section className="panel platform-form" aria-label="Estado de conexión">
+    <BrandLogo compact/><h2>Conexión de API necesaria</h2>
+    <p className="muted">No se pudo habilitar el backend de NeuroLab. Para trabajar con proyectos y modelos reales debe configurarse la conexión a la API. La aplicación no muestra datos de demostración.</p>
+  </section></Landing>;
   if(loading)return <main className="platform-loading"><p role="status">Conectando con NeuroLab…</p></main>;
   if(user&&projects.length)return <><div className="account-strip"><span><strong>{user.display_name}</strong> · Mi espacio</span><button className="secondary" onClick={()=>void logout()}>Cerrar sesión</button></div>{error&&<p role="alert">{error}</p>}
     <App key={user.id} storageOwner={user.id} initialProjects={projects} onPersistProject={save} onDeleteProject={deleteProject}/></>;
