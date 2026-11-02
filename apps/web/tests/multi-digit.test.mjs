@@ -52,3 +52,32 @@ test("Los giros de 90° y 180° preservan un trazo sin cortar el recorte",()=>{
    assert.ok(rotated.reduce((a,v)=>a+v,0)>6,"El trazo se cortó a "+degrees+"°");
  }
 });
+
+test("Un softmax alto en el recorte de lado no descarta un giro de 90°",()=>{
+ const angles=Array.from({length:24},()=>new Array(10).fill(.0001));
+ angles[0][2]=.025;angles[6][7]=.91;angles[5][7]=.4;angles[7][7]=.4;
+ const pixels=Array.from({length:24},()=>Array.from({length:10},()=>new Float32Array(784)));
+ const {results}=resolveAngleEvidence([{angles,pixels}]);
+ assert.equal(results[0].digit,7);
+ assert.equal(results[0].angle,90);
+});
+test("Un recorte derecho no se gira cuando 0° tiene la mejor evidencia",()=>{
+ const angles=Array.from({length:24},()=>new Array(10).fill(.0001));
+ angles[0][4]=.91;angles[1][4]=.4;angles[23][4]=.4;
+ const pixels=Array.from({length:24},()=>Array.from({length:10},()=>new Float32Array(784)));
+ const {results}=resolveAngleEvidence([{angles,pixels}]);
+ assert.equal(results[0].digit,4);
+ assert.equal(results[0].angle,0);
+});
+test("La coherencia de la hoja trata 345° y 0° como orientaciones vecinas",()=>{
+ const pixels=Array.from({length:24},()=>Array.from({length:10},()=>new Float32Array(784)));
+ const anchors=[1,2,3,4].map(d=>{
+  const angles=Array.from({length:24},()=>new Array(10).fill(.0001));
+  angles[23][d]=.96;return {angles,pixels};
+ });
+ const weak=Array.from({length:24},()=>new Array(10).fill(.0001));
+ weak[0][8]=.45;weak[23][8]=.40;
+ const result=resolveAngleEvidence([...anchors,{angles:weak,pixels}]);
+ assert.ok(result.commonAngle!==null);
+ assert.equal(result.results.length,5);
+});

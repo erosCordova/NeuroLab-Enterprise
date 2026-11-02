@@ -26,7 +26,6 @@ export function isDigitClassifier(classes:readonly string[],config:Config):boole
   return config.size===28&&config.channels===1&&
     classes.length===10&&classes.every((name,i)=>name===LABELS[i]);
 }
-type Choice={scores:number[];angle:number;pixels:Float32Array};
 type Ranked={digit:string;alternative:string;confidence:number;margin:number;uncertain:boolean};
 export function rankDigitScores(scores:readonly number[]):Ranked{
   if(scores.length!==10||scores.some(v=>!Number.isFinite(v)||v<0))
@@ -98,7 +97,7 @@ type AngleSolution={
   digit:number;alternative:number;confidence:number;margin:number;angle:number;
   ambiguous69:boolean;pixels:Float32Array;
 };
-const angularDistance=(a:number,b:number)=>Math.abs((a-b+180)%360-180);
+const angularDistance=(a:number,b:number)=>Math.abs(((a-b+180)%360+360)%360-180);
 export function resolveAngleEvidence(items:ReadonlyArray<AngleEvidence>):{results:AngleSolution[];commonAngle:number|null}{
   if(!items.length)return {results:[],commonAngle:null};
   const valid=items.every(item=>item.angles.length===24&&item.pixels.length===24&&
@@ -175,7 +174,7 @@ async function forward(model:tf.LayersModel,inputs:readonly Float32Array[]):Prom
  * no permite determinar que la escritura estaba girada.
  */
 async function inferRegions(model:tf.LayersModel,regions:DigitRegion[]):Promise<{digits:DigitPrediction[];orientationWarning:string}>{
-  const baseline=await forward(model,regions.map(region=>region.pixels));
+  // No descartar rotaciones por un softmax inicial artificialmente alto.
   let bank:OrientationBank|null=null;
   try{bank=await loadOrientationBank();}catch{bank=null;}
   if(!bank){
@@ -189,7 +188,7 @@ async function inferRegions(model:tf.LayersModel,regions:DigitRegion[]):Promise<
       const scores:number[][]=[];
       for(let j=0;j<candidates.length;j+=8)
         scores.push(...await forward(model,candidates.slice(j,j+8).map(c=>c.pixels)));
-      const original=baseline[i];
+      const original=scores[0];
       const index=chooseOrientation(original,candidates.slice(1).map((item,j)=>({scores:scores[j+1],angle:item.angle})));
       const selected=index>=0?{...candidates[index+1],scores:scores[index+1]}:{...candidates[0],scores:original};
       const ranked=rankDigitScores(selected.scores);
@@ -258,21 +257,12 @@ export async function predictMultipleDigits(modelRef:string,file:File,config:Con
   const probe=await createImageBitmap(file);
   const isOfficial=probe.width===28&&probe.height===28;
   probe.close();
-  if(isOfficial){
-    const {predictInBrowser}=await import("./browserCNN.ts");
-    const {preprocessMnistPhoto}=await import("./mnistPreprocess.ts");
-    const predictions=await predictInBrowser(modelRef,file,config,classes,true);
-    const pixels=await preprocessMnistPhoto(file);
-    const first=predictions[0];
-    const margin=first.probabilidad-(predictions[1]?.probabilidad??0);
-    const box:DigitBox={x:0,y:0,width:28,height:28,row:1,position:1};
-    const uncertain=first.probabilidad<.60||margin<.18;
-    return {predictions,sequence:uncertain?"?":first.clase,
-      digits:[{position:1,row:1,digit:first.clase,confidence:first.probabilidad,margin,
-        alternative:predictions[1]?.clase??"",angle:0,uncertain,box,thumbnail:thumb(pixels)}],
-      warning:"Imagen individual de MNIST: se conserva la inferencia original."};
-  }
-  const regions=await segmentDigitsFromFile(file);
+  // La resolución 28×28 no garantiza orientación vertical; comprobar giros
+  // sin segmentar la imagen oficial en fragmentos.
+  const regions:DigitRegion[]=isOfficial
+    ?[{box:{x:0,y:0,width:28,height:28,row:1,position:1},
+       pixels:await (await import("./mnistPreprocess.ts")).preprocessMnistPhoto(file)}]
+    :await segmentDigitsFromFile(file);
   if(!regions.length)throw new Error("No se detectaron números en esta imagen.");
   const model=await tf.loadLayersModel(modelRef);
   try{
