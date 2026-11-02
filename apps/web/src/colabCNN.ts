@@ -10,14 +10,15 @@ import * as tf from "@tensorflow/tfjs";
 const SIGNATURE="NLCOLAB1";
 const FORMAT="neurolab-colab-mnist",ARCHITECTURE="tecnoforms-mnist-conv32x2-conv64x2-dense128-v1";
 const LIMIT=1_500_000;
-const EXPECTED=[
+const EXPECTED:ReadonlyArray<readonly [string,readonly number[]]>=[
   ["conv2d/kernel",[3,3,1,32]],["conv2d/bias",[32]],
   ["conv2d_1/kernel",[3,3,32,32]],["conv2d_1/bias",[32]],
   ["conv2d_2/kernel",[3,3,32,64]],["conv2d_2/bias",[64]],
   ["conv2d_3/kernel",[3,3,64,64]],["conv2d_3/bias",[64]],
   ["dense/kernel",[1600,128]],["dense/bias",[128]],
   ["dense_1/kernel",[128,10]],["dense_1/bias",[10]],
-] as const;
+];
+
 const EXPECTED_BYTES=EXPECTED.reduce((n,[,shape])=>n+shape.reduce((a,b)=>a*b,1)*4,0);
 const classes=Array.from({length:10},(_,i)=>String(i));
 
