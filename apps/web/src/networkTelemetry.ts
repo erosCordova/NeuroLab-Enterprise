@@ -5,6 +5,7 @@ import type {Config} from "./cnn.ts";
 export type LayerActivity={
   key:string;label:string;shape:string;units:number;
   magnitude:number;preview:number[];mode:"channels"|"neurons"|"groups"|"probabilities"|"pixels";
+  maps?:number[][]; // mapas de activación reales 8 × 8 por canal, nunca simulados
 };
 export type NetworkTrace={
   epoch:number;sampleLabel:string;predictedLabel:string;
@@ -31,6 +32,31 @@ export function summarizeLayer(values:ArrayLike<number>,shape:readonly number[],
     }
   }else for(let i=0;i<Math.min(units,limit);i++)preview.push(values[i]);
   return {units,magnitude,preview};
+}
+/** Reduce mapas espaciales reales por promedio de área para visualización 8 × 8.
+ * Solo se ejecuta al capturar una época, nunca dentro de cada lote.
+ */
+export function activationMaps(values:ArrayLike<number>,shape:readonly number[],channelsLimit=3):number[][]{
+  if(shape.length!==4||shape[0]!==1)return [];
+  const [,height,width,channels]=shape;
+  if(!height||!width||!channels||values.length!==height*width*channels)return [];
+  const maps:number[][]=[];
+  for(let channel=0;channel<Math.min(channels,channelsLimit);channel++){
+    const pixels:number[]=[];
+    for(let gy=0;gy<8;gy++)for(let gx=0;gx<8;gx++){
+      let total=0,area=0;
+      const y0=Math.floor(gy*height/8),y1=Math.max(y0+1,Math.floor((gy+1)*height/8));
+      const x0=Math.floor(gx*width/8),x1=Math.max(x0+1,Math.floor((gx+1)*width/8));
+      for(let y=y0;y<y1;y++)for(let x=x0;x<x1;x++){
+        const v=values[(y*width+x)*channels+channel];
+        total+=Number.isFinite(v)?Math.max(0,v):0;area++;
+      }
+      pixels.push(total/Math.max(1,area));
+    }
+    const max=Math.max(1e-8,...pixels);
+    maps.push(pixels.map(v=>v/max));
+  }
+  return maps;
 }
 export function captureNetworkTrace(model:tf.LayersModel,sample:tf.Tensor4D,config:Config,
   classes:string[],epoch:number,sampleLabel:string):NetworkTrace{
@@ -67,7 +93,8 @@ export function captureNetworkTrace(model:tf.LayersModel,sample:tf.Tensor4D,conf
       const values=output.dataSync();
       const summary=summarizeLayer(values,output.shape,mode,mode==="probabilities"?classes.length:12);
       layers.push({key,label,shape:output.shape.slice(1).join(" × "),units:summary.units,
-        magnitude:summary.magnitude,preview:summary.preview,mode});
+        magnitude:summary.magnitude,preview:summary.preview,mode,
+        maps:(cls==="Conv2D"||cls==="MaxPooling2D")?activationMaps(values,output.shape):undefined});
     }
     const raw=Array.from(output.dataSync());
     const probabilities=classes.length===2?[1-raw[0],raw[0]]:raw;

@@ -2,7 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import * as tf from "@tensorflow/tfjs";
 import {buildBrowserCNN} from "../src/browserCNN.ts";
-import {captureNetworkTrace,summarizeLayer} from "../src/networkTelemetry.ts";
+import {captureNetworkTrace,summarizeLayer,activationMaps} from "../src/networkTelemetry.ts";
 
 test("Las activaciones convolucionales se calculan por canal y no como neuronas ficticias",()=>{
   const summary=summarizeLayer(new Float32Array([1,3,5,7,9,11,13,15]),[1,2,2,2],"channels");
@@ -41,4 +41,18 @@ test("TensorFlow.js inspecciona capas reales, no altera los pesos ni filtra tens
     for(let i=0;i<4;i++)captureNetworkTrace(model,input,config,classes,i+1,"7");
     assert.equal(tf.memory().numTensors,beforeCount);
   }finally{input.dispose();model.optimizer?.dispose();model.dispose();}
+});
+
+test("Mapas reales 8x8 mantienen canales, dimensiones y normalización",()=>{
+ const values=new Float32Array(1*8*8*3);
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++){
+  const i=(y*8+x)*3;
+  values[i]=x/7;values[i+1]=y/7;values[i+2]=(x+y)/14;
+ }
+ const maps=activationMaps(values,[1,8,8,3]);
+ assert.equal(maps.length,3);
+ assert.equal(maps[0].length,64);
+ assert.ok(maps.every(map=>map.every(v=>v>=0&&v<=1)));
+ assert.equal(maps[0][0],0);
+ assert.equal(maps[0][7],1);
 });
