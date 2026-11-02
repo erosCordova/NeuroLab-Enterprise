@@ -208,3 +208,36 @@ export async function restoreCNNBackup(projectId:string,file:Blob,expectedRef?:s
     return report;
   }finally{model.dispose();}
 }
+
+
+/**
+ * Importa un respaldo SIN utilizar la referencia del entrenamiento original.
+ * Importaciones y entrenamientos de la página mantienen modelos diferentes
+ * en IndexedDB, incluso cuando ambos tienen pesos idénticos.
+ */
+export function importedCNNReference(projectId:string,sha256:string):string{
+  if(!projectId||projectId.length>128||! /^[a-f0-9]{64}$/.test(sha256))
+    error("No se pudo identificar de forma segura el respaldo importado.");
+  return "indexeddb://neurolab-cnn-"+projectId+"-imported-"+sha256.slice(0,24);
+}
+export async function importCNNBackupIsolated(projectId:string,file:Blob):Promise<BrowserReport>{
+  const {report,artifacts}=await decodeCNNBackup(file,projectId);
+  const fingerprint=await hash(new Uint8Array(await file.arrayBuffer()));
+  const modelRef=importedCNNReference(projectId,fingerprint);
+  // La identidad almacenada es nueva; la huella, la arquitectura, los
+  // pesos y las métricas originales permanecen iguales.
+  const imported={...report,model_ref:modelRef};
+  const existing=await tf.io.listModels();
+  if(existing[modelRef]){
+    const stored=await tf.loadLayersModel(modelRef);
+    try{compareStructure(stored,report.config,report.classes.length);}
+    finally{stored.dispose();}
+    return imported;
+  }
+  const model=await tf.loadLayersModel({load:async()=>artifacts});
+  try{
+    compareStructure(model,report.config,report.classes.length);
+    await model.save(modelRef,{includeOptimizer:false});
+    return imported;
+  }finally{model.dispose();}
+}
