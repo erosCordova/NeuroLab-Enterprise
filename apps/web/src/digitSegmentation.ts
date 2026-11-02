@@ -68,16 +68,22 @@ export function normalizeDigitCrop(ink:Float32Array,width:number,height:number):
   return moved;
 }
 function otsu(values:Float32Array):number{
-  const bins=new Uint32Array(128);let sum=0;
-  for(const v of values){const index=Math.min(127,Math.floor(Math.max(0,v)*127));bins[index]++;sum+=index;}
-  let best=0,highest=0,weight=0,partial=0;
-  for(let i=0;i<128;i++){
+  // OpenCV usa 256 niveles sobre uint8, no el histograma de 128 bins
+  // que desplazaba el umbral y alteraba los límites de los trazos.
+  const bins=new Uint32Array(256);let sum=0;
+  for(const v of values){
+    const i=Math.max(0,Math.min(255,Math.round(v*255)));
+    bins[i]++;sum+=i;
+  }
+  let best=0,highest=-1,weight=0,partial=0;
+  for(let i=0;i<256;i++){
     weight+=bins[i];partial+=i*bins[i];
     if(!weight||weight===values.length)continue;
-    const score=(sum*weight/values.length-partial)**2/(weight*(values.length-weight));
+    const diff=sum*weight/values.length-partial;
+    const score=diff*diff/(weight*(values.length-weight));
     if(score>highest){highest=score;best=i;}
   }
-  return best/127;
+  return best/255;
 }
 function mergeFragments(regions:Component[]):Component[]{
   const list=regions.map(c=>({...c,ids:[...c.ids]}));
