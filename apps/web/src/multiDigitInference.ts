@@ -17,8 +17,8 @@ export function isDigitClassifier(classes:readonly string[],config:Config):boole
   return config.size===28&&config.channels===1&&
     classes.length===10&&classes.every((name,i)=>name===LABELS[i]);
 }
-export function rotationHypothesis(probabilities:readonly number[],labels:readonly string[]=LABELS){
-  if(probabilities.length!==ANGLES.length*2*labels.length||probabilities.some(x=>!Number.isFinite(x)||x<0))
+export function rotationHypothesis(probabilities:ArrayLike<number>,labels:readonly string[]=LABELS){
+  if(probabilities.length!==ANGLES.length*2*labels.length||Array.from(probabilities).some(x=>!Number.isFinite(x)||x<0))
     throw new Error("Probabilidades incompletas para búsqueda de orientación.");
   const scores=Array.from({length:ANGLES.length},()=>Array(labels.length).fill(0) as number[]);
   for(let a=0;a<ANGLES.length;a++)for(let j=0;j<labels.length;j++){
