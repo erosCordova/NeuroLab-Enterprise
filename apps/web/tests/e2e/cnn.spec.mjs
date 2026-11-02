@@ -1144,20 +1144,22 @@ test("Biblioteca de imágenes: restaura archivos binarios sin volver a seleccion
 });
 
 
-test("Entrenamientos separa entrenar un modelo y cargar uno preentrenado",async({page})=>{
+test("Entrenamientos aísla el modelo local del importado",async({page})=>{
   await navigate(page,"Entrenamientos");
-  const train=page.getByRole("tab",{name:/Entrenar un modelo nuevo/});
-  const pretrained=page.getByRole("tab",{name:/Cargar modelo preentrenado/});
+  const train=page.getByRole("tab",{name:/Modelo entrenado en NeuroLab/});
+  const pretrained=page.getByRole("tab",{name:/Modelo preentrenado importado/});
   await expect(train).toHaveAttribute("aria-selected","true");
-  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
+  await expect(page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"})).toBeVisible();
   await expect(page.getByText("Entrenar CNN con TensorFlow.js",{exact:true})).toBeVisible();
   await pretrained.click();
   await expect(pretrained).toHaveAttribute("aria-selected","true");
   await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeHidden();
-  const imported=page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"});
+  const imported=page.getByRole("tabpanel",{name:"Modelo preentrenado importado"});
   await expect(imported).toBeVisible();
   await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\.ncnn/);
-  await expect(imported.getByText(/Colab convertido al formato compatible/)).toBeVisible();
+  await expect(imported.getByText(/Colab previamente convertidos/)).toBeVisible();
+  await expect(imported.getByRole("button",{name:"Entrenar CNN real"})).toHaveCount(0);
+  await expect(imported.getByRole("heading",{name:"Sin modelo importado activo"})).toBeVisible();
   await train.click();
   await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
   await expect(page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"})).toBeHidden();

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import * as tf from "@tensorflow/tfjs";
 import {buildBrowserCNN} from "../src/browserCNN.ts";
 import {
-  encodeCNNBackup,decodeCNNBackup,validatePortableIdentity,validateBackupHeader,
+  encodeCNNBackup,decodeCNNBackup,validatePortableIdentity,validateBackupHeader,importedCNNReference,
 } from "../src/modelBackup.ts";
 
 const config={
@@ -92,4 +92,14 @@ test("MNIST grande: respaldo portátil de pesos y métricas válido, con verific
       assert.throws(()=>validatePortableIdentity(project,{...meta,classes:digits.toReversed()}),/inconsistentes/);
     }
   }finally{model.dispose();}
+});
+
+test("La ruta de pesos importados nunca comparte identificador con el entrenado aquí",()=>{
+ const sha="d".repeat(64),imported=importedCNNReference(project,sha);
+ assert.match(imported,/^indexeddb:\/\/neurolab-cnn-CNN-001-imported-/);
+ assert.notEqual(imported,report.model_ref);
+ assert.equal(importedCNNReference(project,sha),imported);
+ assert.notEqual(importedCNNReference(project,"e".repeat(64)),imported);
+ assert.notEqual(importedCNNReference("OTRO",sha),imported);
+ assert.throws(()=>importedCNNReference(project,"sin-sha"),/identificar/);
 });
