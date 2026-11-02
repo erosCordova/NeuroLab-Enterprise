@@ -101,7 +101,7 @@ export default function PredictionPanel({inputLabel,inputAriaLabel,disabled=fals
             <span style={{width:(Math.max(0,Math.min(1,top.probabilidad))*100)+"%"}}/>
           </div>
           {multi&&<p className="nl-prediction-context">{multi.warning}</p>}
-          </>:<p className="nl-prediction-wait">Sin resultado</p>
+          </>:<p className="nl-prediction-wait">Sin resultado</p>}
       </div>
     </div>}
     {multi&&<section className="nl-colab-results" aria-label="Tabla de reconocimiento por dígito">
