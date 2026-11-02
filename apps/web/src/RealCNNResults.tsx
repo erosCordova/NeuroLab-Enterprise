@@ -4,6 +4,7 @@ import type {RealRun} from "./realRuns";
 import CNNBackupActions from "./CNNBackupActions";
 import PredictionPanel from "./PredictionPanel";
 import type {BrowserReport} from "./browserCNN";
+import {deleteModelWeights,deletedLocalRefs,localModelName,renameLocalModel} from "./modelCatalog";
 
 type Props={projectId:string};
 
@@ -35,18 +36,39 @@ export default function RealCNNResults({projectId}:Props) {
   const [selected,setSelected]=useState("");
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
+  const [confirming,setConfirming]=useState("");
+  const [renaming,setRenaming]=useState(false);
+  const [name,setName]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [revision,setRevision]=useState(0);
 
   useEffect(()=>{
     let active=true;
     setLoading(true);setError("");setRuns([]);setSelected("");
     void api<RealRun[]>("/projects/"+projectId+"/real-runs")
-      .then(data=>{if(active){const local=data.filter(run=>run.source==="navegador"&&run.engine==="TensorFlow.js"&&!!run.model_ref&&!run.model_ref.includes("-imported-"));setRuns(local);setSelected(local[0]?.id??"");}})
+      .then(data=>{if(active){const deleted=deletedLocalRefs(projectId);const local=data.filter(run=>run.source==="navegador"&&run.engine==="TensorFlow.js"&&!!run.model_ref&&!run.model_ref.includes("-imported-")&&!deleted.has(run.model_ref));setRuns(local);setSelected(local[0]?.id??"");}})
       .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Error al consultar resultados CNN.");})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
-  },[projectId]);
+  },[projectId,revision]);
 
   const current=runs.find(run=>run.id===selected)??runs[0];
+  async function removeLocal(run:RealRun){
+    if(!run.model_ref)return;
+    setBusy(true);setError("");
+    try{
+      await deleteModelWeights(projectId,run.model_ref,"local");
+      const remaining=runs.filter(item=>item.model_ref!==run.model_ref);
+      setRuns(remaining);setSelected(remaining[0]?.id??"");setConfirming("");setRenaming(false);
+      setName("");setRevision(v=>v+1);
+    }catch(cause){setError(cause instanceof Error?cause.message:"No se pudo eliminar la CNN.");}
+    finally{setBusy(false);}
+  }
+  function rename(run:RealRun){
+    if(!run.model_ref)return;
+    try{renameLocalModel(projectId,run.model_ref,name);setRenaming(false);setRevision(v=>v+1);}
+    catch(cause){setError(cause instanceof Error?cause.message:"No se pudo renombrar la CNN.");}
+  }
   const backupReport:BrowserReport|null=current?.engine==="TensorFlow.js"&&current.model_ref?{
     training:"real",engine:"TensorFlow.js",weights_file:"model.json",model_ref:current.model_ref,
     dataset_fingerprint:current.dataset_fingerprint,classes:current.classes,samples:current.samples,
@@ -68,9 +90,30 @@ export default function RealCNNResults({projectId}:Props) {
     {error&&<p className="error" role="alert">{error}</p>}
     {!loading&&!runs.length&&<p className="caption">Todavía no hay entrenamientos locales registrados. Inicia uno desde Entrenar modelo.</p>}
     {current&&<>
+      <div className="model-crud-local">
+        <strong>Administrar CNN entrenada aquí</strong>
+        <p className="caption">Editar nombre o eliminar solo sus pesos de este navegador. El historial de métricas en PostgreSQL no se elimina automáticamente.</p>
+        {renaming?<div className="model-crud-rename">
+          <input aria-label="Nuevo nombre de CNN entrenada" value={name} maxLength={80} onChange={e=>setName(e.target.value)}/>
+          <button type="button" onClick={()=>rename(current)} disabled={busy}>Guardar nombre</button>
+          <button type="button" className="secondary" onClick={()=>setRenaming(false)}>Cancelar</button>
+        </div>:<div className="model-crud-actions">
+          <span className="model-crud-local-name">{localModelName(projectId,current.model_ref??"")||"CNN local · "+new Date(current.imported_at).toLocaleString("es-PE")}</span>
+          <button type="button" className="secondary" onClick={()=>{setRenaming(true);setName(localModelName(projectId,current.model_ref??""));setConfirming("");}}>Renombrar</button>
+          <button type="button" className="model-crud-delete" onClick={()=>{setConfirming(current.id);setRenaming(false);}}>Eliminar modelo</button>
+        </div>}
+        {confirming===current.id&&<div className="model-crud-confirm">
+          <strong>¿Eliminar los pesos de esta CNN?</strong>
+          <p>Dejará de estar disponible en este navegador. Los reportes históricos del servidor se conservan para auditoría. Descarga un respaldo antes si necesitas recuperarla.</p>
+          <div className="model-crud-actions">
+            <button type="button" className="model-crud-danger" disabled={busy} onClick={()=>void removeLocal(current)}>{busy?"Eliminando…":"Sí, eliminar pesos"}</button>
+            <button type="button" className="secondary" onClick={()=>setConfirming("")} disabled={busy}>Cancelar</button>
+          </div>
+        </div>}
+      </div>
       <label className="field"><span>Entrenamiento creado en esta página</span>
-        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);}}>
-          {runs.map(run=><option key={run.id} value={run.id}>{new Date(run.imported_at).toLocaleString("es-PE")+" · "+run.classes.join(", ")}</option>)}
+        <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);setConfirming("");setRenaming(false);}}>
+          {runs.map(run=><option key={run.id} value={run.id}>{(localModelName(projectId,run.model_ref??"")||new Date(run.imported_at).toLocaleString("es-PE"))+" · "+run.classes.join(", ")}</option>)}
         </select>
       </label>
       <div className="metric-grid">
