@@ -1,7 +1,8 @@
 /**
  * Transformaciones afines de MNIST en 28 × 28, sin modificar el original.
- * Se mantienen las etiquetas: las rotaciones máximas son deliberadamente
- * moderadas para no convertir un 6 en un 9 (o viceversa).
+ * La rutina geométrica acepta una vuelta completa para la búsqueda de
+ * orientación durante la inferencia. El entrenamiento sigue usando solo
+ * aumentos moderados (±24°), sin alterar las etiquetas de 6 y 9.
  */
 const SIZE=28,PIXELS=SIZE*SIZE,CENTER=(SIZE-1)/2;
 const clamp=(v:number)=>Math.max(0,Math.min(1,v));
@@ -22,7 +23,7 @@ export function transformMnistPixels(
 ):Float32Array{
   check(source);
   if([angle,dx,dy,zoom,shear].some(v=>!Number.isFinite(v))||zoom<.75||zoom>1.25||
-    Math.abs(angle)>Math.PI/3||Math.abs(shear)>.75)
+    Math.abs(angle)>2*Math.PI||Math.abs(shear)>.75)
     throw new Error("Transformación de imagen MNIST fuera de rango.");
   if(angle===0&&dx===0&&dy===0&&zoom===1&&shear===0)return new Float32Array(source);
   const cos=Math.cos(angle)/zoom,sin=Math.sin(angle)/zoom;

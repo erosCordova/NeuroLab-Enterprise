@@ -170,3 +170,22 @@ test("MNIST: un PNG inclinado de 28×28 también recibe inferencia robusta",()=>
  assert.equal(shouldUseMnistRobustInference(true,tilted),true);
  assert.equal(shouldUseMnistRobustInference(false,upright),true);
 });
+
+
+test("MNIST: la búsqueda de 360° acepta las 24 orientaciones de 0° a 345°",()=>{
+  const original=new Float32Array(784);
+  for(let y=6;y<23;y++)for(let x=11;x<15;x++)original[y*28+x]=1;
+  const snapshot=new Float32Array(original);
+  for(let step=0;step<24;step++){
+    const angle=step*15*Math.PI/180;
+    const rotated=transformMnistPixels(original,angle);
+    const deskewed=deskewMnistPixels(rotated);
+    assert.equal(rotated.length,784);
+    assert.ok(rotated.every(v=>Number.isFinite(v)&&v>=0&&v<=1),"Ángulo "+step*15);
+    assert.ok(deskewed.every(v=>Number.isFinite(v)&&v>=0&&v<=1),"Desinclinación "+step*15);
+    assert.ok(rotated.reduce((a,v)=>a+v,0)>4,"El trazo desapareció en "+step*15+"°");
+  }
+  assert.deepEqual(original,snapshot,"Las transformaciones no deben modificar la entrada");
+  assert.throws(()=>transformMnistPixels(original,2*Math.PI+.01),/fuera de rango/);
+  assert.throws(()=>transformMnistPixels(original,NaN),/fuera de rango/);
+});
