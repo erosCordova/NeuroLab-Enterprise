@@ -119,8 +119,8 @@ function localNames(projectId:string):Record<string,string>{
   try{
     const raw=JSON.parse(localStorage.getItem(nameKey(projectId))||"{}");
     if(!raw||typeof raw!=="object"||Array.isArray(raw))return {};
-    return Object.fromEntries(Object.entries(raw).filter(([ref,name])=>
-      isOwnedModelRef(projectId,ref,"local")&&typeof name==="string"&&name.length<=80));
+    return Object.fromEntries(Object.entries(raw).filter((entry):entry is [string,string]=>
+      isOwnedModelRef(projectId,entry[0],"local")&&typeof entry[1]==="string"&&entry[1].length<=80));
   }catch{return {};}
 }
 export function localModelName(projectId:string,ref:string):string{
