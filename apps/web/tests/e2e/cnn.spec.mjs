@@ -1157,10 +1157,23 @@ test("Entrenamientos aísla el modelo local del importado",async({page})=>{
   const imported=page.getByRole("tabpanel",{name:"Modelo preentrenado importado"});
   await expect(imported).toBeVisible();
   await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\.ncnn/);
-  await expect(imported.getByText(/Colab previamente convertidos/)).toBeVisible();
+  await expect(imported.getByText(/conversiones compatibles de Colab/)).toBeVisible();
   await expect(imported.getByRole("button",{name:"Entrenar CNN real"})).toHaveCount(0);
-  await expect(imported.getByRole("heading",{name:"Sin modelo importado activo"})).toBeVisible();
+  await expect(imported.getByRole("heading",{name:"Modelos cargados"})).toBeVisible();
+  await expect(imported.getByRole("heading",{name:"Mis modelos preentrenados"})).toBeVisible();
   await train.click();
   await expect(page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"})).toBeVisible();
   await expect(page.getByRole("tabpanel",{name:"Modelo preentrenado importado"})).toBeHidden();
+});
+
+test("Los dos orígenes de CNN muestran controles CRUD sin compartir importador",async({page})=>{
+ await navigate(page,"Entrenamientos");
+ const local=page.getByRole("tabpanel",{name:"Modelo entrenado en NeuroLab"});
+ await expect(local.getByRole("button",{name:"Entrenar CNN real"})).toBeVisible();
+ await expect(local.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveCount(0);
+ await page.getByRole("tab",{name:/Modelo preentrenado importado/}).click();
+ const imported=page.getByRole("tabpanel",{name:"Modelo preentrenado importado"});
+ await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toBeVisible();
+ await expect(imported.getByRole("button",{name:"Entrenar CNN real"})).toHaveCount(0);
+ await expect(imported.getByRole("region",{name:"Administrar modelos preentrenados importados"})).toBeVisible();
 });

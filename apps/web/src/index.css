@@ -200,3 +200,33 @@ progress::-moz-progress-bar{background:#0aa893}
   body{background:#fff}
   .card,.panel{box-shadow:none}
 }
+
+/* Acentos funcionales 2026. La identidad principal petrolera/verde-cian se conserva. */
+.stats>.card:nth-child(4n+1){border-top:3px solid #25a9a4}
+.stats>.card:nth-child(4n+2){border-top:3px solid #658dc6}
+.stats>.card:nth-child(4n+3){border-top:3px solid #9b81d3}
+.stats>.card:nth-child(4n+4){border-top:3px solid #e7aa59}
+.metric-grid>div:nth-child(4n+1){border-left:3px solid #2cb9aa}
+.metric-grid>div:nth-child(4n+2){border-left:3px solid #77a3ce}
+.metric-grid>div:nth-child(4n+3){border-left:3px solid #a58ad9}
+.metric-grid>div:nth-child(4n+4){border-left:3px solid #dfa45c}
+.metric-grid>div{padding-left:10px;transition:border-color .15s}
+.workflow>div:nth-child(4n+1){border-left:3px solid #19a89c}
+.workflow>div:nth-child(4n+2){border-left:3px solid #9174c6}
+.project-card .tile-icon{background:linear-gradient(130deg,#e1f5f5,#e7edff);color:#557ba9}
+.project-card:nth-child(3n+2) .tile-icon{background:#f1eafb;color:#8e66bd}
+.project-card:nth-child(3n+3) .tile-icon{background:#fff0e1;color:#ad7836}
+.model-crud-local{margin:16px 0;padding:15px;border:1px solid #d7e4f0;border-left:3px solid #8d74bd;border-radius:12px;background:#fbfcff}
+.model-crud-local>strong{font-size:13px;color:#345c68}
+.model-crud-local .caption{margin:8px 0}
+.model-crud-local-name{font-size:12px;font-weight:700;color:#386d71;max-width:100%;overflow-wrap:anywhere}
+.model-crud-local .model-crud-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.model-crud-local .model-crud-actions>button{padding:9px 12px;border-radius:9px;font-size:11px;font-weight:750}
+.model-crud-delete{padding:9px 12px;border-radius:9px;border:1px solid #ebc7c4;background:#fff2f1;color:#ac4c51;font-size:11px;font-weight:750}
+.model-crud-confirm{padding:12px;margin:12px 0;border:1px solid #eccabb;border-radius:10px;background:#fff8f0}
+.model-crud-confirm strong{font-size:12px;color:#a85639}
+.model-crud-confirm p{font-size:11px;color:#775f56;line-height:1.6;margin:8px 0}
+.model-crud-danger{padding:9px 12px;background:#ac4a51;border:1px solid #ac4a51;color:white;border-radius:9px;font-size:11px;font-weight:750}
+.model-crud-rename{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.model-crud-rename input{flex:1;min-width:190px}
+@media(prefers-reduced-motion:reduce){.metric-grid>div{transition:none}}
