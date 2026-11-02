@@ -5,6 +5,7 @@ import type {BrowserReport} from "./browserCNN";
 import type {RealModel,ModelFilter} from "./realModelRegistry";
 import {filterRealModels,unregisteredRuns} from "./realModelRegistry";
 import CNNBackupActions from "./CNNBackupActions";
+import type {DigitPrediction} from "./multiDigitInference";
 import "./real-model-registry.css";
 
 export default function RealModelRegistry({projectId}:{projectId:string}){
@@ -26,6 +27,7 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
  const [predicting,setPredicting]=useState(false);
  const [predictionError,setPredictionError]=useState("");
  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
+ const [digitRegions,setDigitRegions]=useState<DigitPrediction[]>([]);
 
  async function refreshInventory(active:()=>boolean){
   try{
@@ -96,11 +98,17 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
 
  async function classify(file:File){
   if(!current||!run?.model_ref||!onDevice)return;
-  setPredicting(true);setPredictionError("");setPredictions([]);
+  setPredicting(true);setPredictionError("");setPredictions([]);setDigitRegions([]);
   try{
-   const {predictInBrowser}=await import("./browserCNN");
-   const values=await predictInBrowser(current.model_ref,file,run.config,run.classes);
-   setPredictions(values);
+   const isMnist=run.classes.length===10&&run.classes.every((label,i)=>label===String(i));
+   if(isMnist){
+     const {predictMultipleDigits}=await import("./multiDigitInference");
+     const detected=await predictMultipleDigits(current.model_ref,file,run.config,run.classes);
+     setDigitRegions(detected.digits);setPredictions(detected.predictions);
+   }else{
+     const {predictInBrowser}=await import("./browserCNN");
+     setPredictions(await predictInBrowser(current.model_ref,file,run.config,run.classes));
+   }
   }catch(cause){setPredictionError(cause instanceof Error?cause.message:"No se pudo clasificar.");}
   finally{setPredicting(false);}
  }
@@ -173,7 +181,8 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
     }}/></label>
     {predicting&&<p role="status">Realizando inferencia CNN…</p>}
     {predictionError&&<p role="alert" className="error">{predictionError}</p>}
-    {predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
+    {digitRegions.length>0?<div className="table-scroll"><table><thead><tr><th>Posición</th><th>Fila</th><th>Dígito</th><th>Confianza estimada</th></tr></thead><tbody>{digitRegions.map(item=><tr key={item.position}><td>{item.position}</td><td>{item.row}</td><td>{item.digit}{item.uncertain?" · Revisar":""}</td><td>{(item.confidence*100).toFixed(2)}%</td></tr>)}</tbody></table></div>:
+      predictions.length>0&&<div className="table-scroll"><table><thead><tr><th>Clase</th><th>Probabilidad estimada</th></tr></thead><tbody>{predictions.map(item=><tr key={item.clase}><td>{item.clase}</td><td>{(item.probabilidad*100).toFixed(2)}%</td></tr>)}</tbody></table></div>}
    </section>}
   </div>}
   <p className="caption">El registro administra metadatos de modelos reales sin certificación independiente; no modifica las fichas de demostración.</p>
