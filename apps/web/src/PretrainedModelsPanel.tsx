@@ -3,110 +3,141 @@ import CNNBackupActions from "./CNNBackupActions";
 import PredictionPanel from "./PredictionPanel";
 import {defaultConfig} from "./cnn";
 import type {BrowserReport} from "./browserCNN";
-import {readImportedColab} from "./colabCNN";
 import type {ColabImported} from "./colabCNN";
+import {addImportedModel,deleteModelWeights,importedModels,renameImportedModel} from "./modelCatalog";
+import type {ImportedModel} from "./modelCatalog";
 import "./training-workspace.css";
 
-const storageKey=(projectId:string)=>"neurolab-imported-ordinary-v1:"+projectId;
-type Origin="colab"|"ncnn";
-const isImportRef=(projectId:string,ref:string)=>ref.startsWith("indexeddb://neurolab-cnn-"+projectId+"-imported-");
-
 export default function PretrainedModelsPanel({projectId}:{projectId:string}){
-  const [ordinary,setOrdinary]=useState<BrowserReport|null>(null);
-  const [colab,setColab]=useState<ColabImported|null>(null);
-  const [active,setActive]=useState<Origin|null>(null);
+  const [models,setModels]=useState<ImportedModel[]>([]);
+  const [selected,setSelected]=useState("");
+  const [renaming,setRenaming]=useState("");
+  const [draft,setDraft]=useState("");
+  const [confirming,setConfirming]=useState("");
+  const [busy,setBusy]=useState(false);
   const [warning,setWarning]=useState("");
+  const [available,setAvailable]=useState<Set<string>>(new Set());
   useEffect(()=>{
     let mounted=true;
-    setOrdinary(null);setColab(null);setActive(null);setWarning("");
+    setSelected("");setModels([]);setWarning("");setConfirming("");setAvailable(new Set());
     void (async()=>{
       const tf=await import("@tensorflow/tfjs");
-      const available=await tf.io.listModels();
-      const previous=readImportedColab(projectId);
-      if(previous&&available[previous.modelRef]&&mounted){
-        setColab(previous);
-        setActive(current=>current??"colab");
-      }
-      const json=localStorage.getItem(storageKey(projectId));
-      if(!json)return;
-      const {validatePortableIdentity}=await import("./modelBackup");
-      try{
-        const report=validatePortableIdentity(projectId,JSON.parse(json));
-        if(!isImportRef(projectId,report.model_ref)){
-          if(mounted)setWarning("Existe una importación de la versión anterior que compartía referencia con un entrenamiento. Vuelve a cargar su archivo .ncnn para utilizar una copia independiente.");
-        }else if(available[report.model_ref]&&mounted){
-          setOrdinary(report);
-          setActive(current=>current??"ncnn");
-        }
-      }catch{/* Nunca dar por válido un registro alterado o incompleto. */}
-    })().catch(()=>{if(mounted)setWarning("No se pudieron consultar los modelos importados en este navegador.");});
+      const known=await tf.io.listModels();
+      const items=importedModels(projectId);
+      if(!mounted)return;
+      setAvailable(new Set(Object.keys(known)));
+      setModels(items);
+      setSelected(items.find(item=>known[item.ref])?.ref??"");
+    })().catch(e=>{if(mounted)setWarning(e instanceof Error?e.message:"No se pudieron recuperar los modelos importados.");});
     return ()=>{mounted=false;};
   },[projectId]);
-
-  function handleRestored(value:BrowserReport){
-    if(!isImportRef(projectId,value.model_ref)){
-      setWarning("No se pudo separar el modelo importado del entrenamiento local.");
-      return;
-    }
-    setOrdinary(value);setActive("ncnn");setWarning("");
-    try{localStorage.setItem(storageKey(projectId),JSON.stringify(value));}
-    catch{setWarning("Los pesos se importaron, pero el navegador no pudo recordar la ficha después de recargar.");}
+  function choose(ref:string){setSelected(ref);setRenaming("");setConfirming("");}
+  function created(report:BrowserReport){
+    try{
+      const item:ImportedModel={ref:report.model_ref,origin:"ncnn",name:"CNN importada desde respaldo",
+        createdAt:new Date().toISOString(),report};
+      const next=addImportedModel(projectId,item);
+      setModels(next);setSelected(item.ref);setAvailable(prev=>new Set([...prev,item.ref]));
+      setWarning("");setConfirming("");
+    }catch(e){setWarning(e instanceof Error?e.message:"No se pudo registrar la importación.");}
   }
-  function handleColab(value:ColabImported){
-    setColab(value);setActive("colab");setWarning("");
+  function createdColab(colab:ColabImported){
+    try{
+      const item:ImportedModel={ref:colab.modelRef,origin:"colab",name:"CNN original de Google Colab",
+        createdAt:new Date().toISOString(),colab};
+      const next=addImportedModel(projectId,item);
+      setModels(next);setSelected(item.ref);setAvailable(prev=>new Set([...prev,item.ref]));
+      setWarning("");setConfirming("");
+    }catch(e){setWarning(e instanceof Error?e.message:"No se pudo registrar el modelo de Colab.");}
   }
-  const chosen=active==="colab"&&colab?"colab":
-    active==="ncnn"&&ordinary?"ncnn":colab?"colab":ordinary?"ncnn":null;
-  const count=Number(Boolean(colab))+Number(Boolean(ordinary));
-  const source=chosen==="colab"?colab:ordinary;
+  function rename(ref:string){
+    try{
+      setModels(renameImportedModel(projectId,ref,draft));
+      setRenaming("");setWarning("");
+    }catch(e){setWarning(e instanceof Error?e.message:"No se pudo cambiar el nombre.");}
+  }
+  async function remove(item:ImportedModel){
+    setBusy(true);setWarning("");
+    try{
+      await deleteModelWeights(projectId,item.ref,item.origin);
+      const next=importedModels(projectId);
+      setModels(next);setAvailable(prev=>{const updated=new Set(prev);updated.delete(item.ref);return updated;});
+      setSelected(current=>current===item.ref?(next.find(x=>available.has(x.ref)&&x.ref!==item.ref)?.ref??""):current);
+      setConfirming("");setRenaming("");
+    }catch(e){setWarning(e instanceof Error?e.message:"No se pudo eliminar este modelo.");}
+    finally{setBusy(false);}
+  }
+  const active=models.find(item=>item.ref===selected&&available.has(item.ref));
+  const valid=models.filter(item=>available.has(item.ref));
+  const lost=models.filter(item=>!available.has(item.ref));
   return <div className="pretrained-workspace">
     <section className="panel pretrained-welcome">
-      <div className="eyebrow">SOLO MODELOS CARGADOS DESDE ARCHIVO</div>
-      <h2>Modelo preentrenado importado</h2>
-      <p>En esta opción <strong>no se entrena ninguna CNN</strong>. Carga y utiliza únicamente los pesos del archivo seleccionado, separados de los modelos entrenados en NeuroLab.</p>
-      <div className="pretrained-steps" aria-label="Pasos para importar un modelo">
-        <div><strong>01</strong><span>Importa los pesos desde .ncnn</span></div>
-        <div><strong>02</strong><span>Selecciona el modelo cargado</span></div>
-        <div><strong>03</strong><span>Reconoce imágenes sin entrenar</span></div>
+      <div className="eyebrow">EXCLUSIVO PARA MODELOS CARGADOS DESDE ARCHIVO</div>
+      <h2>Mis modelos preentrenados</h2>
+      <p>Importa, consulta, cambia el nombre, selecciona o elimina modelos <strong>sin volver a entrenar</strong>. Tus CNN entrenadas en NeuroLab permanecen independientes.</p>
+      <div className="pretrained-steps">
+        <div><strong>01</strong><span>Importa un archivo .ncnn</span></div>
+        <div><strong>02</strong><span>Selecciona el modelo</span></div>
+        <div><strong>03</strong><span>Reconoce imágenes</span></div>
       </div>
-      <p className="caption">Admite respaldos de NeuroLab y archivos de Colab previamente convertidos al formato .ncnn. Los archivos .keras originales requieren conversión previa. Tus modelos entrenados aquí permanecen intactos.</p>
+      <p className="caption">Se admiten archivos .ncnn de NeuroLab y conversiones compatibles de Colab. Los archivos .keras originales necesitan conversión previa. Los pesos permanecen exclusivamente en este navegador.</p>
     </section>
-    <CNNBackupActions mode="import" projectId={projectId} onRestored={handleRestored} onColabImported={handleColab}/>
+    <CNNBackupActions mode="import" projectId={projectId} onRestored={created} onColabImported={createdColab}/>
     {warning&&<p className="error" role="alert">{warning}</p>}
-    {count===0&&<section className="panel pretrained-restored" aria-label="Esperando modelo importado">
-      <h3>Sin modelo importado activo</h3>
-      <p className="caption">Selecciona tu archivo .ncnn arriba. Los modelos entrenados en esta página se encuentran exclusivamente en la opción «Modelo entrenado en NeuroLab».</p>
-    </section>}
-    {count>1&&<section className="panel pretrained-chooser" aria-label="Seleccionar modelo importado">
-      <h3>¿Qué modelo cargado quieres utilizar?</h3>
-      <div className="pretrained-choices">
-        {colab&&<button type="button" aria-pressed={chosen==="colab"} onClick={()=>setActive("colab")}>CNN original de Colab</button>}
-        {ordinary&&<button type="button" aria-pressed={chosen==="ncnn"} onClick={()=>setActive("ncnn")}>CNN importada desde respaldo NeuroLab</button>}
+    <section className="panel model-crud-list" aria-label="Administrar modelos preentrenados importados">
+      <div className="model-crud-head"><div><div className="eyebrow">CATÁLOGO DE IMPORTACIONES</div>
+        <h3>Modelos cargados</h3><p className="caption">{valid.length} disponibles · {lost.length} sin pesos en este navegador</p></div>
+        <span className="model-crud-counter">{models.length} modelos</span>
       </div>
-    </section>}
-    {chosen&&source&&<section className="panel pretrained-restored" aria-label="Predicción exclusiva con modelo importado">
-      <div className="eyebrow">MODELO IMPORTADO ACTIVO · {chosen==="colab"?"COLAB":"ARCHIVO .NCNN"}</div>
-      <h2>{chosen==="colab"?"CNN original de Google Colab":"CNN importada desde respaldo"}</h2>
-      <p className="caption">{chosen==="colab"?
+      {!models.length&&<p className="model-crud-empty">No tienes modelos importados. Selecciona un archivo .ncnn arriba para comenzar.</p>}
+      <div className="model-crud-grid">
+        {models.map(item=><article key={item.ref} className={"model-crud-card "+(selected===item.ref?"is-selected ":"")+(item.origin==="colab"?"is-colab":"is-backup")}>
+          <div className="model-crud-card-top">
+            <span className={"model-crud-type "+item.origin}>{item.origin==="colab"?"Colab · Keras":"Respaldo · NeuroLab"}</span>
+            <span className={available.has(item.ref)?"model-crud-online":"model-crud-offline"}>{available.has(item.ref)?"Disponible":"Sin pesos"}</span>
+          </div>
+          {renaming===item.ref?<div className="model-crud-rename">
+            <input aria-label={"Nuevo nombre de "+item.name} maxLength={80} autoFocus value={draft} disabled={busy} onChange={e=>setDraft(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")rename(item.ref);if(e.key==="Escape")setRenaming("");}}/>
+            <button type="button" disabled={busy} onClick={()=>rename(item.ref)}>Guardar nombre</button>
+            <button type="button" className="secondary" onClick={()=>setRenaming("")}>Cancelar</button>
+          </div>:<h4>{item.name}</h4>}
+          <p className="caption">{item.origin==="colab"?"10 clases · 271 210 parámetros":(item.report?.classes.length??0)+" clases · "+(item.report?.parameters??0).toLocaleString("es-PE")+" parámetros"}</p>
+          {confirming===item.ref?<div className="model-crud-confirm" role="group" aria-label={"Confirmar eliminación de "+item.name}>
+            <strong>¿Eliminar «{item.name}»?</strong>
+            <p>Se borrarán sus pesos de IndexedDB y esta ficha del navegador. No se borrarán otros modelos ni los archivos que hayas descargado.</p>
+            <div className="model-crud-actions">
+              <button type="button" className="model-crud-danger" disabled={busy} onClick={()=>void remove(item)}>{busy?"Eliminando…":"Sí, eliminar definitivamente"}</button>
+              <button type="button" className="secondary" disabled={busy} onClick={()=>setConfirming("")}>Cancelar</button>
+            </div>
+          </div>:<div className="model-crud-actions">
+            <button type="button" disabled={busy||!available.has(item.ref)} className={selected===item.ref?"model-crud-current":"secondary"} onClick={()=>choose(item.ref)}>{selected===item.ref?"Modelo seleccionado":"Usar modelo"}</button>
+            <button type="button" className="secondary" disabled={busy} onClick={()=>{setRenaming(item.ref);setDraft(item.name);setConfirming("");}}>Renombrar</button>
+            <button type="button" className="model-crud-delete" disabled={busy} onClick={()=>{setConfirming(item.ref);setRenaming("");}}>Eliminar</button>
+          </div>}
+        </article>)}
+      </div>
+    </section>
+    {active&&<section className="panel pretrained-restored" aria-label="Predicción exclusiva con modelo importado">
+      <div className="eyebrow">MODELO IMPORTADO ACTIVO · {active.origin==="colab"?"COLAB":"ARCHIVO .NCNN"}</div>
+      <h2>{active.name}</h2>
+      <p className="caption">{active.origin==="colab"?
         "4 capas convolucionales · 271 210 parámetros · 10 dígitos (0–9). Pesos originales importados sin reentrenar.":
-        ordinary?ordinary.classes.length+" clases · "+ordinary.parameters.toLocaleString("es-PE")+" parámetros · "+ordinary.completed_epochs+" épocas completadas antes de importarlo.":""}
+        active.report?active.report.classes.length+" clases · "+active.report.parameters.toLocaleString("es-PE")+" parámetros · "+active.report.completed_epochs+" épocas originales.":""}
       </p>
-      <p className="caption">Esta predicción usa exclusivamente la referencia de pesos importados. Nunca utiliza el último modelo entrenado dentro de NeuroLab.</p>
-      <PredictionPanel key={chosen==="colab"?colab!.modelRef:ordinary!.model_ref}
-        digitMode={chosen==="colab"||Boolean(ordinary&&ordinary.classes.length===10&&ordinary.classes.every((name,i)=>name===String(i)))}
-        inputLabel="Imagen para reconocer con este modelo importado"
-        inputAriaLabel="Imagen para predecir solo con el modelo importado"
+      <PredictionPanel key={active.ref}
+        digitMode={active.origin==="colab"||Boolean(active.report&&active.report.classes.length===10&&active.report.classes.every((name,i)=>name===String(i)))}
+        inputLabel="Imagen para reconocer con el modelo importado" inputAriaLabel="Imagen para predecir solo con el modelo importado"
         onPredict={async file=>{
-          const digits=chosen==="colab"||Boolean(ordinary&&ordinary.classes.length===10&&ordinary.classes.every((name,i)=>name===String(i)));
-          const modelRef=chosen==="colab"?colab!.modelRef:ordinary!.model_ref;
-          const config=chosen==="colab"?defaultConfig():ordinary!.config;
-          const classes=chosen==="colab"?colab!.classes:ordinary!.classes;
+          const ordinary=active.report;
+          const digits=active.origin==="colab"||Boolean(ordinary&&ordinary.classes.length===10&&ordinary.classes.every((name,i)=>name===String(i)));
+          const config=active.origin==="colab"?defaultConfig():ordinary!.config;
+          const classes=active.origin==="colab"?active.colab!.classes:ordinary!.classes;
           if(digits){
             const {predictMultipleDigits}=await import("./multiDigitInference");
-            return predictMultipleDigits(modelRef,file,config,classes);
+            return predictMultipleDigits(active.ref,file,config,classes);
           }
           const {predictInBrowser}=await import("./browserCNN");
-          return predictInBrowser(modelRef,file,config,classes,false);
+          return predictInBrowser(active.ref,file,config,classes,false);
         }}/>
     </section>}
   </div>;

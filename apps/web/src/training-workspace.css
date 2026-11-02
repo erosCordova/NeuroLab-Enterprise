@@ -49,3 +49,39 @@
 .pretrained-choices button{background:#fff;border:1px solid #c8e2db;color:#34655f;font-size:12px;font-weight:800;padding:12px 15px;border-radius:10px}
 .pretrained-choices button[aria-pressed="true"]{background:#ddf6ed;border-color:#119681;color:#087262;box-shadow:inset 0 0 0 1px #119681}
 .pretrained-restored>.eyebrow{color:#067763;font-weight:800}
+
+
+/* Acentos secundarios para jerarquía visual: verde azulado sigue siendo el principal. */
+.training-route-choice:first-child .training-route-icon{background:#e6f7fa;color:#176b9a}
+.training-route-choice:nth-child(2) .training-route-icon{background:#f0ebfc;color:#7556b5}
+.training-route-choice:first-child{border-left:3px solid #22a6b5}
+.training-route-choice:nth-child(2){border-left:3px solid #9c82d3}
+.pretrained-steps>div:nth-child(1) strong{color:#177ca6}
+.pretrained-steps>div:nth-child(2) strong{color:#8a62b9}
+.pretrained-steps>div:nth-child(3) strong{color:#c27d30}
+.model-crud-list{margin-top:17px;background:linear-gradient(145deg,#fff,#f8fcff)}
+.model-crud-head{display:flex;justify-content:space-between;align-items:start;gap:12px;margin-bottom:18px}
+.model-crud-head h3{font-size:19px;color:#22434d;margin:5px 0}
+.model-crud-head .eyebrow{color:#7456a5}
+.model-crud-counter{background:#eee8fb;color:#6b50a7;font-size:11px;font-weight:800;padding:8px 12px;border-radius:11px}
+.model-crud-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:13px}
+.model-crud-card{background:#fff;border:1px solid #dae5e9;border-left:4px solid #668bb9;border-radius:13px;padding:16px;min-width:0}
+.model-crud-card.is-colab{border-left-color:#9d7dd3}
+.model-crud-card.is-selected{box-shadow:0 0 0 2px rgba(24,153,135,.1);border-top-color:#1ba38d;border-right-color:#1ba38d;border-bottom-color:#1ba38d}
+.model-crud-card h4{font-size:16px;color:#264d55;margin:12px 0 8px;overflow-wrap:anywhere}
+.model-crud-card-top{display:flex;gap:7px;flex-wrap:wrap;justify-content:space-between}
+.model-crud-type{font-size:10px;font-weight:800;padding:6px 8px;border-radius:7px;background:#e6f3ff;color:#316eae}
+.model-crud-type.colab{background:#eee9fb;color:#7d55b4}
+.model-crud-online,.model-crud-offline{font-size:10px;font-weight:800;padding:6px 8px;border-radius:7px;background:#e6f7ee;color:#18775c}
+.model-crud-offline{background:#fff1dc;color:#936116}
+.model-crud-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.model-crud-actions button,.model-crud-rename button{border-radius:9px;padding:9px 11px;font-size:11px;font-weight:750}
+.model-crud-current{background:#e2f7ee;border:1px solid #5fbaa3;color:#107762}
+.model-crud-delete,.model-crud-danger{border:1px solid #efc4c4;background:#fff4f3;color:#a83d46}
+.model-crud-danger{background:#af404c;color:white;border-color:#a43c49}
+.model-crud-rename{display:flex;flex-wrap:wrap;gap:7px}
+.model-crud-rename input{flex:1;min-width:140px}
+.model-crud-confirm{border:1px solid #efcebe;background:#fff9f4;padding:12px;border-radius:10px;margin-top:12px}
+.model-crud-confirm strong{color:#a34f36;font-size:12px}
+.model-crud-confirm p{font-size:11px;line-height:1.5;color:#7a685d}
+.model-crud-empty{padding:15px;border-radius:9px;background:#f1f8fa;color:#55747d;font-size:12px}
