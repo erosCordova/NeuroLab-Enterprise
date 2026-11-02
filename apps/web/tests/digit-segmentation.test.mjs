@@ -42,3 +42,13 @@ test("Recorte manual se centra y no debe estar vacío",()=>{
  assert.ok(r.reduce((a,b)=>a+b,0)>5);
  assert.throws(()=>normalizeDigitCrop(new Float32Array(5),2,2),/inválido/);
 });
+
+test("Las líneas finas mantienen intensidad y continuidad después del recorte",()=>{
+ const width=70,height=90,gray=new Float32Array(width*height).fill(.68);
+ for(let y=12;y<74;y++)for(let dx=-1;dx<=1;dx++)gray[y*width+35+dx]=.19;
+ const result=segmentDigitsFromGray(gray,width,height);
+ assert.equal(result.length,1);
+ const active=Array.from(result[0].pixels).filter(v=>v>.22);
+ assert.ok(active.length>18,"La tinta debe sobrevivir al escalado: "+active.length);
+ assert.ok(Math.max(...active)<1,"No debe saturarse artificialmente");
+});

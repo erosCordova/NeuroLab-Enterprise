@@ -25,12 +25,18 @@ export function normalizeDigitCrop(ink:Float32Array,width:number,height:number):
   let total=0,mx=0,my=0;
   for(let i=0;i<784;i++){const v=result[i];total+=v;mx+=(i%28)*v;my+=Math.floor(i/28)*v;}
   if(total<.45)throw new Error("No hay suficiente tinta para reconocer un número.");
-  const dx=Math.max(-3,Math.min(3,Math.round(13.5-mx/total))),dy=Math.max(-3,Math.min(3,Math.round(13.5-my/total)));
-  if(dx===0&&dy===0)return result;
+  // Centramos con momentos y desplazamiento subpíxel, igual que Colab.
+  const dx=Math.max(-left,Math.min(28-left-w,13.5-mx/total));
+  const dy=Math.max(-top,Math.min(28-top-h,13.5-my/total));
+  if(Math.abs(dx)<.001&&Math.abs(dy)<.001)return result;
   const moved=new Float32Array(784);
   for(let y=0;y<28;y++)for(let x=0;x<28;x++){
-    const xx=x-dx,yy=y-dy;
-    if(xx>=0&&xx<28&&yy>=0&&yy<28)moved[y*28+x]=result[yy*28+xx];
+    const sx=x-dx,sy=y-dy;
+    if(sx<0||sx>27||sy<0||sy>27)continue;
+    const x0=Math.floor(sx),y0=Math.floor(sy),x1=Math.min(27,x0+1),y1=Math.min(27,y0+1);
+    const fx=sx-x0,fy=sy-y0;
+    moved[y*28+x]=(result[y0*28+x0]*(1-fx)+result[y0*28+x1]*fx)*(1-fy)+
+      (result[y1*28+x0]*(1-fx)+result[y1*28+x1]*fx)*fy;
   }
   return moved;
 }
@@ -93,32 +99,17 @@ export function segmentDigitsFromGray(gray:Float32Array,width:number,height:numb
   const light=border/Math.max(1,count)>.5;
   const normalized=new Float32Array(total);
   for(let i=0;i<total;i++)normalized[i]=light?gray[i]:1-gray[i];
-  // Media local para eliminar sombras de una fotografía sin destruir trazos finos.
-  const stride=width+1,integral=new Float64Array((height+1)*stride);
-  for(let y=0;y<height;y++){
-    let line=0;for(let x=0;x<width;x++){
-      line+=normalized[y*width+x];
-      integral[(y+1)*stride+x+1]=integral[y*stride+x+1]+line;
-    }
-  }
-  const radius=Math.max(5,Math.round(Math.min(width,height)*.12));
+  // Otsu global sobre tinta original, como Colab. El antiguo filtrado de
+  // media local destruye el trazo fino del bolígrafo en fotografías.
   const ink=new Float32Array(total);
-  for(let y=0;y<height;y++){
-    const y0=Math.max(0,y-radius),y1=Math.min(height,y+radius+1);
-    for(let x=0;x<width;x++){
-      const x0=Math.max(0,x-radius),x1=Math.min(width,x+radius+1);
-      const local=(integral[y1*stride+x1]-integral[y0*stride+x1]-integral[y1*stride+x0]+integral[y0*stride+x0])/((y1-y0)*(x1-x0));
-      const i=y*width+x;
-      ink[i]=Math.max(0,local-normalized[i]);
-    }
-  }
-  const threshold=Math.max(.045,Math.min(.21,otsu(ink)*.78));
+  for(let i=0;i<total;i++)ink[i]=1-normalized[i];
+  const threshold=otsu(ink);
   const mask=new Uint8Array(total);
   let painted=0;
-  for(let i=0;i<total;i++)if(ink[i]>=threshold){mask[i]=1;painted++;}
+  for(let i=0;i<total;i++)if(ink[i]>threshold){mask[i]=1;painted++;}
   if(painted<12)throw new Error("No se detectaron trazos con contraste suficiente.");
   const labels=new Int32Array(total),queue=new Int32Array(total),components:Component[]=[];
-  const minimum=Math.max(4,Math.floor(total*.000008));
+  const minimum=Math.max(3,Math.ceil(total*.000003));
   let found=0;
   for(let i=0;i<total;i++){
     if(!mask[i]||labels[i])continue;
@@ -136,7 +127,7 @@ export function segmentDigitsFromGray(gray:Float32Array,width:number,height:numb
         if(mask[q]&&!labels[q]){labels[q]=id;queue[tail++]=q;}
       }
     }
-    if(tail>=minimum&&yMax-yMin>=2&&xMax-xMin>=1){
+    if(tail>=minimum&&yMax-yMin>=2&&!(xMax-xMin>=width*.98&&yMax-yMin>=height*.98)){
       components.push({x:xMin,y:yMin,w:xMax-xMin+1,h:yMax-yMin+1,area:tail,ids:[id]});
     }
   }
@@ -148,15 +139,17 @@ export function segmentDigitsFromGray(gray:Float32Array,width:number,height:numb
     const {x,y,w,h,ids,row}=region;
     const relevant=new Set(ids);
     const crop=new Float32Array(w*h);
-    let strongest=0;
-    for(let cy=0;cy<h;cy++)for(let cx=0;cx<w;cx++){
-      const index=(y+cy)*width+x+cx;
-      if(relevant.has(labels[index]))strongest=Math.max(strongest,ink[index]);
-    }
-    const scale=Math.max(.08,strongest);
+    // Recuperar intensidad de grises real con antialiasing 3×3 cercano,
+    // sin arrastrar píxeles pertenecientes a otra componente.
     for(let cy=0;cy<h;cy++)for(let cx=0;cx<w;cx++){
       const global=(y+cy)*width+x+cx;
-      if(relevant.has(labels[global]))crop[cy*w+cx]=Math.min(1,ink[global]/scale);
+      const label=labels[global];
+      if(label!==0&&!relevant.has(label))continue;
+      let near=false;
+      for(let sy=Math.max(0,cy-1);sy<=Math.min(h-1,cy+1)&&!near;sy++)
+        for(let sx=Math.max(0,cx-1);sx<=Math.min(w-1,cx+1);sx++)
+          if(relevant.has(labels[(y+sy)*width+x+sx])){near=true;break;}
+      if(near)crop[cy*w+cx]=ink[global];
     }
     return {box:{x,y,width:w,height:h,row,position:i+1},pixels:normalizeDigitCrop(crop,w,h)};
   });
