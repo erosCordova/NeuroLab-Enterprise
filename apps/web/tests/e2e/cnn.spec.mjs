@@ -1156,8 +1156,8 @@ test("Entrenamientos separa entrenar un modelo y cargar uno preentrenado",async(
   await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeHidden();
   const imported=page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"});
   await expect(imported).toBeVisible();
-  await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\\.ncnn/);
-  await expect(imported.getByText("Modelo preentrenado",{exact:true})).toHaveCount(0);
+  await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\.ncnn/);
+  await expect(imported.getByText(/Colab convertido al formato compatible/)).toBeVisible();
   await train.click();
   await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
   await expect(page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"})).toBeHidden();
