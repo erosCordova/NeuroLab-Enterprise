@@ -1,4 +1,4 @@
-import type { ImageDataset, Job } from "./cnn";
+import type { ImageDataset } from "./cnn";
 import { inspectDataset } from "./inspection.ts";
 
 export async function sha256(buffer: ArrayBuffer) {
@@ -53,38 +53,4 @@ export async function fingerprintDataset(dataset:ImageDataset) {
   };
 
   return sha256(new TextEncoder().encode(JSON.stringify(identity)).buffer);
-}
-
-export function validateCompletedJob(job:Job) {
-  const last=job.metrics.at(-1);
-
-  if(
-    job.status!=="Completado" || !last ||
-    last.epoch!==job.epoch || job.metrics.length!==job.epoch ||
-    job.epoch>job.epochs ||
-    (!job.stoppedEarly&&job.epoch!==job.epochs) ||
-    (job.stoppedEarly&&!job.config.earlyStopping)
-  ){
-    throw new Error("Solo se registra una ejecución completada con todas sus épocas.");
-  }
-
-  if(!job.dataset.fingerprint || !/^[a-f0-9]{64}$/.test(job.dataset.fingerprint)){
-    throw new Error("La ejecución no conserva la identidad del dataset. Crea otra tras aplicar las imágenes.");
-  }
-
-  if(job.dataset.train+job.dataset.validation+job.dataset.test!==job.dataset.count){
-    throw new Error("Los conteos del dataset conservado no son coherentes.");
-  }
-
-  for(const [index,metric] of job.metrics.entries()){
-    if(
-      metric.epoch!==index+1 ||
-      ![metric.loss,metric.valLoss,metric.accuracy,metric.valAccuracy].every(Number.isFinite) ||
-      metric.loss<0 || metric.valLoss<0 ||
-      metric.accuracy<0 || metric.accuracy>1 ||
-      metric.valAccuracy<0 || metric.valAccuracy>1
-    ){
-      throw new Error("La ejecución contiene métricas incompletas o fuera de rango.");
-    }
-  }
 }

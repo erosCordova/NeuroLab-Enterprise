@@ -1,4 +1,4 @@
-import {advanceWithControls,validateTrainingOptions} from "./adaptiveTraining.ts";
+import {validateTrainingOptions} from "./adaptiveTraining.ts";
 import {sha256,rememberImage} from "./integrity.ts";
 export type ConvLayer = {
   id: string;
@@ -39,47 +39,12 @@ export type ImageDataset = {
   fingerprint?: string;
 };
 
-export type DatasetMeta = {
-  name: string;
-  count: number;
-  classes: string[];
-  train: number;
-  validation: number;
-  test: number;
-  seed: number;
-  fingerprint?: string;
-};
-
 export type Metric = {
   epoch: number;
   accuracy: number;
   valAccuracy: number;
   loss: number;
   valLoss: number;
-};
-
-export type Job = {
-  createdAt?: string;
-  startedAt?: string;
-  endedAt?: string;
-  repeatedFrom?: string;
-  configurationMode?: "automatic" | "manual";
-  id: string;
-  projectId: string;
-  name: string;
-  config: Config;
-  dataset: DatasetMeta;
-  versionId: string | null;
-  epochs: number;
-  batch: number;
-  epoch: number;
-  status: "En cola" | "Preparando" | "Ejecutando" | "Completado" | "Cancelado";
-  metrics: Metric[];
-  bestEpoch?: number;
-  bestValLoss?: number;
-  staleEpochs?: number;
-  stoppedEarly?: boolean;
-  stopReason?: string;
 };
 
 export const defaultConfig = (): Config => ({
@@ -237,38 +202,4 @@ export async function readImages(files: File[]): Promise<ImageRecord[]> {
   }
 
   return result;
-}
-
-export function datasetMeta(dataset: ImageDataset): DatasetMeta {
-  return {
-    name: dataset.name,
-    count: dataset.images.length,
-    classes: [...dataset.classes],
-    train: dataset.train.length,
-    validation: dataset.validation.length,
-    test: dataset.test.length,
-    seed: dataset.seed,
-    fingerprint: dataset.fingerprint,
-  };
-}
-
-export function terminal(status: Job["status"]) {
-  return status === "Completado" || status === "Cancelado";
-}
-
-export function advanceJobs(jobs: Job[]): Job[] {
-  const now=new Date().toISOString();
-  return advanceWithControls(jobs).map((next,index)=>{
-    if(next===jobs[index])return next;
-    return {...next,
-      startedAt:next.startedAt??(next.status==="Ejecutando"?now:undefined),
-      endedAt:next.endedAt??(terminal(next.status)?now:undefined),
-    };
-  });
-}
-
-export function csvCell(value: string | number) {
-  let text = String(value);
-  if (typeof value === "string" && /^\s*[=+\-@]/.test(text)) text = "'" + text;
-  return '"' + text.replaceAll('"','""') + '"';
 }

@@ -1,4 +1,4 @@
-import type { Config, ImageDataset, Job } from "./cnn";
+import type { Config, ImageDataset } from "./cnn";
 
 export function validateTrainingOptions(config:Config) {
   const dropout=config.dropout??0;
@@ -57,56 +57,4 @@ export function recommendCNN(dataset:ImageDataset,current:Config) {
     minimumClass:Math.min(...counts),
     reason:`${count} imágenes de entrenamiento y ${classes} clases: se propone una CNN de ${filters.length} bloques para limitar su complejidad. Es una heurística editable, no una arquitectura óptima demostrada.`,
   };
-}
-
-export function advanceWithControls(jobs:Job[]):Job[] {
-  const active=jobs.find(job=>
-    job.status!=="Completado"&&job.status!=="Cancelado"
-  );
-  if(!active)return jobs;
-
-  return jobs.map((job):Job=>{
-    if(job.id!==active.id)return job;
-    if(job.status==="En cola")return {...job,status:"Preparando"};
-    if(job.status==="Preparando")return {...job,status:"Ejecutando"};
-
-    const epoch=Math.min(job.epoch+1,job.epochs);
-    const baseline=1/job.dataset.classes.length;
-
-    const metric={
-      epoch,
-      accuracy:.96-(.96-baseline)*Math.exp(-epoch/7),
-      valAccuracy:.91-(.91-baseline)*Math.exp(-epoch/8),
-      loss:.13+1.25*Math.exp(-epoch/7),
-      valLoss:.2+1.3*Math.exp(-epoch/8),
-    };
-
-    const improved=
-      job.bestValLoss===undefined||
-      job.bestValLoss-metric.valLoss>(job.config.minDelta??.01);
-
-    const stale=improved?0:(job.staleEpochs??0)+1;
-    const stoppedEarly=Boolean(
-      job.config.earlyStopping&&
-      stale>=(job.config.patience??5)&&
-      epoch<job.epochs
-    );
-    const done=stoppedEarly||epoch===job.epochs;
-
-    return {
-      ...job,
-      epoch,
-      status:done?"Completado":"Ejecutando",
-      metrics:[...job.metrics,metric],
-      bestEpoch:improved?epoch:job.bestEpoch,
-      bestValLoss:improved?metric.valLoss:job.bestValLoss,
-      staleEpochs:stale,
-      stoppedEarly,
-      stopReason:done
-        ? stoppedEarly
-          ? "Parada temprana: sin mejora significativa en validación."
-          : "Máximo de épocas alcanzado."
-        : undefined,
-    };
-  });
 }

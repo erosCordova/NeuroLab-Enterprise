@@ -1,9 +1,8 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {
-  sha256,rememberImage,fingerprintDataset,validateCompletedJob
+  sha256,rememberImage,fingerprintDataset
 } from "../src/integrity.ts";
-import {defaultConfig} from "../src/cnn.ts";
 
 function dataset(){
   return {
@@ -49,18 +48,4 @@ test("No identifica conjuntos sin huellas ni particiones válidas",async()=>{
   data.images[0].checksum="";
   await assert.rejects(()=>fingerprintDataset(data));
   await assert.rejects(()=>fingerprintDataset({...dataset(),test:[1,5]}));
-});
-
-test("El registro requiere métricas completas e identidad del dataset",()=>{
-  const job={
-    id:"J1",projectId:"P1",name:"Prueba",config:defaultConfig(),
-    dataset:{name:"imagenes",count:6,classes:["A","B"],train:2,validation:2,test:2,seed:42,fingerprint:"a".repeat(64)},
-    versionId:null,epochs:1,batch:32,epoch:1,status:"Completado",
-    metrics:[{epoch:1,loss:.4,valLoss:.5,accuracy:.8,valAccuracy:.7}]
-  };
-  assert.doesNotThrow(()=>validateCompletedJob(job));
-  assert.throws(()=>validateCompletedJob({...job,status:"Cancelado"}));
-  assert.throws(()=>validateCompletedJob({...job,metrics:[]}));
-  assert.throws(()=>validateCompletedJob({...job,dataset:{...job.dataset,fingerprint:""}}));
-  assert.throws(()=>validateCompletedJob({...job,metrics:[{...job.metrics[0],accuracy:1.2}]}));
 });

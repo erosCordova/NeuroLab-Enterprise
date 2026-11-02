@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { defaultConfig,summary,partition,advanceJobs,csvCell } from "../src/cnn.ts";
+import { defaultConfig,summary,partition } from "../src/cnn.ts";
 
 test("CNN: calcula dimensiones, Flatten y parámetros multiclase",()=>{
   const result=summary(defaultConfig(),10);
@@ -43,32 +43,4 @@ test("Imágenes: requiere varias clases y suficientes ejemplos",()=>{
   assert.throws(()=>partition(["A","A","A"],70,15,42));
   assert.throws(()=>partition(["A","A","B","B"],70,15,42));
   assert.throws(()=>partition(["A","A","A","B","B","B"],90,15,42));
-});
-
-test("La cola completa una simulación sin modificar la configuración",()=>{
-  const job={
-    id:"CNN-1",projectId:"P1",name:"Prueba",config:defaultConfig(),
-    dataset:{name:"imagenes",count:6,classes:["A","B"],train:2,validation:2,test:2,seed:42},
-    versionId:null,epochs:2,batch:32,epoch:0,status:"En cola",metrics:[]
-  };
-  let result=[job];
-  for(let index=0;index<4;index++)result=advanceJobs(result);
-  assert.equal(result[0].status,"Completado");
-  assert.equal(result[0].metrics.length,2);
-  assert.equal(job.epoch,0);
-  assert.deepEqual(result[0].config,job.config);
-});
-
-test("Una simulación cancelada no vuelve a ejecutarse",()=>{
-  const job={
-    id:"CNN-1",projectId:"P1",name:"Prueba",config:defaultConfig(),
-    dataset:{name:"imagenes",count:6,classes:["A","B"],train:2,validation:2,test:2,seed:42},
-    versionId:null,epochs:2,batch:32,epoch:0,status:"Cancelado",metrics:[]
-  };
-  assert.equal(advanceJobs([job])[0].status,"Cancelado");
-});
-
-test("Los reportes escapan texto y neutralizan fórmulas",()=>{
-  assert.equal(csvCell('dato "citado"'),'"dato ""citado"""');
-  assert.equal(csvCell("=SUM(A1)"),'"\'=SUM(A1)"');
 });
