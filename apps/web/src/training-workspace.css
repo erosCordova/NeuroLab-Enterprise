@@ -41,3 +41,11 @@
 .training-preparation small{flex-basis:100%;font-size:11px;color:#6b8685;word-break:break-word}
 .training-preparation-current{border-color:#54b6a3;background:#f1fbf7}
 @media(max-width:760px){.training-preparation{grid-template-columns:1fr}}
+
+/* Dos orígenes sin estados ni pesos compartidos. */
+.pretrained-chooser{margin:16px 0;border:1px solid #cbe4db}
+.pretrained-chooser h3{margin:0 0 12px;color:#195a52;font-size:15px}
+.pretrained-choices{display:flex;gap:10px;flex-wrap:wrap}
+.pretrained-choices button{background:#fff;border:1px solid #c8e2db;color:#34655f;font-size:12px;font-weight:800;padding:12px 15px;border-radius:10px}
+.pretrained-choices button[aria-pressed="true"]{background:#ddf6ed;border-color:#119681;color:#087262;box-shadow:inset 0 0 0 1px #119681}
+.pretrained-restored>.eyebrow{color:#067763;font-weight:800}
