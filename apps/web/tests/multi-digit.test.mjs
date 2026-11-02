@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {defaultConfig} from "../src/cnn.ts";
-import {isDigitClassifier,rankDigitScores,chooseOrientation,orderDigitResults,normalizeRotated} from "../src/multiDigitInference.ts";
+import {isDigitClassifier,rankDigitScores,chooseOrientation,orderDigitResults,normalizeRotated,resolveAngleEvidence} from "../src/multiDigitInference.ts";
 
 test("Solo admite CNN de diez cifras con entrada MNIST",()=>{
  const c=defaultConfig(),names=Array.from({length:10},(_,i)=>String(i));

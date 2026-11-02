@@ -1,7 +1,8 @@
 /**
- * Reconocimiento multi-dígito: mismo modelo original de Colab, recortes con
- * escala de grises y orientación conservadora. No seleccionar el máximo entre
- * 24 giros si el dígito ya está derecho: eso convertía 6→5, 4→1 y 9→1.
+ * Reconocimiento multi-dígito: búsqueda completa 360° adaptada del Colab,
+ * ponderada con HOG del entrenamiento MNIST y coherencia entre dígitos.
+ * Un softmax alto en la orientación equivocada NO evita investigar los giros.
+ * Los pesos de la CNN original permanecen sin cambios.
  */
 import * as tf from "@tensorflow/tfjs";
 import type {Config} from "./cnn.ts";
@@ -92,34 +93,68 @@ export function normalizeRotated(source:Float32Array,angle:number):Float32Array{
   return normalizeDigitCrop(expanded,side,side);
 }
 const SEARCH_ANGLES=Array.from({length:24},(_,i)=>i*15);
-type OrientationDecision={scores:number[];angle:number;pixels:Float32Array;confidence:number;margin:number};
-function decideWithReferences(
+export type AngleEvidence={angles:number[][];pixels:Float32Array[][]};
+type AngleSolution={
+  digit:number;alternative:number;confidence:number;margin:number;angle:number;
+  ambiguous69:boolean;pixels:Float32Array;
+};
+const angularDistance=(a:number,b:number)=>Math.abs((a-b+180)%360-180);
+export function resolveAngleEvidence(items:ReadonlyArray<AngleEvidence>):{results:AngleSolution[];commonAngle:number|null}{
+  if(!items.length)return {results:[],commonAngle:null};
+  const valid=items.every(item=>item.angles.length===24&&item.pixels.length===24&&
+    item.angles.every(v=>v.length===10&&v.every(x=>Number.isFinite(x)&&x>=0)));
+  if(!valid)throw new Error("Las 24 orientaciones no están completas.");
+  const initial=items.map(item=>{
+    const best=Array.from({length:10},(_,d)=>Math.max(...item.angles.map(row=>row[d])));
+    const ranked=best.map((value,digit)=>({value,digit})).sort((a,b)=>b.value-a.value);
+    return {angle:SEARCH_ANGLES[item.angles.findIndex(row=>row[ranked[0].digit]===ranked[0].value)],
+      digit:ranked[0].digit,ratio:ranked[0].value/Math.max(1e-8,ranked[1].value)};
+  });
+  const anchors=initial.filter(v=>v.ratio>2&&v.digit!==6&&v.digit!==9);
+  let commonAngle:number|null=null;
+  if(anchors.length>=3&&anchors.length>=Math.ceil(items.length*.4)){
+    let bestCount=0;
+    for(const candidate of SEARCH_ANGLES){
+      const support=anchors.filter(v=>angularDistance(v.angle,candidate)<=30).length;
+      if(support>bestCount){bestCount=support;commonAngle=candidate;}
+    }
+    if(bestCount<Math.ceil(anchors.length*.75))commonAngle=null;
+  }
+  const results=items.map((item,i)=>{
+    const adjusted=item.angles.map((row,a)=>row.map(score=>
+      commonAngle!==null&&initial[i].ratio<2.5?
+        score*(.15+.85*Math.exp(-.5*(angularDistance(SEARCH_ANGLES[a],commonAngle)/30)**2)):score));
+    const max=Array.from({length:10},(_,d)=>Math.max(...adjusted.map(row=>row[d])));
+    const order=Array.from({length:10},(_,d)=>d).sort((a,b)=>max[b]-max[a]);
+    const sum=Math.max(1e-8,max.reduce((n,v)=>n+v,0));
+    const digit=order[0],alternative=order[1],confidence=max[digit]/sum,margin=(max[digit]-max[alternative])/sum;
+    const angleIndex=adjusted.findIndex(row=>row[digit]===max[digit]);
+    const degree=SEARCH_ANGLES[Math.max(0,angleIndex)];
+    return {digit,alternative,confidence,margin,
+      angle:degree>180?degree-360:degree,
+      ambiguous69:(digit===6&&alternative===9||digit===9&&alternative===6)&&margin<.25,
+      pixels:item.pixels[Math.max(0,angleIndex)][digit]??item.pixels[Math.max(0,angleIndex)][0]};
+  });
+  return {results,commonAngle};
+}
+/** Puntuación CNN+HOG por orientación, siguiendo la combinación del Colab. */
+function createAngleEvidence(
   variants:ReadonlyArray<{pixels:Float32Array;angle:number}>,
   distributions:ReadonlyArray<number[]>,bank:OrientationBank,
-):OrientationDecision{
+):AngleEvidence{
   if(variants.length!==48||distributions.length!==48)
-    throw new Error("La búsqueda de orientación requiere 24 giros con dos preparaciones.");
+    throw new Error("La búsqueda de orientación necesita 24 giros y dos preparaciones.");
   const raw=distributions.map((scores,i)=>{
     const similarity=top3ReferenceSimilarity(hogDescriptor(variants[i].pixels),bank);
     return scores.map((probability,digit)=>
       Math.pow(Math.max(1e-7,probability),.75)*Math.exp(Math.max(-30,Math.min(0,(similarity[digit]-1)/.065))));
   });
-  // Máximo entre preparación original y corregida, seguido de suavizado
-  // angular idéntico al Colab (la primera y última orientación son vecinas).
-  const max=SEARCH_ANGLES.map((_,i)=>raw[2*i].map((v,d)=>Math.max(v,raw[2*i+1][d])));
-  const smoothed=max.map((row,i)=>row.map((value,d)=>
-    .6*value+.2*max[(i+23)%24][d]+.2*max[(i+1)%24][d]));
-  const best=Array.from({length:10},(_,d)=>Math.max(...smoothed.map(row=>row[d])));
-  const order=Array.from({length:10},(_,d)=>d).sort((a,b)=>best[b]-best[a]);
-  const sum=best.reduce((n,v)=>n+v,0);
-  const confidence=best[order[0]]/Math.max(sum,1e-8);
-  const margin=(best[order[0]]-best[order[1]])/Math.max(sum,1e-8);
-  const digit=order[0];
-  const angleIndex=smoothed.findIndex(row=>row[digit]===best[digit]);
-  const v=raw[2*angleIndex][digit]>=raw[2*angleIndex+1][digit]?2*angleIndex:2*angleIndex+1;
-  const degrees=SEARCH_ANGLES[angleIndex];
-  return {scores:best.map(value=>value/Math.max(sum,1e-8)),confidence,margin,
-    angle:degrees>180?degrees-360:degrees,pixels:variants[v].pixels};
+  const best=SEARCH_ANGLES.map((_,i)=>raw[2*i].map((v,d)=>Math.max(v,raw[2*i+1][d])));
+  const smoothed=best.map((row,i)=>row.map((value,d)=>
+    .6*value+.2*best[(i+23)%24][d]+.2*best[(i+1)%24][d]));
+  const pixels=SEARCH_ANGLES.map((_,i)=>Array.from({length:10},(_,digit)=>
+    variants[raw[2*i][digit]>=raw[2*i+1][digit]?2*i:2*i+1].pixels));
+  return {angles:smoothed,pixels};
 }
 async function forward(model:tf.LayersModel,inputs:readonly Float32Array[]):Promise<number[][]>{
   const merged=new Float32Array(inputs.length*784);
@@ -134,59 +169,61 @@ async function forward(model:tf.LayersModel,inputs:readonly Float32Array[]):Prom
     }finally{result.dispose();}
   }finally{batch.dispose();}
 }
-async function inferRegion(model:tf.LayersModel,region:DigitRegion):Promise<DigitPrediction>{
-  const original=(await forward(model,[region.pixels]))[0];
-  const baseline=rankDigitScores(original);
-  let selected:Choice={scores:original,angle:0,pixels:region.pixels};
-  let confidence=baseline.confidence,margin=baseline.margin;
-  let needsReview=false;
-  // Los recortes claros conservan la decisión y la confianza original.
-  if(baseline.confidence<.70||baseline.margin<.15){
-    const referenceTask=loadOrientationBank().catch(()=>null);
-    const bank=await referenceTask;
-    if(bank){
-      const variants:Array<{pixels:Float32Array;angle:number}>=[];
-      for(const angle of SEARCH_ANGLES){
-        const rotated=normalizeRotated(region.pixels,angle);
-        variants.push({pixels:rotated,angle});
-        variants.push({pixels:deskewMnistPixels(rotated),angle});
-      }
-      const distributions:number[][]=[];
-      for(let i=0;i<variants.length;i+=12){
-        distributions.push(...await forward(model,variants.slice(i,i+12).map(v=>v.pixels)));
-        await tf.nextFrame();
-      }
-      const decision=decideWithReferences(variants,distributions,bank);
-      const winner=rankDigitScores(decision.scores);
-      // El Colab elige por evidencia combinada y marca dudas en la tabla.
-      // No descartar automáticamente la elección HOG por ser menos confiada
-      // que un softmax aislado y potencialmente erróneo.
-      if(winner.digit===baseline.digit||
-         (decision.confidence>=.40&&decision.margin>=.10)){
-        selected={scores:decision.scores,angle:decision.angle,pixels:decision.pixels};
-        confidence=decision.confidence;margin=decision.margin;
-      }else needsReview=true;
-    }else{
-      // Sin conexión se preserva el motor anterior, sin bloquear predicciones.
-      const candidates=[{pixels:deskewMnistPixels(region.pixels),angle:0},
-        ...fallbackAngles.map(angle=>({pixels:normalizeRotated(region.pixels,angle),angle}))];
-      const distributions:number[][]=[];
-      for(let i=0;i<candidates.length;i+=5)
-        distributions.push(...await forward(model,candidates.slice(i,i+5).map(v=>v.pixels)));
-      const index=chooseOrientation(original,distributions.map((scores,i)=>({scores,angle:candidates[i].angle})));
-      if(index>=0)selected={...candidates[index],scores:distributions[index]};
+/**
+ * Evalúa TODAS las orientaciones, incluso si el softmax del original es alto.
+ * Un dígito horizontal puede dar 95% a una clase incorrecta; la CNN sola
+ * no permite determinar que la escritura estaba girada.
+ */
+async function inferRegions(model:tf.LayersModel,regions:DigitRegion[]):Promise<{digits:DigitPrediction[];orientationWarning:string}>{
+  const baseline=await forward(model,regions.map(region=>region.pixels));
+  let bank:OrientationBank|null=null;
+  try{bank=await loadOrientationBank();}catch{bank=null;}
+  if(!bank){
+    const digits:DigitPrediction[]=[];
+    for(let i=0;i<regions.length;i++){
+      const region=regions[i],candidates=[
+        {pixels:region.pixels,angle:0},
+        {pixels:deskewMnistPixels(region.pixels),angle:0},
+        ...fallbackAngles.map(angle=>({pixels:normalizeRotated(region.pixels,angle),angle})),
+      ];
+      const scores:number[][]=[];
+      for(let j=0;j<candidates.length;j+=8)
+        scores.push(...await forward(model,candidates.slice(j,j+8).map(c=>c.pixels)));
+      const original=baseline[i];
+      const index=chooseOrientation(original,candidates.slice(1).map((item,j)=>({scores:scores[j+1],angle:item.angle})));
+      const selected=index>=0?{...candidates[index+1],scores:scores[index+1]}:{...candidates[0],scores:original};
       const ranked=rankDigitScores(selected.scores);
-      confidence=ranked.confidence;margin=ranked.margin;
-      needsReview=true;
+      digits.push({...region.box,box:region.box,position:region.box.position,row:region.box.row,
+        digit:ranked.digit,alternative:ranked.alternative,confidence:ranked.confidence,
+        margin:ranked.margin,angle:selected.angle,uncertain:true,thumbnail:thumb(selected.pixels)});
     }
+    return {digits,orientationWarning:"No se pudieron cargar las referencias de orientación. La lectura de números girados puede requerir revisión."};
   }
-  const result=rankDigitScores(selected.scores);
-  const ambiguous69=Math.abs(selected.angle)>=90&&["6","9"].includes(result.digit)&&
-    (confidence<.8||margin<.25);
-  const uncertain=needsReview||confidence<.6||margin<.15||ambiguous69;
-  return {...region.box,digit:ambiguous69?"6 / 9":result.digit,
-    alternative:result.alternative,confidence,margin,
-    uncertain,angle:selected.angle,box:region.box,thumbnail:thumb(selected.pixels)};
+  const evidence:AngleEvidence[]=[];
+  for(const region of regions){
+    const variants:Array<{pixels:Float32Array;angle:number}>=[];
+    for(const angle of SEARCH_ANGLES){
+      const rotated=normalizeRotated(region.pixels,angle);
+      variants.push({pixels:rotated,angle},{pixels:deskewMnistPixels(rotated),angle});
+    }
+    const scores:number[][]=[];
+    for(let j=0;j<variants.length;j+=12){
+      scores.push(...await forward(model,variants.slice(j,j+12).map(item=>item.pixels)));
+      await tf.nextFrame();
+    }
+    evidence.push(createAngleEvidence(variants,scores,bank));
+  }
+  const decisions=resolveAngleEvidence(evidence);
+  return {digits:decisions.results.map((result,i)=>{
+    const region=regions[i];
+    return {...region.box,box:region.box,position:region.box.position,row:region.box.row,
+      digit:result.ambiguous69?"6 / 9":String(result.digit),alternative:String(result.alternative),
+      confidence:result.confidence,margin:result.margin,angle:result.angle,
+      uncertain:result.ambiguous69||result.margin<.15||result.confidence<.65,
+      thumbnail:thumb(result.pixels)};
+  }),orientationWarning:decisions.commonAngle===null?
+    "Orientación estimada individualmente por dígito.":
+    "Orientación coherente entre varios dígitos; los casos ambiguos se contrastaron con el grupo."};
 }
 async function annotateImage(file:File,digits:DigitPrediction[]):Promise<string>{
   const bitmap=await createImageBitmap(file);
@@ -239,12 +276,11 @@ export async function predictMultipleDigits(modelRef:string,file:File,config:Con
   if(!regions.length)throw new Error("No se detectaron números en esta imagen.");
   const model=await tf.loadLayersModel(modelRef);
   try{
-    const digits:DigitPrediction[]=[];
-    for(const region of regions)digits.push(await inferRegion(model,region));
+    const {digits,orientationWarning}=await inferRegions(model,regions);
     const doubtful=digits.filter(d=>d.uncertain).length;
     const warning=doubtful
-      ?doubtful+" región(es) requieren revisión: trazos ambiguos u orientación no concluyente."
-      :"Las cifras se evalúan con los pesos guardados; las puntuaciones son estimaciones del modelo, no exactitud medida sobre fotografías.";
+      ?doubtful+" región(es) requieren revisión: trazos ambiguos u orientación no concluyente. "+orientationWarning
+      :"Las cifras se evalúan con los pesos guardados y referencias HOG. "+orientationWarning+" Las puntuaciones no son exactitud medida sobre fotografías.";
     const sequence=orderDigitResults(digits);
     const predictions=digits.length===1
       ?[{clase:digits[0].digit,probabilidad:digits[0].confidence}]

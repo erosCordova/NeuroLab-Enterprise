@@ -1,13 +1,13 @@
 /**
  * Referencias HOG de MNIST (solo entrenamiento, jamás test), equivalentes
  * a las del cuaderno de Colab. Se descargan del proxy público existente
- * SOLO si la CNN no está segura, se calculan una vez por sesión y no
+ * para la búsqueda de orientación completa, se calculan una vez por sesión y no
  * cambian los pesos ni envían fotografías privadas.
  */
 import {normalizeDigitCrop} from "./digitSegmentation.ts";
 import {MNIST_PROXY_PATH} from "./mnistDataset.ts";
 
-const DIM=324,CELLS=144,SAMPLE_PER_CLASS=120;
+const DIM=324,CELLS=144,SAMPLE_PER_CLASS=300;
 export type OrientationBank={byClass:Float32Array[];counts:number[]};
 let loaded:Promise<OrientationBank>|undefined;
 
@@ -92,7 +92,7 @@ async function readGzip(url:string,limit:number):Promise<Uint8Array>{
   return bytes;
 }
 async function prepareBank():Promise<OrientationBank>{
-  // Los primeros 120 ejemplos de cada clase son reproducibles y proceden
+  // Los primeros 300 ejemplos de cada clase son reproducibles y proceden
   // exclusivamente del entrenamiento MNIST. El banco completo del Colab
   // usa más ejemplos; este es un índice ligero adaptado a navegadores.
   const labels=await readGzip(MNIST_PROXY_PATH+"train-labels-idx1-ubyte.gz",60_008);
