@@ -74,7 +74,7 @@ function thumb(pixels:Float32Array):string{
   ctx.putImageData(img,0,0);return canvas.toDataURL("image/png");
 }
 /** Girar en un lienzo ampliado: no cortar los extremos como en el visor anterior. */
-function normalizeRotated(source:Float32Array,angle:number):Float32Array{
+export function normalizeRotated(source:Float32Array,angle:number):Float32Array{
   if(angle===0)return new Float32Array(source);
   const rad=angle*Math.PI/180,c=Math.cos(rad),s=Math.sin(rad);
   const side=Math.ceil(28*(Math.abs(c)+Math.abs(s)))+4;
@@ -158,8 +158,11 @@ async function inferRegion(model:tf.LayersModel,region:DigitRegion):Promise<Digi
       }
       const decision=decideWithReferences(variants,distributions,bank);
       const winner=rankDigitScores(decision.scores);
-      if(decision.confidence>=.52&&decision.margin>=.12&&
-         (winner.digit===baseline.digit||decision.confidence>=baseline.confidence-.08)){
+      // El Colab elige por evidencia combinada y marca dudas en la tabla.
+      // No descartar automáticamente la elección HOG por ser menos confiada
+      // que un softmax aislado y potencialmente erróneo.
+      if(winner.digit===baseline.digit||
+         (decision.confidence>=.40&&decision.margin>=.10)){
         selected={scores:decision.scores,angle:decision.angle,pixels:decision.pixels};
         confidence=decision.confidence;margin=decision.margin;
       }else needsReview=true;

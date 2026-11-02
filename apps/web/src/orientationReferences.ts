@@ -130,6 +130,7 @@ async function prepareBank():Promise<OrientationBank>{
   return {byClass,counts};
 }
 export async function loadOrientationBank():Promise<OrientationBank>{
-  if(!loaded)loaded=prepareBank().catch(e=>{loaded=undefined;throw e;});
+  // Un fallo de red no dispara múltiples descargas durante el mismo análisis.
+  if(!loaded)loaded=prepareBank();
   return loaded;
 }
