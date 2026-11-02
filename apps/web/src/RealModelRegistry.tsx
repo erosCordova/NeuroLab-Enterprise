@@ -7,6 +7,7 @@ import {filterRealModels,unregisteredRuns} from "./realModelRegistry";
 import CNNBackupActions from "./CNNBackupActions";
 import type {DigitPrediction} from "./multiDigitInference";
 import "./real-model-registry.css";
+import {deleteModelWeights,deletedLocalRefs} from "./modelCatalog";
 
 export default function RealModelRegistry({projectId}:{projectId:string}){
  const [models,setModels]=useState<RealModel[]>([]);
@@ -26,6 +27,7 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
  const [editNotes,setEditNotes]=useState("");
  const [predicting,setPredicting]=useState(false);
  const [predictionError,setPredictionError]=useState("");
+ const [confirmDelete,setConfirmDelete]=useState("");
  const [predictions,setPredictions]=useState<{clase:string;probabilidad:number}[]>([]);
  const [digitRegions,setDigitRegions]=useState<DigitPrediction[]>([]);
 
@@ -44,8 +46,11 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
    api<RealModel[]>("/projects/"+projectId+"/real-models"),
    api<RealRun[]>("/projects/"+projectId+"/real-runs"),
   ]).then(([registered,history])=>{
-   if(active){setModels(registered);setRuns(history);setSelected(registered[0]?.id??"");
-    setEditName(registered[0]?.display_name??"");setEditNotes(registered[0]?.notes??"");}
+   if(active){const removed=deletedLocalRefs(projectId);
+    const remaining=registered.filter(item=>!removed.has(item.model_ref));
+    const availableRuns=history.filter(item=>!item.model_ref||!removed.has(item.model_ref));
+    setModels(remaining);setRuns(availableRuns);setSelected(remaining[0]?.id??"");
+    setEditName(remaining[0]?.display_name??"");setEditNotes(remaining[0]?.notes??"");}
   }).catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"No se pudo consultar el registro.");})
     .finally(()=>{if(active)setLoading(false);});
   void refreshInventory(()=>active);
@@ -63,6 +68,21 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
   completed_epochs:run.completed_epochs,batch:run.batch,seed:run.seed,metrics:run.metrics,test:run.test,
  }:null;
  const onDevice=Boolean(current&&inventory==="available"&&available.has(current.model_ref));
+ async function removeLocal(model:RealModel){
+   setBusy(true);setError("");setMessage("");
+   try{
+     await deleteModelWeights(projectId,model.model_ref,"local");
+     const remaining=models.filter(item=>item.model_ref!==model.model_ref);
+     setModels(remaining);
+     setRuns(previous=>previous.filter(item=>item.model_ref!==model.model_ref));
+     setAvailable(previous=>{const copy=new Set(previous);copy.delete(model.model_ref);return copy;});
+     const next=remaining[0];setSelected(next?.id??"");
+     setEditName(next?.display_name??"");setEditNotes(next?.notes??"");
+     setConfirmDelete("");setPredictions([]);
+     setMessage("Pesos y ficha local ocultados en este navegador. La ficha histórica de PostgreSQL se conserva y no afecta a otros modelos.");
+   }catch(cause){setError(cause instanceof Error?cause.message:"No se pudo eliminar el modelo.");}
+   finally{setBusy(false);}
+ }
 
  async function register(){
   const chosen=pending.find(item=>item.id===(newRun||pending[0]?.id));
@@ -155,7 +175,7 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
     <p className="caption">{item.classes.join(" · ")} · {item.parameters.toLocaleString("es-PE")} parámetros · {item.completed_epochs} épocas</p>
     <p className="real-model-availability">{inventory==="loading"?"Comprobando pesos…":inventory==="error"?"Disponibilidad desconocida":available.has(item.model_ref)?"Pesos disponibles en este navegador":"Sin pesos en este navegador"}</p>
     <p className="caption">Precisión de prueba declarada: {(item.test.accuracy*100).toFixed(1)}%</p>
-    <button type="button" className="secondary" onClick={()=>{setSelected(item.id);setEditName(item.display_name);setEditNotes(item.notes);setPredictions([]);setPredictionError("");}}>Administrar modelo</button>
+    <button type="button" className="secondary" onClick={()=>{setSelected(item.id);setEditName(item.display_name);setEditNotes(item.notes);setPredictions([]);setPredictionError("");setConfirmDelete("");}}>Administrar modelo</button>
    </article>)}
   </div>
   {current&&<div className="real-registry-detail" aria-label="Detalle del modelo CNN real">
@@ -173,6 +193,17 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
     <button className="secondary" disabled={busy} onClick={()=>void save(current,{status:current.status==="Archivado"?"Registrado":"Archivado"})}>{current.status==="Archivado"?"Restaurar ficha archivada":"Archivar ficha"}</button>
    </div>
    {current.status==="Archivado"&&<p className="caption">Archivar no elimina ni modifica los pesos o las métricas del modelo.</p>}
+   <div className="model-crud-local">
+     <button type="button" className="model-crud-delete" disabled={busy} onClick={()=>setConfirmDelete(current.id)}>Eliminar pesos de este modelo</button>
+     {confirmDelete===current.id&&<div className="model-crud-confirm">
+       <strong>¿Eliminar «{current.display_name}» de este navegador?</strong>
+       <p>Se eliminarán los pesos guardados en IndexedDB. Se ocultará su ficha local, pero su registro histórico en PostgreSQL permanecerá disponible para auditoría y no se borrarán otros modelos.</p>
+       <div className="model-crud-actions">
+         <button type="button" className="model-crud-danger" disabled={busy} onClick={()=>void removeLocal(current)}>Confirmar eliminación</button>
+         <button type="button" className="secondary" disabled={busy} onClick={()=>setConfirmDelete("")}>Cancelar</button>
+       </div>
+     </div>}
+   </div>
    {report&&<CNNBackupActions mode="export" key={current.id} projectId={projectId} report={report}/>}
    {onDevice&&current.status==="Registrado"&&<section className="cnn-backup-predictions" aria-label="Predicción CNN desde registro">
     <h3>Reconocer otra imagen sin reentrenar</h3>
