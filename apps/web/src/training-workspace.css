@@ -32,3 +32,12 @@
 .pretrained-workspace .cnn-backup-panel h3{font-size:17px}
 .pretrained-restored{margin-top:16px}
 @media(max-width:760px){.training-route-buttons,.pretrained-steps{grid-template-columns:1fr}.training-workspace-head{padding:17px}.training-route-choice{padding:14px}}
+
+.training-preparation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 15px}
+.training-preparation>button,.training-preparation-current{display:flex;flex-wrap:wrap;align-items:center;gap:9px;padding:14px 15px;text-align:left;border:1px solid #d6e8e2;background:#fff;border-radius:11px;color:#315e5e;min-width:0}
+.training-preparation>button:hover{border-color:#64b9a5}
+.training-preparation span{border-radius:50%;width:24px;height:24px;display:grid;place-items:center;background:#e6f6f0;color:#128e7e;font-weight:800;font-size:12px}
+.training-preparation strong{font-size:12px}
+.training-preparation small{flex-basis:100%;font-size:11px;color:#6b8685;word-break:break-word}
+.training-preparation-current{border-color:#54b6a3;background:#f1fbf7}
+@media(max-width:760px){.training-preparation{grid-template-columns:1fr}}

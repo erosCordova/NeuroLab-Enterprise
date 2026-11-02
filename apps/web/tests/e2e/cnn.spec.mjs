@@ -1142,3 +1142,23 @@ test("Biblioteca de imágenes: restaura archivos binarios sin volver a seleccion
   await navigate(page,"Entrenamientos");
   await expect(page.getByRole("button",{name:"Entrenar CNN real"})).toBeEnabled();
 });
+
+
+test("Entrenamientos separa entrenar un modelo y cargar uno preentrenado",async({page})=>{
+  await navigate(page,"Entrenamientos");
+  const train=page.getByRole("tab",{name:/Entrenar un modelo nuevo/});
+  const pretrained=page.getByRole("tab",{name:/Cargar modelo preentrenado/});
+  await expect(train).toHaveAttribute("aria-selected","true");
+  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
+  await expect(page.getByText("Entrenar CNN con TensorFlow.js",{exact:true})).toBeVisible();
+  await pretrained.click();
+  await expect(pretrained).toHaveAttribute("aria-selected","true");
+  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeHidden();
+  const imported=page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"});
+  await expect(imported).toBeVisible();
+  await expect(imported.getByLabel("Restaurar modelo CNN desde respaldo")).toHaveAttribute("accept",/\\.ncnn/);
+  await expect(imported.getByText("Modelo preentrenado",{exact:true})).toHaveCount(0);
+  await train.click();
+  await expect(page.getByRole("tabpanel",{name:"Entrenar un modelo nuevo"})).toBeVisible();
+  await expect(page.getByRole("tabpanel",{name:"Cargar modelo preentrenado"})).toBeHidden();
+});

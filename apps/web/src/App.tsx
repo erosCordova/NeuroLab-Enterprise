@@ -608,6 +608,15 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
             {trainingRunning&&<p className="training-route-status" role="status">Entrenamiento en curso. Puedes cambiar de opción cuando finalice o lo canceles.</p>}
           </section>
           <div role="tabpanel" aria-label="Entrenar un modelo nuevo" className="training-workspace-content" style={{display:trainingView==="train"?"":"none"}}>
+          <section className="training-preparation" aria-label="Pasos para entrenar CNN">
+            <button type="button" disabled={trainingRunning} onClick={()=>navigate("Datasets")}>
+              <span>1</span><strong>Dataset</strong><small>{activeDatasetName==="Sin dataset"?"Cargar imágenes o URL":activeDatasetName}</small>
+            </button>
+            <button type="button" disabled={trainingRunning} onClick={()=>navigate("Diseñador CNN")}>
+              <span>2</span><strong>Diseñar CNN</strong><small>{automatic?"Arquitectura automática":"Arquitectura manual"}</small>
+            </button>
+            <div className="training-preparation-current"><span>3</span><strong>Entrenar y evaluar</strong><small>Inicia la CNN real aquí abajo</small></div>
+          </section>
           <nav className="cnn-training-tabs" aria-label="Accesos a las etapas del entrenamiento">
             <a href="#cnn-real-training">Entrenar CNN con imágenes</a>
             <a href="#photo-real-training">Entrenar con fotografías</a>
