@@ -4,8 +4,8 @@
  * SOLO si la CNN no está segura, se calculan una vez por sesión y no
  * cambian los pesos ni envían fotografías privadas.
  */
-import {normalizeDigitCrop} from "./digitSegmentation";
-import {MNIST_PROXY_PATH} from "./mnistDataset";
+import {normalizeDigitCrop} from "./digitSegmentation.ts";
+import {MNIST_PROXY_PATH} from "./mnistDataset.ts";
 
 const DIM=324,CELLS=144,SAMPLE_PER_CLASS=120;
 export type OrientationBank={byClass:Float32Array[];counts:number[]};

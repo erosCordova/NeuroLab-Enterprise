@@ -8,8 +8,8 @@ import type {Config} from "./cnn.ts";
 import {normalizeDigitCrop,segmentDigitsFromFile} from "./digitSegmentation.ts";
 import type {DigitBox,DigitRegion} from "./digitSegmentation.ts";
 import {deskewMnistPixels} from "./mnistRobust.ts";
-import {hogDescriptor,loadOrientationBank,top3ReferenceSimilarity} from "./orientationReferences";
-import type {OrientationBank} from "./orientationReferences";
+import {hogDescriptor,loadOrientationBank,top3ReferenceSimilarity} from "./orientationReferences.ts";
+import type {OrientationBank} from "./orientationReferences.ts";
 
 export type DigitPrediction={
   position:number;row:number;digit:string;confidence:number;alternative:string;
