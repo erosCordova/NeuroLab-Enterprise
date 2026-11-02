@@ -590,24 +590,24 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
         {page==="Entrenamientos"&&!tabularActive&&<>
           <section className="training-workspace-head" aria-label="Seleccionar forma de utilizar una CNN">
             <div className="eyebrow">ELIGE CÓMO QUIERES COMENZAR</div>
-            <h2>¿Qué quieres hacer con tu modelo?</h2>
-            <p>Proyecto activo: <strong>{project?.name}</strong>. Puedes entrenar desde tus datos o utilizar una red neuronal que ya aprendió.</p>
+            <h2>Selecciona el origen del modelo</h2>
+            <p>Proyecto: <strong>{project?.name}</strong>. Son dos espacios independientes: entrenar aquí no modifica las importaciones, y cargar un modelo no modifica tus entrenamientos.</p>
             <div className="training-route-buttons" role="tablist" aria-label="Opciones de Entrenamientos">
               <button type="button" role="tab" aria-selected={trainingView==="train"} className="training-route-choice" onClick={()=>setTrainingView("train")}>
                 <span className="training-route-icon" aria-hidden="true">01</span><span className="training-route-copy">
-                  <strong>Entrenar un modelo nuevo</strong><small>Elige un dataset, configura la CNN, entrena y evalúa sus resultados.</small>
+                  <strong>Modelo entrenado en NeuroLab</strong><small>Entrena y utiliza exclusivamente una CNN creada en esta página, con sus resultados, predicciones y respaldos.</small>
                 </span>
               </button>
               <button type="button" role="tab" aria-selected={trainingView==="import"} className="training-route-choice"
                 disabled={trainingRunning} onClick={()=>setTrainingView("import")}>
                 <span className="training-route-icon" aria-hidden="true">02</span><span className="training-route-copy">
-                  <strong>Cargar modelo preentrenado</strong><small>Importa un archivo .ncnn de Colab o NeuroLab y realiza predicciones sin entrenar.</small>
+                  <strong>Modelo preentrenado importado</strong><small>Carga y utiliza exclusivamente archivos .ncnn; sus resultados y predicciones permanecen independientes.</small>
                 </span>
               </button>
             </div>
             {trainingRunning&&<p className="training-route-status" role="status">Entrenamiento en curso. Puedes cambiar de opción cuando finalice o lo canceles.</p>}
           </section>
-          <div role="tabpanel" aria-label="Entrenar un modelo nuevo" className="training-workspace-content" style={{display:trainingView==="train"?"":"none"}}>
+          <div role="tabpanel" aria-label="Modelo entrenado en NeuroLab" className="training-workspace-content" style={{display:trainingView==="train"?"":"none"}}>
           <section className="training-preparation" aria-label="Pasos para entrenar CNN">
             <button type="button" disabled={trainingRunning} onClick={()=>navigate("Datasets")}>
               <span>1</span><strong>Dataset</strong><small>{activeDatasetName==="Sin dataset"?"Cargar imágenes o URL":activeDatasetName}</small>
@@ -641,7 +641,7 @@ export default function App({initialProjects,onPersistProject,onDeleteProject,st
           <TrainingHistory key={projectId} jobs={projectJobs} onRepeat={repeatJob} onSelect={setSelectedId}/>
           </div></details>
           </div>
-          <div role="tabpanel" aria-label="Cargar modelo preentrenado" className="training-workspace-content" style={{display:trainingView==="import"?"":"none"}}>
+          <div role="tabpanel" aria-label="Modelo preentrenado importado" className="training-workspace-content" style={{display:trainingView==="import"?"":"none"}}>
             <PretrainedModelsPanel key={projectId} projectId={projectId}/>
           </div>
         </>}

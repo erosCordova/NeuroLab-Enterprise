@@ -173,7 +173,7 @@ export default function RealModelRegistry({projectId}:{projectId:string}){
     <button className="secondary" disabled={busy} onClick={()=>void save(current,{status:current.status==="Archivado"?"Registrado":"Archivado"})}>{current.status==="Archivado"?"Restaurar ficha archivada":"Archivar ficha"}</button>
    </div>
    {current.status==="Archivado"&&<p className="caption">Archivar no elimina ni modifica los pesos o las métricas del modelo.</p>}
-   {report&&<CNNBackupActions key={current.id} projectId={projectId} report={report} strictSelection onRestored={()=>void refreshInventory(()=>true)}/>}
+   {report&&<CNNBackupActions mode="export" key={current.id} projectId={projectId} report={report}/>}
    {onDevice&&current.status==="Registrado"&&<section className="cnn-backup-predictions" aria-label="Predicción CNN desde registro">
     <h3>Reconocer otra imagen sin reentrenar</h3>
     <label className="field"><span>Imagen nueva</span><input aria-label="Clasificar imagen con modelo real registrado" type="file" accept="image/png,image/jpeg,image/webp" disabled={predicting} onChange={event=>{

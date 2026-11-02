@@ -1,7 +1,6 @@
 import {useEffect,useState} from "react";
 import {api} from "./api";
 import type {RealRun} from "./realRuns";
-import {prepareRealReport} from "./realRuns";
 import CNNBackupActions from "./CNNBackupActions";
 import PredictionPanel from "./PredictionPanel";
 import type {BrowserReport} from "./browserCNN";
@@ -34,36 +33,18 @@ function Curves({run,kind}:{run:RealRun;kind:"accuracy"|"loss"}) {
 export default function RealCNNResults({projectId}:Props) {
   const [runs,setRuns]=useState<RealRun[]>([]);
   const [selected,setSelected]=useState("");
-  const [busy,setBusy]=useState(false);
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState("");
-  const [message,setMessage]=useState("");
 
   useEffect(()=>{
     let active=true;
     setLoading(true);setError("");setRuns([]);setSelected("");
     void api<RealRun[]>("/projects/"+projectId+"/real-runs")
-      .then(data=>{if(active){setRuns(data);setSelected(data[0]?.id??"");}})
+      .then(data=>{if(active){const local=data.filter(run=>run.source==="navegador"&&run.engine==="TensorFlow.js"&&!!run.model_ref&&!run.model_ref.includes("-imported-"));setRuns(local);setSelected(local[0]?.id??"");}})
       .catch(cause=>{if(active)setError(cause instanceof Error?cause.message:"Error al consultar resultados CNN.");})
       .finally(()=>{if(active)setLoading(false);});
     return ()=>{active=false;};
   },[projectId]);
-
-  async function importFile(file:File) {
-    setBusy(true);setError("");setMessage("");
-    try {
-      if(file.size>65536)throw new Error("El archivo supera 64 KiB.");
-      const body=prepareRealReport(JSON.parse(await file.text()) as unknown);
-      const run=await api<RealRun>("/projects/"+projectId+"/real-runs",{
-        method:"POST",body:JSON.stringify(body),
-      });
-      setRuns(current=>[run,...current]);
-      setSelected(run.id);
-      setMessage("Informe CNN importado y guardado en PostgreSQL. No se cargaron los pesos del modelo.");
-    }catch(cause) {
-      setError(cause instanceof Error?cause.message:"No se pudo importar el informe JSON.");
-    }finally{setBusy(false);}
-  }
 
   const current=runs.find(run=>run.id===selected)??runs[0];
   const backupReport:BrowserReport|null=current?.engine==="TensorFlow.js"&&current.model_ref?{
@@ -73,31 +54,21 @@ export default function RealCNNResults({projectId}:Props) {
     completed_epochs:current.completed_epochs,batch:current.batch,seed:current.seed,
     metrics:current.metrics,test:current.test,
   }:null;
-  return <section className="panel recent" aria-label="Resultados CNN reales importados">
+  return <section className="panel recent" aria-label="Modelos CNN entrenados en esta página">
     <div className="panel-head">
       <div>
-        <div className="eyebrow">ENTRENAMIENTOS CON MÉTRICAS OBSERVADAS</div>
-        <h2>Resultados CNN reales</h2>
+        <div className="eyebrow">SOLO MODELOS ENTRENADOS AQUÍ</div>
+        <h2>Historial de modelos entrenados en NeuroLab</h2>
         <p className="muted">Historial persistente · {runs.length} entrenamientos registrados</p>
       </div>
-      <span className="badge">IMPORTACIÓN JSON</span>
+      <span className="badge">ENTRENADOS AQUÍ</span>
     </div>
-    <p className="soft">Importa un informe JSON de entrenamiento CNN, generado por el motor Python o exportado desde TensorFlow.js. Los valores del informe se validan y se conservan en PostgreSQL. Importar un JSON del navegador no transfiere sus pesos a otros dispositivos. También puedes entrenar con TensorFlow.js desde esta página: los pesos quedan en IndexedDB del navegador y no se suben a Neon. Los informes proporcionados por clientes no están certificados por el servidor.</p>
-    <label className="field">
-      <span>Seleccionar informe de un entrenamiento real</span>
-      <input type="file" accept=".json,application/json" disabled={busy} aria-label="Importar métricas CNN reales" onChange={event=>{
-        const file=event.target.files?.[0];
-        event.target.value="";
-        if(file)void importFile(file);
-      }}/>
-    </label>
-    {busy&&<p role="status">Validando y guardando resultados…</p>}
+    <p className="soft">Aquí aparecen únicamente CNN entrenadas dentro de NeuroLab y registradas para este proyecto. La otra opción de Entrenamientos gestiona exclusivamente modelos importados.</p>
     {loading&&<p role="status">Recuperando historial de PostgreSQL…</p>}
     {error&&<p className="error" role="alert">{error}</p>}
-    {message&&<p className="feedback" role="status">{message}</p>}
-    {!loading&&!runs.length&&<p className="caption">Aún no hay reportes importados en este proyecto.</p>}
+    {!loading&&!runs.length&&<p className="caption">Todavía no hay entrenamientos locales registrados. Inicia uno desde Entrenar modelo.</p>}
     {current&&<>
-      <label className="field"><span>Entrenamiento importado</span>
+      <label className="field"><span>Entrenamiento creado en esta página</span>
         <select aria-label="Seleccionar entrenamiento CNN real" value={current.id} onChange={event=>{setSelected(event.target.value);}}>
           {runs.map(run=><option key={run.id} value={run.id}>{new Date(run.imported_at).toLocaleString("es-PE")+" · "+run.classes.join(", ")}</option>)}
         </select>
@@ -113,7 +84,7 @@ export default function RealCNNResults({projectId}:Props) {
         <section className="panel"><h3>Precisión por época</h3><Curves run={current} kind="accuracy"/></section>
         <section className="panel"><h3>Pérdida por época</h3><Curves run={current} kind="loss"/></section>
       </div>
-      {backupReport&&<CNNBackupActions key={backupReport.model_ref} projectId={projectId} report={backupReport} strictSelection/>}
+      {backupReport&&<CNNBackupActions mode="export" key={backupReport.model_ref} projectId={projectId} report={backupReport}/>}
       {current.engine==="TensorFlow.js"&&current.model_ref&&<div className="browser-cnn-summary cnn-spaced">
         <h3>Reconocer otra imagen con este modelo</h3>
         <p className="caption">El modelo se recupera de IndexedDB en este navegador; no se vuelve a entrenar. Si cambias de equipo o eliminas los datos del navegador, puede no estar disponible.</p>
