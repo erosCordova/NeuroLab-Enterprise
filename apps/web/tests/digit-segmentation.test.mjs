@@ -52,3 +52,14 @@ test("Las líneas finas mantienen intensidad y continuidad después del recorte"
  assert.ok(active.length>18,"La tinta debe sobrevivir al escalado: "+active.length);
  assert.ok(Math.max(...active)<1,"No debe saturarse artificialmente");
 });
+
+test("Una imagen MNIST con márgenes grandes se recorta antes de normalizar",()=>{
+ const src=new Float32Array(784);
+ for(let y=4;y<24;y++)src[y*28+13]=.8;
+ const output=normalizeDigitCrop(src,28,28);
+ assert.equal(output.length,784);
+ assert.ok(output.reduce((sum,x)=>sum+x,0)>5);
+ // La altura del trazo debe seguir siendo de unos 20 píxeles, no 14.
+ const rows=[];for(let y=0;y<28;y++)if(output.slice(y*28,(y+1)*28).some(x=>x>.1))rows.push(y);
+ assert.ok(rows.length>=18);
+});

@@ -10,22 +10,49 @@ type Component={x:number;y:number;w:number;h:number;area:number;ids:number[]};
 export function normalizeDigitCrop(ink:Float32Array,width:number,height:number):Float32Array{
   if(width<1||height<1||width*height!==ink.length||!ink.every(Number.isFinite))
     throw new Error("El recorte del dígito es inválido.");
-  const side=20/Math.max(width,height),w=Math.max(1,Math.round(width*side)),h=Math.max(1,Math.round(height*side));
+  let peak=0;
+  for(const v of ink)peak=Math.max(peak,v);
+  if(peak<=0)throw new Error("No hay tinta para reconocer un número.");
+  // El Colab elimina el margen vacío ANTES del ajuste a 20 × 20.
+  const threshold=Math.max(.00004,peak*.005);
+  let minX=width,minY=height,maxX=-1,maxY=-1;
+  for(let y=0;y<height;y++)for(let x=0;x<width;x++)
+    if(ink[y*width+x]>threshold){
+      minX=Math.min(minX,x);maxX=Math.max(maxX,x);
+      minY=Math.min(minY,y);maxY=Math.max(maxY,y);
+    }
+  if(maxX<minX||maxY<minY)throw new Error("No se encontraron trazos útiles.");
+  const bw=maxX-minX+1,bh=maxY-minY+1;
+  const scale=20/Math.max(bw,bh);
+  const w=Math.max(1,Math.round(bw*scale)),h=Math.max(1,Math.round(bh*scale));
   const result=new Float32Array(784),left=Math.floor((28-w)/2),top=Math.floor((28-h)/2);
-  const sample=(x:number,y:number)=>{
-    if(x<0||y<0||x>=width||y>=height)return 0;
-    const x0=Math.floor(x),y0=Math.floor(y),x1=Math.min(width-1,x0+1),y1=Math.min(height-1,y0+1),fx=x-x0,fy=y-y0;
-    return (ink[y0*width+x0]*(1-fx)+ink[y0*width+x1]*fx)*(1-fy)+
-      (ink[y1*width+x0]*(1-fx)+ink[y1*width+x1]*fx)*fy;
+  const at=(x:number,y:number)=>{
+    const xx=Math.max(0,Math.min(bw-1,x)),yy=Math.max(0,Math.min(bh-1,y));
+    return ink[(minY+yy)*width+minX+xx];
   };
   for(let y=0;y<h;y++)for(let x=0;x<w;x++){
-    const sx=(x+.5)*width/w-.5,sy=(y+.5)*height/h-.5;
-    result[(top+y)*28+left+x]=Math.max(0,Math.min(1,sample(Math.max(0,sx),Math.max(0,sy))));
+    let value=0;
+    if(scale<1){
+      // INTER_AREA de OpenCV: promedio ponderado del área fuente para reducir
+      // fotografías sin perder grosor ni partes del trazo.
+      const x0=x*bw/w,x1=(x+1)*bw/w,y0=y*bh/h,y1=(y+1)*bh/h;
+      for(let sy=Math.floor(y0);sy<Math.ceil(y1);sy++)for(let sx=Math.floor(x0);sx<Math.ceil(x1);sx++){
+        const area=Math.max(0,Math.min(x1,sx+1)-Math.max(x0,sx))*
+          Math.max(0,Math.min(y1,sy+1)-Math.max(y0,sy));
+        if(area>0)value+=at(sx,sy)*area;
+      }
+      value/=(x1-x0)*(y1-y0);
+    }else{
+      const sx=(x+.5)*bw/w-.5,sy=(y+.5)*bh/h-.5;
+      const ix=Math.floor(sx),iy=Math.floor(sy),fx=sx-ix,fy=sy-iy;
+      value=(at(ix,iy)*(1-fx)+at(ix+1,iy)*fx)*(1-fy)+
+        (at(ix,iy+1)*(1-fx)+at(ix+1,iy+1)*fx)*fy;
+    }
+    result[(top+y)*28+left+x]=Math.max(0,Math.min(1,value));
   }
   let total=0,mx=0,my=0;
   for(let i=0;i<784;i++){const v=result[i];total+=v;mx+=(i%28)*v;my+=Math.floor(i/28)*v;}
-  if(total<.45)throw new Error("No hay suficiente tinta para reconocer un número.");
-  // Centramos con momentos y desplazamiento subpíxel, igual que Colab.
+  if(total<.1)throw new Error("No hay suficiente tinta para reconocer un número.");
   const dx=Math.max(-left,Math.min(28-left-w,13.5-mx/total));
   const dy=Math.max(-top,Math.min(28-top-h,13.5-my/total));
   if(Math.abs(dx)<.001&&Math.abs(dy)<.001)return result;
