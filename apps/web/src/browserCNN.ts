@@ -133,6 +133,7 @@ export async function trainInBrowser(
   projectId:string,dataset:ImageDataset,config:Config,epochs:number,batch:number,
   onProgress:(progress:BrowserProgress)=>void,signal?:AbortSignal,
   onTrace?:(trace:NetworkTrace)=>void,
+  onBatch?:(info:{epoch:number;epochs:number;batch:number;batches:number})=>void,
 ):Promise<BrowserReport> {
   const architecture=validateBrowserBudget(config,dataset,epochs,batch);
   if(signal?.aborted)throw new TrainingCancelled();
@@ -173,9 +174,21 @@ export async function trainInBrowser(
     model=buildBrowserCNN(config,classes.length);
     let bestLoss=Infinity,stale=0;
     const metrics:Metric[]=[];
+    const batchesPerEpoch=Math.ceil(dataset.train.length/batch);
+    let currentEpoch=1;
     const history=await model.fit(xTrain,yTrain,{
-      batchSize:batch,epochs,shuffle:true,validationData:[xVal,yVal],verbose:0,
+      batchSize:batch,epochs,shuffle:true,validationData:[xVal,yVal],verbose:0,yieldEvery:"batch",
       callbacks:{
+        onEpochBegin:async epoch=>{currentEpoch=epoch+1;},
+        onBatchEnd:async index=>{
+          if(signal?.aborted)model!.stopTraining=true;
+          const completed=index+1;
+          const frequency=Math.max(1,Math.ceil(batchesPerEpoch/20));
+          if(completed===1||completed===batchesPerEpoch||completed%frequency===0){
+            onBatch?.({epoch:currentEpoch,epochs,batch:completed,batches:batchesPerEpoch});
+            await tf.nextFrame();
+          }
+        },
         onEpochEnd:async(epoch,logs)=>{
           const point=metricFromLogs(epoch+1,logs);
           metrics.push(point);

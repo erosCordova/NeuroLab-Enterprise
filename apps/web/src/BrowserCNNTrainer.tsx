@@ -54,6 +54,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
   const [error,setError]=useState("");
   const [message,setMessage]=useState("");
   const [batchState,setBatchState]=useState("");
+  const [batchPulse,setBatchPulse]=useState(0);
   const [tensorBytes,setTensorBytes]=useState(0);
   const [savingHistory,setSavingHistory]=useState(false);
   const [historySaved,setHistorySaved]=useState(false);
@@ -88,13 +89,13 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
 
   async function start() {
     if(!dataset&&!mnist)return;
-    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setNetworkHistory([]);setInspectError("");setInspectMessage("");setBatchState("");setTensorBytes(0);setWorking(true);onWorkingChange?.(true);
+    setError("");setMessage("");setReport(null);setHistorySaved(false);setMetrics([]);setNetworkTrace(null);setNetworkHistory([]);setInspectError("");setInspectMessage("");setBatchState("");setBatchPulse(0);setTensorBytes(0);setWorking(true);onWorkingChange?.(true);
     setStage("Preparando el motor de CNN y las imágenes…");
     const abort=new AbortController();
     controller.current=abort;
     try{
       // Dar dos fotogramas al navegador antes de la carga pesada de TensorFlow:
-      // garantiza que el estado "Entrenando" y las partículas SVG puedan pintarse.
+      // garantiza el estado "Entrenando" antes de completar lotes reales.
       await new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
       if(abort.signal.aborted)return;
       const onEpoch=(epoch:number,total:number,metric:Metric)=>{
@@ -104,11 +105,12 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
       };
       const result=mnist
         ? await (await import("./mnistTrain")).trainMnistInBrowser(projectId,mnist,config,Number(epochs),Number(batch),onEpoch,
-          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);},abort.signal,
+          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setTensorBytes(info.tensorBytes);setBatchPulse(value=>value+1);},abort.signal,
           snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}})
         : await (await import("./browserCNN")).trainInBrowser(projectId,dataset!,config,Number(epochs),Number(batch),
           ({epoch,epochs:total,metric})=>onEpoch(epoch,total,metric),abort.signal,
-          snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}});
+          snapshot=>{if(!abort.signal.aborted){setNetworkTrace(snapshot);setNetworkHistory(old=>[...old,snapshot]);}},
+          info=>{if(abort.signal.aborted)return;setBatchState("Época "+info.epoch+"/"+info.epochs+" · lote "+info.batch+"/"+info.batches);setBatchPulse(value=>value+1);});
       if(abort.signal.aborted)return;
       setReport(result);
       // Termina la animación al acabar el entrenamiento, no al finalizar el guardado remoto.
@@ -241,7 +243,7 @@ export default function BrowserCNNTrainer({projectId,dataset,mnist,config,connec
     <p className="soft">Las imágenes no se envían a Render para entrenar. Los pesos se guardan en IndexedDB de <strong>este navegador</strong>, no en Neon ni en la nube: podrían perderse si limpias sus datos o utilizas otro dispositivo. La calidad depende de las imágenes y no se garantiza una precisión determinada.</p>
     <NetworkFlow config={config} classCount={mnist?10:dataset?.classes.length??report?.classes.length??2} working={working} realMetrics={metrics} realEpochs={report?.requested_epochs??Number(epochs)} realComplete={Boolean(report)} trace={networkTrace} history={networkHistory}
       classNames={report?.classes??(mnist?classNamesForSource(mnist.source):dataset?.classes)}
-      batchState={batchState}/>
+      batchState={batchState} batchPulse={batchPulse}/>
     {!dataset&&!mnist?<div className="cnn-empty">Primero carga y aplica un dataset en la sección Datasets.</div>:<>
       {mnist?<p><strong>{isFashionDataset(mnist.source)?"Fashion-MNIST":"MNIST"} · origen público</strong> · {mnist.limit.toLocaleString("es-PE")} ejemplos seleccionados · 10 clases · 10 000 pruebas independientes.</p>:dataset&&<p><strong>{dataset.name}</strong> · {dataset.images.length} imágenes · {dataset.classes.length} clases · {dataset.train.length} entrenamiento / {dataset.validation.length} validación / {dataset.test.length} prueba</p>}
       {mnist&&<p className="mnist-usage">El entrenamiento IDX usa mini-batches de tensores temporales. Las imágenes originales permanecen como bytes; evita otras tareas pesadas mientras entrenas el conjunto completo. La duración depende de tu CPU/GPU.</p>}

@@ -870,3 +870,21 @@ test("Entrenamientos no incluye MobileNet ni transferencia fotográfica retirada
   await expect(imported).toBeVisible();
   await expect(imported.getByText(/MobileNet/i)).toHaveCount(0);
 });
+
+
+test("La visualización CNN anima solo después de procesar un lote real",async({page})=>{
+ await applyDataset(page);
+ await navigate(page,"Entrenamientos");
+ const trainer=page.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+ const graph=trainer.getByRole("region",{name:"Visualización de neuronas y conexiones de la CNN"});
+ const window=graph.locator(".nl-neural-window");
+ await expect(window).toHaveAttribute("data-motion","paused");
+ await expect(graph.locator(".nl-real-batch-signals")).toHaveCount(0);
+ await trainer.getByLabel("Épocas de entrenamiento real").fill("1");
+ await trainer.getByLabel("Batch del entrenamiento real").fill("8");
+ await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
+ await expect(window).toHaveAttribute("data-batch-pulse",/^[1-9]\d*$/,{timeout:90000});
+ await expect(trainer.getByRole("button",{name:"Exportar informe JSON de entrenamiento real"})).toBeVisible({timeout:90000});
+ await expect(window).toHaveAttribute("data-motion","paused");
+ await expect(graph.locator(".nl-real-batch-signals")).toHaveCount(0);
+});
