@@ -45,9 +45,10 @@ test("Las rutas se adaptan también a capas manuales y conjuntos binarios",()=>{
   assert.ok(graphEnergyRoutes(stages).every(route=>!route.path.includes("NaN")));
 });
 
-test("La animación solo se activa al iniciar Entrenar CNN y se detiene al finalizar o cancelar",()=>{
-  assert.equal(shouldAnimateGraph(false,true),false,"Antes de pulsar Entrenar CNN");
-  assert.equal(shouldAnimateGraph(true,true),true,"Entrenamiento iniciado aun sin traza");
-  assert.equal(shouldAnimateGraph(true,false),false,"Pausa manual durante entrenamiento");
-  assert.equal(shouldAnimateGraph(false,false),false,"Finalización o cancelación");
+test("La animación depende de lotes reales y se detiene al finalizar o pausar",()=>{
+  assert.equal(shouldAnimateGraph(false,false,true),false,"Antes de pulsar Entrenar CNN");
+  assert.equal(shouldAnimateGraph(true,false,true),false,"Sin señales antes del primer lote");
+  assert.equal(shouldAnimateGraph(true,true,true),true,"Lote real completado");
+  assert.equal(shouldAnimateGraph(true,true,false),false,"Pausar solo la visualización");
+  assert.equal(shouldAnimateGraph(false,true,true),false,"Finalización o cancelación");
 });

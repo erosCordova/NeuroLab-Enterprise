@@ -1,23 +1,27 @@
-import {useId,useMemo,useState} from "react";
+import {useEffect,useId,useMemo,useState} from "react";
 import type {Config,Metric} from "./cnn";
 import type {NetworkTrace} from "./networkTelemetry";
-import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth} from "./networkGraph";
+import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph} from "./networkGraph";
 import "./network-flow.css";
 
 type Props={
   config:Config;classCount:number;working:boolean;realMetrics:Metric[];
   realEpochs:number;realComplete:boolean;trace?:NetworkTrace|null;history?:NetworkTrace[];
-  classNames?:string[];batchState?:string;
+  classNames?:string[];batchState?:string;batchPulse?:number;
 };
 const percent=(value:number)=>(100*Math.max(0,Math.min(1,value))).toFixed(1)+"%";
 
 export default function NetworkFlow({config,classCount,working,realMetrics,realEpochs,realComplete,trace,
-  history=[],classNames,batchState}:Props){
+  history=[],classNames,batchState,batchPulse=0}:Props){
   const [view,setView]=useState<"2d"|"3d">("3d");
   const [selectedKey,setSelectedKey]=useState("output");
   const [epochView,setEpochView]=useState("latest");
+  const [motionEnabled,setMotionEnabled]=useState(true);
+  useEffect(()=>{if(working)setMotionEnabled(true);},[working]);
   const gradientId=useId().replace(/:/g,"-");
   const stages=useMemo(()=>{try{return graphStages(config,classCount);}catch{return [];}},[config,classCount]);
+  const measuredBatch=shouldAnimateGraph(working,batchPulse>0,motionEnabled);
+  const batchRoutes=useMemo(()=>graphEnergyRoutes(stages),[stages]);
   const visible=epochView==="latest"?trace:history.find(h=>String(h.epoch)===epochView)??trace;
   const measured=useMemo(()=>new Map(visible?.layers.map(item=>[item.key,item])??[]),[visible]);
   const selected=stages.find(item=>item.key===selectedKey)??stages.at(-1);
@@ -50,6 +54,11 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
           <option value="latest">Última época</option>
           {history.map(h=><option key={h.epoch} value={String(h.epoch)}>Época {h.epoch}</option>)}
         </select>}
+        {working&&<button type="button" className="nl-motion-toggle"
+          aria-pressed={motionEnabled} aria-label={motionEnabled?"Pausar animación del entrenamiento":"Reanudar animación del entrenamiento"}
+          onClick={()=>setMotionEnabled(value=>!value)}>
+          {motionEnabled?"Pausar animación":"Reanudar animación"}
+        </button>}
         <div className="nl-view-toggle" role="group" aria-label="Vista del grafo">
           <button type="button" className={view==="3d"?"selected":""} aria-pressed={view==="3d"} onClick={()=>setView("3d")}>3D</button>
           <button type="button" className={view==="2d"?"selected":""} aria-pressed={view==="2d"} onClick={()=>setView("2d")}>2D</button>
@@ -60,9 +69,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
       {visible?<><span className="nl-epoch-pill">Época {visible.epoch}</span>
         <span>Original: <strong>{visible.sampleLabel}</strong></span><span aria-hidden="true">→</span>
         <span>Predicción: <strong>{visible.predictedLabel}</strong> <small>{percent(visible.confidence)}</small></span></>:
-        <span className="nl-empty-pill">{working?"Entrenando · esperando las primeras mediciones":"Arquitectura real configurada · sin activaciones medidas"}</span>}
+        <span className="nl-empty-pill">{working?batchPulse>0?"Entrenando · lotes reales registrados · esperando medición de época":"Entrenando · esperando el primer lote real":"Arquitectura real configurada · sin activaciones medidas"}</span>}
     </div>
-    {stages.length?<div className="nl-neural-window" data-view={view} data-motion="paused" data-training={working?"true":"false"}>
+    {stages.length?<div className="nl-neural-window" data-view={view} data-motion={measuredBatch?"running":"paused"} data-training={working?"true":"false"} data-batch-pulse={batchPulse}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Diagrama desplazable de neuronas y conexiones">
         <svg className="nl-neural-svg" viewBox={"0 0 "+width+" 352"} width={width} height="352" role="img" aria-label="Grafo de la red: neuronas conectadas de entrada a convoluciones, pooling, Flatten, Dense y salida">
           <defs>
@@ -86,6 +95,18 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 strokeWidth={selectedLink?1.15:.75}
                 strokeOpacity={measured.size?Math.min(.5,.085+power*.28):.16}/>;
             })))}
+          {measuredBatch&&<g key={"lote-"+batchPulse} className="nl-real-batch-signals"
+            pointerEvents="none" aria-label={"Señales por lote real completado: "+batchState}>
+            {batchRoutes.map(route=>{
+              const duration=(.65+route.column*.075).toFixed(2)+"s";
+              const delay=(route.column*.07+(Number(route.key.split("-")[1])||0)*.045).toFixed(2)+"s";
+              return <circle key={route.key} cx="0" cy="0" r="3.2" fill={route.column%2?"#a99af9":"#59fee0"}>
+                <animateMotion path={route.path} dur={duration} begin={delay} repeatCount="1" fill="freeze"/>
+                <animate attributeName="opacity" values="0;0.95;0.8;0" keyTimes="0;0.12;0.62;1"
+                  dur={duration} begin={delay} fill="freeze"/>
+              </circle>;
+            })}
+          </g>}
           {stages.map((stage,column)=><g key={stage.key} className={selected?.key===stage.key?"nl-column chosen":"nl-column"}>
             <text className="nl-svg-label" x={85+column*146} y="32" textAnchor="middle">{stage.label}</text>
             <text className="nl-svg-shape" x={85+column*146} y="49" textAnchor="middle">{stage.shape}</text>
@@ -93,7 +114,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
               const value=strength(column,nodeIndex),observed=measured.has(stage.key);
               const chosen=selected?.key===stage.key;
               const r=6+value*4;
-              return <g key={nodeIndex} className="nl-neuron">
+              return <g key={nodeIndex} className={"nl-neuron "+(measuredBatch&&observed?"live":"")}>
                 {view==="3d"&&<><circle cx={point.x+7} cy={point.y-6} r={r+2} fill="#050e21" stroke={column%2?"#9686eb":"#167f8f"} strokeOpacity=".65"/>
                   <line x1={point.x+7} y1={point.y-6} x2={point.x} y2={point.y} stroke="#96eee2" strokeOpacity=".28"/></>}
                 {chosen&&<circle cx={point.x} cy={point.y} r={r+6} fill="none" stroke="#64fce0" strokeOpacity=".36"/>}
@@ -146,8 +167,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
       <div className="nl-graph-legend" aria-label="Leyenda de mediciones">
         <span><i className="nl-legend-data"/> {visible?"Activaciones medidas de la época "+visible.epoch:"Sin activaciones disponibles"}</span>
+        {working&&<span className="nl-batch-legend">{batchPulse>0?"Destellos: lotes realmente procesados":"Esperando lote procesado"}</span>}
       </div>
-      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los enlaces esquematizan la estructura: no son pesos individuales ni flujo de datos medido.</p>
+      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los enlaces esquematizan la estructura; los destellos señalan lotes completados, no pesos, gradientes ni flujo de datos medido.</p>
     </div>
   </section>;
 }

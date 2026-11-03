@@ -34,7 +34,7 @@ export function graphCanvasWidth(columns:number){
   return Math.max(900,170+Math.max(0,columns-1)*146);
 }
 
-/** Rutas cortas y estables para pulsos animados visibles, aun antes de medir activaciones. */
+/** Rutas esquemáticas para señalar lotes realmente completados; no representan pesos ni métricas. */
 export type GraphEnergyRoute={key:string;column:number;path:string;duration:number;delay:number};
 export function graphEnergyRoutes(stages:readonly GraphStage[]):GraphEnergyRoute[]{
   const routes:GraphEnergyRoute[]=[];
@@ -56,7 +56,7 @@ export function graphEnergyRoutes(stages:readonly GraphStage[]):GraphEnergyRoute
   return routes;
 }
 
-/** La animación visible depende exclusivamente de una ejecución de entrenamiento activa. */
-export function shouldAnimateGraph(working:boolean,motion:boolean):boolean{
-  return working&&motion;
+/** No dibujar señales hasta que TensorFlow.js confirme un lote completado. */
+export function shouldAnimateGraph(working:boolean,hasCompletedBatch:boolean,motionEnabled:boolean):boolean{
+  return working&&hasCompletedBatch&&motionEnabled;
 }

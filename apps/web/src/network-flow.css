@@ -104,3 +104,17 @@
 .nl-neural-metrics span:nth-child(2) strong{color:#755ab2}
 .nl-neural-metrics span:nth-child(3){background:#fff5e7;border-color:#f7ddbd}
 .nl-neural-metrics span:nth-child(3) strong{color:#a26d2a}
+
+
+/* Impulsos disparados por onBatchEnd real, nunca por un temporizador simulado. */
+.nl-neural-window[data-motion="running"] .nl-real-batch-signals circle{
+  filter:drop-shadow(0 0 4px #61ffe2) drop-shadow(0 0 2px #b5f2ff);
+}
+.nl-neural-window[data-motion="paused"] .nl-real-batch-signals{display:none}
+.nl-status-pill.live:before{animation:nl-real-training-status 1.1s ease-in-out infinite alternate}
+@keyframes nl-real-training-status{from{opacity:.45;transform:scale(.8)}to{opacity:1;transform:scale(1.35)}}
+.nl-batch-legend{color:#208a85;font-weight:750}
+@media(prefers-reduced-motion:reduce){
+  .nl-real-batch-signals{display:none!important}
+  .nl-status-pill.live:before{animation:none!important}
+}
