@@ -12,13 +12,15 @@ type Props={
 };
 const percent=(value:number)=>(100*Math.max(0,Math.min(1,value))).toFixed(1)+"%";
 
+const reducedMotion=()=>typeof window!=="undefined"&&window.matchMedia?.("(prefers-reduced-motion: reduce)").matches===true;
+
 export default function NetworkFlow({config,classCount,working,realMetrics,realEpochs,realComplete,trace,
   history=[],classNames,batchState,batchPulse=0}:Props){
   const [view,setView]=useState<"2d"|"3d">("3d");
   const [selectedKey,setSelectedKey]=useState("output");
   const [epochView,setEpochView]=useState("latest");
-  const [motionEnabled,setMotionEnabled]=useState(true);
-  useEffect(()=>{if(working)setMotionEnabled(true);},[working]);
+  const [motionEnabled,setMotionEnabled]=useState(()=>!reducedMotion());
+  useEffect(()=>{if(working)setMotionEnabled(!reducedMotion());},[working]);
   const gradientId=useId().replace(/:/g,"-");
   const stages=useMemo(()=>{try{return graphStages(config,classCount);}catch{return [];}},[config,classCount]);
   const laserActive=shouldShowLaserFlow(working,motionEnabled);

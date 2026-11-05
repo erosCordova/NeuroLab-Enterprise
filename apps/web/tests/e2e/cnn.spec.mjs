@@ -897,7 +897,7 @@ test("Haces láser recorren todo el grafo únicamente al entrenar y se pueden pa
   const graph=trainer.getByRole("region",{name:"Visualización de neuronas y conexiones de la CNN"});
   const window=graph.locator(".nl-neural-window");
   await expect(graph.locator(".nl-laser-lane")).toHaveCount(0);
-  await trainer.getByLabel("Épocas de entrenamiento real").fill("2");
+  await trainer.getByLabel("Épocas de entrenamiento real").fill("20");
   await trainer.getByLabel("Batch del entrenamiento real").fill("8");
   await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
   await expect(window).toHaveAttribute("data-training","true");

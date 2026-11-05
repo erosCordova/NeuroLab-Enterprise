@@ -69,3 +69,15 @@ test("Los haces láser cruzan todas las capas, no solo pares de neuronas",()=>{
   assert.equal(shouldShowLaserFlow(true,true),true);
   assert.equal(shouldShowLaserFlow(true,false),false);
 });
+
+test("Las rutas láser se adaptan a arquitecturas manuales y no requieren métricas ficticias",()=>{
+ const config=defaultConfig();
+ config.layers[0].pool=false;
+ config.dropout=.25;
+ const stages=graphStages(config,2);
+ const routes=graphLaserRoutes(stages);
+ assert.equal(routes.length,12);
+ assert.ok(routes.every(route=>(route.path.match(/ C /g)||[]).length===stages.length-1));
+ assert.deepEqual(graphLaserRoutes(stages),routes);
+ assert.deepEqual(graphLaserRoutes([],5),[]);
+});

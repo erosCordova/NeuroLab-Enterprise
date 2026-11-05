@@ -158,7 +158,7 @@
   stroke-width:16;
   stroke-opacity:.34;
   stroke-dasharray:35 115;
-  filter:drop-shadow(0 0 8px currentColor);
+  filter:drop-shadow(0 0 8px rgba(79,255,222,.8));
 }
 .nl-laser-beam{
   stroke-width:6.5;
@@ -181,6 +181,15 @@
   animation:nl-laser-node-glow 1.5s ease-in-out infinite alternate;
 }
 @keyframes nl-laser-node-glow{from{filter:brightness(1)}to{filter:brightness(1.65)}}
+/* En preferencias de movimiento reducido se desactiva por defecto.
+   Si el usuario pulsa Reanudar, su acción explícita habilita solo los láseres. */
 @media(prefers-reduced-motion:reduce){
-  .nl-laser-network{display:none!important}
+  .nl-neural-window[data-motion="running"] .nl-laser-network{display:initial!important}
+  .nl-neural-window[data-motion="running"] .nl-laser-lane path{
+    animation-name:nl-laser-cross-network!important;
+    animation-duration:var(--nl-laser-duration)!important;
+    animation-delay:var(--nl-laser-delay)!important;
+    animation-timing-function:linear!important;
+    animation-iteration-count:infinite!important;
+  }
 }
