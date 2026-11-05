@@ -183,7 +183,7 @@ export async function trainInBrowser(
         onBatchEnd:async index=>{
           if(signal?.aborted)model!.stopTraining=true;
           const completed=index+1;
-          const frequency=Math.max(1,Math.ceil(batchesPerEpoch/20));
+          const frequency=Math.max(1,Math.ceil(batchesPerEpoch/36));
           if(completed===1||completed===batchesPerEpoch||completed%frequency===0){
             onBatch?.({epoch:currentEpoch,epochs,batch:completed,batches:batchesPerEpoch});
             await tf.nextFrame();

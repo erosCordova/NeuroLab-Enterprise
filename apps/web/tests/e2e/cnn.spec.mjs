@@ -888,3 +888,20 @@ test("La visualización CNN anima solo después de procesar un lote real",async(
  await expect(window).toHaveAttribute("data-motion","paused");
  await expect(graph.locator(".nl-real-batch-signals")).toHaveCount(0);
 });
+
+
+test("El visualizador usa trazos SVG de lote real en lugar de animaciones SMIL",async({page})=>{
+  await applyDataset(page);
+  await navigate(page,"Entrenamientos");
+  const trainer=page.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
+  const graph=trainer.getByRole("region",{name:"Visualización de neuronas y conexiones de la CNN"});
+  await expect(graph.locator(".nl-real-batch-path")).toHaveCount(0);
+  await trainer.getByLabel("Épocas de entrenamiento real").fill("1");
+  await trainer.getByLabel("Batch del entrenamiento real").fill("8");
+  await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
+  await expect(graph.locator(".nl-neural-window")).toHaveAttribute("data-batch-pulse",/^[1-9]\\d*$/,{timeout:90000});
+  const path=graph.locator(".nl-real-batch-path").first();
+  await expect(path).toBeAttached({timeout:20000});
+  await expect(path).toHaveCSS("animation-name","nl-real-batch-travel");
+  await expect(graph.locator("animateMotion")).toHaveCount(0);
+});

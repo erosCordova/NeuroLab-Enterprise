@@ -95,7 +95,8 @@ export async function trainMnistInBrowser(
         onEpochBegin:async()=>{currentBatch=0;currentEpoch++;},
         onBatchEnd:async()=>{
           currentBatch++;
-          if(currentBatch===1||currentBatch%20===0||currentBatch===steps){
+          const displayFrequency=Math.max(1,Math.ceil(steps/36));
+          if(currentBatch===1||currentBatch%displayFrequency===0||currentBatch===steps){
             onBatch({epoch:currentEpoch,epochs,batch:currentBatch,batches:steps,tensorBytes:tf.memory().numBytes});
             await tf.nextFrame();
           }

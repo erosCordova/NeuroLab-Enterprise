@@ -96,16 +96,12 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 strokeOpacity={measured.size?Math.min(.5,.085+power*.28):.16}/>;
             })))}
           {measuredBatch&&<g key={"lote-"+batchPulse} className="nl-real-batch-signals"
-            pointerEvents="none" aria-label={"Señales por lote real completado: "+batchState}>
-            {batchRoutes.map(route=>{
-              const duration=(.65+route.column*.075).toFixed(2)+"s";
-              const delay=(route.column*.07+(Number(route.key.split("-")[1])||0)*.045).toFixed(2)+"s";
-              return <circle key={route.key} cx="0" cy="0" r="3.2" fill={route.column%2?"#a99af9":"#59fee0"}>
-                <animateMotion path={route.path} dur={duration} begin={delay} repeatCount="1" fill="freeze"/>
-                <animate attributeName="opacity" values="0;0.95;0.8;0" keyTimes="0;0.12;0.62;1"
-                  dur={duration} begin={delay} fill="freeze"/>
-              </circle>;
-            })}
+            pointerEvents="none" aria-label={"Señales visuales del lote realmente completado: "+batchState}>
+            {batchRoutes.map(route=><path key={route.key} d={route.path}
+              className="nl-real-batch-path" fill="none"
+              stroke={route.column%2?"#b4a6ff":"#56ffe3"}
+              strokeWidth="3.5" strokeLinecap="round"
+              style={{animationDelay:(route.column*.055+(Number(route.key.split("-")[1])||0)*.035).toFixed(2)+"s"}}/>)}
           </g>}
           {stages.map((stage,column)=><g key={stage.key} className={selected?.key===stage.key?"nl-column chosen":"nl-column"}>
             <text className="nl-svg-label" x={85+column*146} y="32" textAnchor="middle">{stage.label}</text>
@@ -167,9 +163,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
       <div className="nl-graph-legend" aria-label="Leyenda de mediciones">
         <span><i className="nl-legend-data"/> {visible?"Activaciones medidas de la época "+visible.epoch:"Sin activaciones disponibles"}</span>
-        {working&&<span className="nl-batch-legend">{batchPulse>0?"Destellos: lotes realmente procesados":"Esperando lote procesado"}</span>}
+        {working&&<span className="nl-batch-legend">{batchPulse>0?"Impulsos sincronizados con lotes reales":"Esperando lote procesado"}</span>}
       </div>
-      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los enlaces esquematizan la estructura; los destellos señalan lotes completados, no pesos, gradientes ni flujo de datos medido.</p>
+      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los enlaces esquematizan la estructura; los impulsos se disparan al completar lotes reales, pero no representan pesos ni gradientes.</p>
     </div>
   </section>;
 }

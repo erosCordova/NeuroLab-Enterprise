@@ -118,3 +118,23 @@
   .nl-real-batch-signals{display:none!important}
   .nl-status-pill.live:before{animation:none!important}
 }
+
+
+/* Reemplazo compatible con Chromium/Edge: trazos SVG visibles activados por
+   un callback real onBatchEnd, no por SMIL animateMotion ni por datos falsos.
+   Cada lote remonta el grupo con una clave nueva y reinicia esta transición. */
+.nl-real-batch-path{
+  stroke-dasharray:22 180;
+  stroke-dashoffset:155;
+  opacity:0;
+  animation:nl-real-batch-travel 2.75s ease-out 1 both;
+  filter:drop-shadow(0 0 5px rgba(79,255,222,.9));
+}
+@keyframes nl-real-batch-travel{
+  0%{stroke-dashoffset:155;opacity:0}
+  12%{opacity:.98}
+  72%{opacity:.92}
+  100%{stroke-dashoffset:-150;opacity:0}
+}
+.nl-neural-window[data-motion="paused"] .nl-real-batch-path{animation-play-state:paused;opacity:0}
+@media(prefers-reduced-motion:reduce){.nl-real-batch-path{animation:none!important;opacity:0!important}}
