@@ -1,7 +1,8 @@
 import {useEffect,useId,useMemo,useState} from "react";
+import type {CSSProperties} from "react";
 import type {Config,Metric} from "./cnn";
 import type {NetworkTrace} from "./networkTelemetry";
-import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph} from "./networkGraph";
+import {graphStages,visibleNodeCount,graphNodePosition,graphCanvasWidth,graphLaserRoutes,shouldShowLaserFlow} from "./networkGraph";
 import "./network-flow.css";
 
 type Props={
@@ -20,8 +21,8 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
   useEffect(()=>{if(working)setMotionEnabled(true);},[working]);
   const gradientId=useId().replace(/:/g,"-");
   const stages=useMemo(()=>{try{return graphStages(config,classCount);}catch{return [];}},[config,classCount]);
-  const measuredBatch=shouldAnimateGraph(working,batchPulse>0,motionEnabled);
-  const batchRoutes=useMemo(()=>graphEnergyRoutes(stages),[stages]);
+  const laserActive=shouldShowLaserFlow(working,motionEnabled);
+  const lasers=useMemo(()=>graphLaserRoutes(stages),[stages]);
   const visible=epochView==="latest"?trace:history.find(h=>String(h.epoch)===epochView)??trace;
   const measured=useMemo(()=>new Map(visible?.layers.map(item=>[item.key,item])??[]),[visible]);
   const selected=stages.find(item=>item.key===selectedKey)??stages.at(-1);
@@ -71,7 +72,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
         <span>Predicción: <strong>{visible.predictedLabel}</strong> <small>{percent(visible.confidence)}</small></span></>:
         <span className="nl-empty-pill">{working?batchPulse>0?"Entrenando · lotes reales registrados · esperando medición de época":"Entrenando · esperando el primer lote real":"Arquitectura real configurada · sin activaciones medidas"}</span>}
     </div>
-    {stages.length?<div className="nl-neural-window" data-view={view} data-motion={measuredBatch?"running":"paused"} data-training={working?"true":"false"} data-batch-pulse={batchPulse}>
+    {stages.length?<div className="nl-neural-window" data-view={view} data-motion={laserActive?"running":"paused"} data-training={working?"true":"false"} data-batch-pulse={batchPulse}>
       <div className="nl-neural-scroll" tabIndex={0} aria-label="Diagrama desplazable de neuronas y conexiones">
         <svg className="nl-neural-svg" viewBox={"0 0 "+width+" 352"} width={width} height="352" role="img" aria-label="Grafo de la red: neuronas conectadas de entrada a convoluciones, pooling, Flatten, Dense y salida">
           <defs>
@@ -95,13 +96,15 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
                 strokeWidth={selectedLink?1.15:.75}
                 strokeOpacity={measured.size?Math.min(.5,.085+power*.28):.16}/>;
             })))}
-          {measuredBatch&&<g key={"lote-"+batchPulse} className="nl-real-batch-signals"
-            pointerEvents="none" aria-label={"Señales visuales del lote realmente completado: "+batchState}>
-            {batchRoutes.map(route=><path key={route.key} d={route.path}
-              className="nl-real-batch-path" fill="none"
-              stroke={route.column%2?"#b4a6ff":"#56ffe3"}
-              strokeWidth="3.5" strokeLinecap="round"
-              style={{animationDelay:(route.column*.055+(Number(route.key.split("-")[1])||0)*.035).toFixed(2)+"s"}}/>)}
+          {laserActive&&<g className="nl-laser-network" aria-label="Haces luminosos viajando de entrada a salida durante el entrenamiento real" pointerEvents="none">
+            {lasers.map(laser=>{
+              const style={"--nl-laser-duration":laser.duration+"s","--nl-laser-delay":laser.delay+"s"} as CSSProperties;
+              return <g key={laser.key} className="nl-laser-lane" style={style}>
+                <path d={laser.path} pathLength={100} className="nl-laser-halo" stroke={laser.hue} fill="none"/>
+                <path d={laser.path} pathLength={100} className="nl-laser-beam" stroke={laser.hue} fill="none"/>
+                <path d={laser.path} pathLength={100} className="nl-laser-head" stroke="#eaffff" fill="none"/>
+              </g>;
+            })}
           </g>}
           {stages.map((stage,column)=><g key={stage.key} className={selected?.key===stage.key?"nl-column chosen":"nl-column"}>
             <text className="nl-svg-label" x={85+column*146} y="32" textAnchor="middle">{stage.label}</text>
@@ -110,7 +113,7 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
               const value=strength(column,nodeIndex),observed=measured.has(stage.key);
               const chosen=selected?.key===stage.key;
               const r=6+value*4;
-              return <g key={nodeIndex} className={"nl-neuron "+(measuredBatch&&observed?"live":"")}>
+              return <g key={nodeIndex} className={"nl-neuron "+(laserActive&&observed?"live":"")}>
                 {view==="3d"&&<><circle cx={point.x+7} cy={point.y-6} r={r+2} fill="#050e21" stroke={column%2?"#9686eb":"#167f8f"} strokeOpacity=".65"/>
                   <line x1={point.x+7} y1={point.y-6} x2={point.x} y2={point.y} stroke="#96eee2" strokeOpacity=".28"/></>}
                 {chosen&&<circle cx={point.x} cy={point.y} r={r+6} fill="none" stroke="#64fce0" strokeOpacity=".36"/>}
@@ -163,9 +166,9 @@ export default function NetworkFlow({config,classCount,working,realMetrics,realE
       {working&&batchState&&<span className="nl-neural-batch">{batchState}</span>}
       <div className="nl-graph-legend" aria-label="Leyenda de mediciones">
         <span><i className="nl-legend-data"/> {visible?"Activaciones medidas de la época "+visible.epoch:"Sin activaciones disponibles"}</span>
-        {working&&<span className="nl-batch-legend">{batchPulse>0?"Impulsos sincronizados con lotes reales":"Esperando lote procesado"}</span>}
+        {working&&<span className="nl-batch-legend">{batchPulse>0?"Flujo láser activo · lotes procesados":"Flujo láser activo · preparando el primer lote"}</span>}
       </div>
-      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los enlaces esquematizan la estructura; los impulsos se disparan al completar lotes reales, pero no representan pesos ni gradientes.</p>
+      <p className="nl-neural-disclaimer">{visible?"Los mapas y los valores se han calculado con TensorFlow.js sobre una imagen de validación.":"El diagrama muestra las dimensiones de la arquitectura seleccionada, sin inventar activaciones ni probabilidades."} Los haces láser representan visualmente el procesamiento durante el entrenamiento real; no representan pesos, gradientes ni señales individuales medidas.</p>
     </div>
   </section>;
 }

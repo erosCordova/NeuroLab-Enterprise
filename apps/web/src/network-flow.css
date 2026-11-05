@@ -138,3 +138,49 @@
 }
 .nl-neural-window[data-motion="paused"] .nl-real-batch-path{animation-play-state:paused;opacity:0}
 @media(prefers-reduced-motion:reduce){.nl-real-batch-path{animation:none!important;opacity:0!important}}
+
+
+/* Haces láser que avanzan desde Entrada hasta Salida por rutas continuas.
+   El movimiento se activa SOLO en un entrenamiento real; nunca genera métricas.
+   pathLength=100 normaliza el recorrido y evita que la luz quede estática. */
+.nl-laser-network{isolation:isolate}
+.nl-laser-lane path{
+  pointer-events:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  animation-duration:var(--nl-laser-duration);
+  animation-delay:var(--nl-laser-delay);
+  animation-timing-function:linear;
+  animation-iteration-count:infinite;
+  animation-name:nl-laser-cross-network;
+}
+.nl-laser-halo{
+  stroke-width:16;
+  stroke-opacity:.34;
+  stroke-dasharray:35 115;
+  filter:drop-shadow(0 0 8px currentColor);
+}
+.nl-laser-beam{
+  stroke-width:6.5;
+  stroke-opacity:.94;
+  stroke-dasharray:24 126;
+  filter:drop-shadow(0 0 5px #63ffe4);
+}
+.nl-laser-head{
+  stroke-width:3;
+  stroke-opacity:1;
+  stroke-dasharray:5 145;
+  filter:drop-shadow(0 0 6px #f7ffff);
+}
+@keyframes nl-laser-cross-network{
+  from{stroke-dashoffset:0}
+  to{stroke-dashoffset:-100}
+}
+.nl-neural-window[data-motion="paused"] .nl-laser-network{display:none}
+.nl-neural-window[data-motion="running"] .nl-neuron.live>.nl-neuron-core{
+  animation:nl-laser-node-glow 1.5s ease-in-out infinite alternate;
+}
+@keyframes nl-laser-node-glow{from{filter:brightness(1)}to{filter:brightness(1.65)}}
+@media(prefers-reduced-motion:reduce){
+  .nl-laser-network{display:none!important}
+}

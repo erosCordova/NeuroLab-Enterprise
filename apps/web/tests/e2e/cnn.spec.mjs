@@ -890,18 +890,27 @@ test("La visualización CNN anima solo después de procesar un lote real",async(
 });
 
 
-test("El visualizador usa trazos SVG de lote real en lugar de animaciones SMIL",async({page})=>{
+test("Haces láser recorren todo el grafo únicamente al entrenar y se pueden pausar",async({page})=>{
   await applyDataset(page);
   await navigate(page,"Entrenamientos");
   const trainer=page.getByRole("region",{name:"Entrenamiento CNN real en navegador"});
   const graph=trainer.getByRole("region",{name:"Visualización de neuronas y conexiones de la CNN"});
-  await expect(graph.locator(".nl-real-batch-path")).toHaveCount(0);
-  await trainer.getByLabel("Épocas de entrenamiento real").fill("1");
+  const window=graph.locator(".nl-neural-window");
+  await expect(graph.locator(".nl-laser-lane")).toHaveCount(0);
+  await trainer.getByLabel("Épocas de entrenamiento real").fill("2");
   await trainer.getByLabel("Batch del entrenamiento real").fill("8");
   await trainer.getByRole("button",{name:"Entrenar CNN real"}).click();
-  await expect(graph.locator(".nl-neural-window")).toHaveAttribute("data-batch-pulse",/^[1-9]\\d*$/,{timeout:90000});
-  const path=graph.locator(".nl-real-batch-path").first();
-  await expect(path).toBeAttached({timeout:20000});
-  await expect(path).toHaveCSS("animation-name","nl-real-batch-travel");
-  await expect(graph.locator("animateMotion")).toHaveCount(0);
+  await expect(window).toHaveAttribute("data-training","true");
+  await expect(graph.locator(".nl-laser-lane")).toHaveCount(12);
+  const beam=graph.locator(".nl-laser-beam").first();
+  await expect(beam).toHaveAttribute("pathLength","100");
+  await expect(beam).toHaveCSS("animation-name","nl-laser-cross-network");
+  await graph.getByRole("button",{name:"Pausar animación del entrenamiento"}).click();
+  await expect(window).toHaveAttribute("data-motion","paused");
+  await expect(graph.locator(".nl-laser-lane")).toHaveCount(0);
+  await graph.getByRole("button",{name:"Reanudar animación del entrenamiento"}).click();
+  await expect(window).toHaveAttribute("data-motion","running");
+  await expect(graph.locator(".nl-laser-lane")).toHaveCount(12);
+  await trainer.getByRole("button",{name:"Cancelar entrenamiento real"}).click();
+  await expect(graph.locator(".nl-laser-lane")).toHaveCount(0);
 });

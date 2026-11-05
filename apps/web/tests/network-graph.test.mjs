@@ -1,7 +1,7 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {defaultConfig} from "../src/cnn.ts";
-import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph} from "../src/networkGraph.ts";
+import {graphStages,graphNodePosition,visibleNodeCount,graphCanvasWidth,graphEnergyRoutes,shouldAnimateGraph,graphLaserRoutes,shouldShowLaserFlow} from "../src/networkGraph.ts";
 
 test("Grafo neuronal reproduce el flujo de conv, pooling, dense y salida real",()=>{
   const config=defaultConfig();
@@ -51,4 +51,21 @@ test("La animación depende de lotes reales y se detiene al finalizar o pausar",
   assert.equal(shouldAnimateGraph(true,true,true),true,"Lote real completado");
   assert.equal(shouldAnimateGraph(true,true,false),false,"Pausar solo la visualización");
   assert.equal(shouldAnimateGraph(false,true,true),false,"Finalización o cancelación");
+});
+
+
+test("Los haces láser cruzan todas las capas, no solo pares de neuronas",()=>{
+  const stages=graphStages(defaultConfig(),10);
+  const routes=graphLaserRoutes(stages);
+  assert.equal(routes.length,12);
+  assert.equal(new Set(routes.map(r=>r.path)).size,12);
+  for(const route of routes){
+    assert.match(route.path,/^M \d+ [\d.]+(?: C [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+ [\d.]+)+$/);
+    assert.equal((route.path.match(/ C /g)||[]).length,stages.length-1);
+    assert.ok(route.duration>=4&&route.duration<5);
+    assert.ok(route.delay<=0);
+  }
+  assert.equal(shouldShowLaserFlow(false,true),false);
+  assert.equal(shouldShowLaserFlow(true,true),true);
+  assert.equal(shouldShowLaserFlow(true,false),false);
 });
